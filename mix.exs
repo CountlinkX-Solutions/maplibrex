@@ -89,19 +89,19 @@ defmodule MaplibreX.MixProject do
       source_url: @source_url,
       extras: ["README.md", "CHANGELOG.md"],
       groups_for_modules: [
-        "Components": [
+        Components: [
           MaplibreX.Components.Map,
           MaplibreX.Components.Marker,
           MaplibreX.Components.Popup
         ],
-        "Controls": [
+        Controls: [
           MaplibreX.Components.NavigationControl,
           MaplibreX.Components.ScaleControl
         ],
-        "Layers": [
+        Layers: [
           MaplibreX.Components.GeoJSONLayer
         ],
-        "Sources": [
+        Sources: [
           MaplibreX.Components.GeoJSONSource
         ]
       ]
