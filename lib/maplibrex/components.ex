@@ -28,4 +28,5 @@ defmodule MaplibreX.Components do
   defdelegate geojson_layer(assigns), to: MaplibreX.Components.GeoJSONLayer
   defdelegate navigation_control(assigns), to: MaplibreX.Components.NavigationControl
   defdelegate scale_control(assigns), to: MaplibreX.Components.ScaleControl
+  defdelegate fullscreen_control(assigns), to: MaplibreX.Components.FullscreenControl
 end

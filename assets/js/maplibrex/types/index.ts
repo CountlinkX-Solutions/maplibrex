@@ -151,6 +151,7 @@ export interface ScaleControlConfig extends ControlConfig {
  */
 export interface FullscreenControlConfig extends ControlConfig {
   container?: HTMLElement;
+  containerSelector?: string;
 }
 
 /**

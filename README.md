@@ -309,6 +309,20 @@ Display a scale bar showing map distance ratios.
 - `max_width` - Maximum width in pixels (default: `100`)
 - `unit` - Unit of measurement: `imperial`, `metric`, `nautical` (default: `metric`)
 
+### Fullscreen Control Component
+
+Toggle fullscreen mode for the map.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `position` - Control position (default: `top-right`)
+- `container_id` - ID of HTML element to make fullscreen (optional)
+
+**Events:**
+- `fullscreen:entered` - Entered fullscreen mode
+- `fullscreen:exited` - Exited fullscreen mode
+
 ## JavaScript Commands
 
 Send commands from LiveView to control the map:
