@@ -1,0 +1,27 @@
+{
+  "name": "maplibrex-assets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Assets for MaplibreX - MapLibre GL JS components for Phoenix LiveView",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "watch": "tsc --noEmit --watch",
+    "lint": "eslint js --ext .ts,.tsx",
+    "format": "prettier --write \"js/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.0.0-pre.2",
+    "phoenix": "file:../deps/phoenix",
+    "phoenix_html": "file:../deps/phoenix_html",
+    "phoenix_live_view": "file:../deps/phoenix_live_view"
+  },
+  "devDependencies": {
+    "@types/phoenix": "^1.6.5",
+    "@types/phoenix_live_view": "^0.20.0",
+    "typescript": "^5.6.0",
+    "prettier": "^3.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0"
+  }
+}

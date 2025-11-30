@@ -1,0 +1,30 @@
+defmodule MaplibreX.Components do
+  @moduledoc """
+  Phoenix LiveView components for MaplibreX.
+
+  This module provides function components for rendering MapLibre maps
+  and related elements in Phoenix LiveView applications.
+  """
+
+  use Phoenix.Component
+
+  @doc """
+  Imports all MaplibreX components into the current scope.
+
+  ## Usage
+
+      import MaplibreX.Components
+  """
+  defmacro __using__(_opts) do
+    quote do
+      import MaplibreX.Components
+    end
+  end
+
+  # Re-export individual component modules
+  defdelegate map(assigns), to: MaplibreX.Components.Map
+  # Future components:
+  # defdelegate marker(assigns), to: MaplibreX.Components.Marker
+  # defdelegate popup(assigns), to: MaplibreX.Components.Popup
+  # defdelegate geojson_layer(assigns), to: MaplibreX.Components.GeoJSONLayer
+end
