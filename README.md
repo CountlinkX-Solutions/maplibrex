@@ -223,11 +223,71 @@ The main map component with full configuration options.
 - `map:zoom_changed` - Zoom level changed
 - `map:error` - Error occurred
 
+### Marker Component
+
+Add markers to your map with full customization.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `lng_lat` (required) - Position `[lng, lat]`
+- `color` - Marker color
+- `scale` - Marker size
+- `rotation` - Rotation in degrees
+- `draggable` - Enable dragging
+- `popup_text` - Simple popup text
+- `popup_html` - Custom popup HTML
+
+**Events:**
+- `marker:clicked` - Marker clicked
+- `marker:drag_start` - Drag started
+- `marker:dragging` - While dragging
+- `marker:drag_end` - Drag ended
+
+### Popup Component
+
+Display popups on the map at specific coordinates.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `lng_lat` - Position `[lng, lat]` (optional, can be set later)
+- `max_width` - Maximum popup width
+- `close_button` - Show close button
+- `close_on_click` - Close on map click
+- `close_on_move` - Close on map move
+- `anchor` - Anchor position
+- `offset` - Pixel offset
+- `open` - Initially open/closed
+
+**Events:**
+- `popup:opened` - Popup opened
+- `popup:closed` - Popup closed
+
+### GeoJSON Layer Component
+
+Render GeoJSON data with full styling control.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `data` (required) - GeoJSON data
+- `type` (required) - Layer type: `fill`, `line`, `circle`, `symbol`, `heatmap`, `fill-extrusion`
+- `paint` - Paint properties for styling
+- `layout` - Layout properties
+- `filter` - Filter expression
+- `min_zoom` / `max_zoom` - Zoom constraints
+- `cluster` - Enable point clustering
+- `cluster_max_zoom` / `cluster_radius` - Clustering options
+
+**Events:**
+- `layer:feature_clicked` - Feature clicked
+- `layer:feature_mouseenter` - Mouse enters feature
+- `layer:feature_mouseleave` - Mouse leaves feature
+- `layer:source_loaded` - Source data loaded
+
 ### Coming Soon
 
-- 📍 `<.marker />` - Add markers to your map
-- 💬 `<.popup />` - Display popups
-- 🗺️ `<.geojson_layer />` - Render GeoJSON data
 - 🎛️ `<.navigation_control />` - Add navigation controls
 - 📏 `<.scale_control />` - Add scale control
 

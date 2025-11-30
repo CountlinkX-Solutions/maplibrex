@@ -24,8 +24,8 @@ defmodule MaplibreX.Components do
   # Re-export individual component modules
   defdelegate map(assigns), to: MaplibreX.Components.Map
   defdelegate marker(assigns), to: MaplibreX.Components.Marker
+  defdelegate popup(assigns), to: MaplibreX.Components.Popup
+  defdelegate geojson_layer(assigns), to: MaplibreX.Components.GeoJSONLayer
 
   # Future components:
-  # defdelegate popup(assigns), to: MaplibreX.Components.Popup
-  # defdelegate geojson_layer(assigns), to: MaplibreX.Components.GeoJSONLayer
 end

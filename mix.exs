@@ -2,7 +2,7 @@ defmodule MaplibreX.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/tu-usuario/maplibrex"
+  @source_url "https://github.com/roger120981/maplibrex"
 
   def project do
     [

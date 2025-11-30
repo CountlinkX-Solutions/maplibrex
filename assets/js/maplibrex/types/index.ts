@@ -84,8 +84,9 @@ export interface PopupConfig extends MaplibreXConfig {
   closeOnClick?: boolean;
   closeOnMove?: boolean;
   offset?: number | [number, number];
-  anchor?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  anchor?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'auto';
   className?: string;
+  open?: boolean;
 }
 
 /**
