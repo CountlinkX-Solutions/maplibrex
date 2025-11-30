@@ -35,7 +35,7 @@ defmodule MaplibreX.MixProject do
       # Phoenix & LiveView
       {:phoenix, "~> 1.7.0"},
       {:phoenix_html, "~> 4.0"},
-      {:phoenix_live_view, "~> 0.20.0"},
+      {:phoenix_live_view, "~> 1.0"},
       {:jason, "~> 1.4"},
 
       # Asset building
