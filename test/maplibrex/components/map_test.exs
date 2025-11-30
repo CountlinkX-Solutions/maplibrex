@@ -46,10 +46,10 @@ defmodule MaplibreX.Components.MapTest do
         />
         """)
 
-      # La configuración está en formato JSON
-      assert html =~ ~s("id":"test-map")
-      assert html =~ ~s("center":[-74.5,40])
-      assert html =~ ~s("zoom":9)
+      # La configuración está en formato JSON (escapado como &quot;)
+      assert html =~ ~s(&quot;id&quot;:&quot;test-map&quot;)
+      assert html =~ ~s(&quot;center&quot;:[-74.5,40])
+      assert html =~ ~s(&quot;zoom&quot;:9)
     end
 
     test "renders map with optional attributes" do
@@ -78,10 +78,10 @@ defmodule MaplibreX.Components.MapTest do
         />
         """)
 
-      assert html =~ ~s("minZoom":5)
-      assert html =~ ~s("maxZoom":15)
-      assert html =~ ~s("bearing":45)
-      assert html =~ ~s("pitch":30)
+      assert html =~ ~s(&quot;minZoom&quot;:5)
+      assert html =~ ~s(&quot;maxZoom&quot;:15)
+      assert html =~ ~s(&quot;bearing&quot;:45)
+      assert html =~ ~s(&quot;pitch&quot;:30)
     end
 
     test "renders map with bounds" do
@@ -104,7 +104,7 @@ defmodule MaplibreX.Components.MapTest do
         />
         """)
 
-      assert html =~ ~s("bounds":[[-75,39],[-74,41]])
+      assert html =~ ~s(&quot;bounds&quot;:[[-75,39],[-74,41]])
     end
 
     test "renders map with custom class" do
@@ -132,51 +132,58 @@ defmodule MaplibreX.Components.MapTest do
     test "fly_to/4 generates correct JS command" do
       command = MaplibreX.Components.Map.fly_to("test-map", [-73.98, 40.75], 12)
 
-      assert command.js
-      assert command.params["center"] == [-73.98, 40.75]
-      assert command.params["zoom"] == 12
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:fly_to", target: "#test-map", value: value}]] = command.ops
+      assert value.center == [-73.98, 40.75]
+      assert value.zoom == 12
     end
 
     test "jump_to/4 generates correct JS command" do
       command = MaplibreX.Components.Map.jump_to("test-map", [-73.98, 40.75], 12)
 
-      assert command.js
-      assert command.params["center"] == [-73.98, 40.75]
-      assert command.params["zoom"] == 12
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:jump_to", target: "#test-map", value: value}]] = command.ops
+      assert value.center == [-73.98, 40.75]
+      assert value.zoom == 12
     end
 
     test "fit_bounds/3 generates correct JS command" do
       bounds = [[-75, 39], [-74, 41]]
       command = MaplibreX.Components.Map.fit_bounds("test-map", bounds)
 
-      assert command.js
-      assert command.params["bounds"] == bounds
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:fit_bounds", target: "#test-map", value: value}]] = command.ops
+      assert value.bounds == bounds
     end
 
     test "set_style/2 generates correct JS command" do
       style = "mapbox://styles/mapbox/dark-v11"
       command = MaplibreX.Components.Map.set_style("test-map", style)
 
-      assert command.js
-      assert command.params["style"] == style
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:set_style", target: "#test-map", value: value}]] = command.ops
+      assert value.style == style
     end
 
     test "zoom_in/1 generates correct JS command" do
       command = MaplibreX.Components.Map.zoom_in("test-map")
 
-      assert command.js
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:zoom_in", target: "#test-map"}]] = command.ops
     end
 
     test "zoom_out/1 generates correct JS command" do
       command = MaplibreX.Components.Map.zoom_out("test-map")
 
-      assert command.js
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:zoom_out", target: "#test-map"}]] = command.ops
     end
 
     test "reset_north/1 generates correct JS command" do
       command = MaplibreX.Components.Map.reset_north("test-map")
 
-      assert command.js
+      assert %Phoenix.LiveView.JS{} = command
+      assert [["push", %{event: "map:reset_north", target: "#test-map"}]] = command.ops
     end
   end
 end

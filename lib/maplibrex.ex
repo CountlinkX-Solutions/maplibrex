@@ -125,4 +125,9 @@ defmodule MaplibreX do
   def default_zoom do
     Application.get_env(:maplibrex, :default_zoom, 10)
   end
+
+  @doc """
+  Returns the version of MaplibreX.
+  """
+  def version, do: "0.1.0"
 end

@@ -42,9 +42,9 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("id":"test-marker")
-      assert html =~ ~s("mapId":"test-map")
-      assert html =~ ~s("lngLat":[-74.5,40])
+      assert html =~ ~s(&quot;id&quot;:&quot;test-marker&quot;)
+      assert html =~ ~s(&quot;mapId&quot;:&quot;test-map&quot;)
+      assert html =~ ~s(&quot;lngLat&quot;:[-74.5,40])
     end
 
     test "renders marker with default color" do
@@ -63,7 +63,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("color":"#3FB1CE")
+      assert html =~ ~s(&quot;color&quot;:&quot;#3FB1CE&quot;)
     end
 
     test "renders marker with custom color" do
@@ -84,7 +84,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("color":"red")
+      assert html =~ ~s(&quot;color&quot;:&quot;red&quot;)
     end
 
     test "renders marker with scale" do
@@ -105,7 +105,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("scale":1.5)
+      assert html =~ ~s(&quot;scale&quot;:1.5)
     end
 
     test "renders marker with rotation" do
@@ -126,7 +126,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("rotation":45)
+      assert html =~ ~s(&quot;rotation&quot;:45)
     end
 
     test "renders draggable marker" do
@@ -147,7 +147,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("draggable":true)
+      assert html =~ ~s(&quot;draggable&quot;:true)
     end
 
     test "renders marker with anchor" do
@@ -168,7 +168,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("anchor":"bottom")
+      assert html =~ ~s(&quot;anchor&quot;:&quot;bottom&quot;)
     end
 
     test "renders marker with offset" do
@@ -189,7 +189,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("offset":[10,20])
+      assert html =~ ~s(&quot;offset&quot;:[10,20])
     end
 
     test "renders marker with popup text" do
@@ -210,8 +210,8 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("popup":{)
-      assert html =~ ~s("text":"Hello World")
+      assert html =~ ~s(&quot;popup&quot;:{)
+      assert html =~ ~s(&quot;text&quot;:&quot;Hello World&quot;)
     end
 
     test "renders marker with popup html" do
@@ -232,8 +232,8 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("popup":{)
-      assert html =~ ~s("html":"<h1>Title</h1>")
+      assert html =~ ~s(&quot;popup&quot;:{)
+      assert html =~ ~s(&quot;html&quot;:&quot;&lt;h1&gt;Title&lt;/h1&gt;&quot;)
     end
 
     test "renders marker with pitch alignment" do
@@ -254,7 +254,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("pitchAlignment":"viewport")
+      assert html =~ ~s(&quot;pitchAlignment&quot;:&quot;viewport&quot;)
     end
 
     test "renders marker with rotation alignment" do
@@ -275,7 +275,7 @@ defmodule MaplibreX.Components.MarkerTest do
         />
         """)
 
-      assert html =~ ~s("rotationAlignment":"map")
+      assert html =~ ~s(&quot;rotationAlignment&quot;:&quot;map&quot;)
     end
 
     test "marker is hidden by default with display:none" do
