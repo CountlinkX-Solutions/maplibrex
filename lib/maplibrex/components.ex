@@ -26,6 +26,6 @@ defmodule MaplibreX.Components do
   defdelegate marker(assigns), to: MaplibreX.Components.Marker
   defdelegate popup(assigns), to: MaplibreX.Components.Popup
   defdelegate geojson_layer(assigns), to: MaplibreX.Components.GeoJSONLayer
-
-  # Future components:
+  defdelegate navigation_control(assigns), to: MaplibreX.Components.NavigationControl
+  defdelegate scale_control(assigns), to: MaplibreX.Components.ScaleControl
 end

@@ -286,10 +286,28 @@ Render GeoJSON data with full styling control.
 - `layer:feature_mouseleave` - Mouse leaves feature
 - `layer:source_loaded` - Source data loaded
 
-### Coming Soon
+### Navigation Control Component
 
-- 🎛️ `<.navigation_control />` - Add navigation controls
-- 📏 `<.scale_control />` - Add scale control
+Add standard navigation controls (zoom and compass) to your map.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `position` - Control position (`top-left`, `top-right`, `bottom-left`, `bottom-right`)
+- `show_compass` - Show compass button (default: `true`)
+- `show_zoom` - Show zoom buttons (default: `true`)
+- `visualize_pitch` - Show pitch visualization (default: `false`)
+
+### Scale Control Component
+
+Display a scale bar showing map distance ratios.
+
+**Attributes:**
+- `id` (required) - Unique identifier
+- `map_id` (required) - ID of the map
+- `position` - Control position (default: `bottom-left`)
+- `max_width` - Maximum width in pixels (default: `100`)
+- `unit` - Unit of measurement: `imperial`, `metric`, `nautical` (default: `metric`)
 
 ## JavaScript Commands
 

@@ -8,6 +8,5 @@ export { MapHook } from './map-hook';
 export { MarkerHook } from './marker-hook';
 export { PopupHook } from './popup-hook';
 export { GeoJSONLayerHook } from './geojson-layer-hook';
-
-// Placeholder para hooks futuros que implementaremos
-// export { ControlHook } from './control-hook';
+export { NavigationControlHook } from './navigation-control-hook';
+export { ScaleControlHook } from './scale-control-hook';
