@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Map JS Commands**: Fixed all map JS commands (`fly_to`, `jump_to`, `fit_bounds`, `set_style`, `zoom_in`, `zoom_out`, `reset_north`) that were not working. Changed from `JS.push()` to `JS.dispatch()` for direct client-side communication without server round-trip.
+- Added event listeners in MapHook to handle commands dispatched from Elixir components
+- Commands now work instantly with reduced latency since they don't require server communication
+
+### Changed
+- Map component commands now use `JS.dispatch()` instead of `JS.push()` for better performance
+- All map commands now dispatch custom DOM events (e.g., `maplibrex:fly_to`, `maplibrex:zoom_in`)
+- Hook TypeScript implementation now listens for command events and executes them directly on the map instance
+
+### Added
+- Comprehensive documentation of fixes in `FIXES_APPLIED.md`
+- Event listeners for all map commands in the MapHook TypeScript implementation
+- Support for all MapLibre flyTo options (bearing, pitch) in commands
+
+## [0.1.0] - 2025-11-30
+
 ### Added
 - Initial release of MaplibreX
 - Core Map component with full MapLibre GL JS integration
@@ -18,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MapLibre GL JS v5.0.0-pre.2 integration
 - CSS styling with dark mode support
 
-### Features in v0.1.0
+### Features
 - `<.map />` component with all standard MapLibre options
 - Event handlers: map:moved, map:clicked, map:loaded, map:zoom_changed, map:error
 - JS commands: fly_to, jump_to, fit_bounds, set_style, zoom_in, zoom_out, reset_north
@@ -26,18 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Singleton MapManager for efficient instance management
 - Proper cleanup and reconnection handling
 - Built-in CSS with customization support
-
-### Coming Soon
-- Marker component
+- Marker component with dragging support
 - Popup component
 - GeoJSON layer support
 - Navigation controls
 - Scale controls
 - Fullscreen controls
-- Geolocate controls
-- Cluster support
-- 3D buildings
-- Terrain support
 
 ## [0.1.0] - 2025-11-30
 

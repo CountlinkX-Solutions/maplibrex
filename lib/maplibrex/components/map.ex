@@ -178,7 +178,7 @@ defmodule MaplibreX.Components.Map do
       |> maybe_put(:bearing, bearing)
       |> maybe_put(:pitch, pitch)
 
-    JS.push("map:fly_to", target: "##{map_id}", value: payload)
+    JS.dispatch("maplibrex:fly_to", to: "##{map_id}", detail: payload)
   end
 
   @doc """
@@ -200,7 +200,7 @@ defmodule MaplibreX.Components.Map do
       |> maybe_put(:bearing, bearing)
       |> maybe_put(:pitch, pitch)
 
-    JS.push("map:jump_to", target: "##{map_id}", value: payload)
+    JS.dispatch("maplibrex:jump_to", to: "##{map_id}", detail: payload)
   end
 
   @doc """
@@ -227,7 +227,7 @@ defmodule MaplibreX.Components.Map do
       %{bounds: bounds, padding: padding, duration: duration}
       |> maybe_put(:maxZoom, max_zoom)
 
-    JS.push("map:fit_bounds", target: "##{map_id}", value: payload)
+    JS.dispatch("maplibrex:fit_bounds", to: "##{map_id}", detail: payload)
   end
 
   @doc """
@@ -241,7 +241,7 @@ defmodule MaplibreX.Components.Map do
   """
   @spec set_style(String.t(), String.t() | map()) :: Phoenix.LiveView.JS.t()
   def set_style(map_id, style) do
-    JS.push("map:set_style", target: "##{map_id}", value: %{style: style})
+    JS.dispatch("maplibrex:set_style", to: "##{map_id}", detail: %{style: style})
   end
 
   @doc """
@@ -249,7 +249,7 @@ defmodule MaplibreX.Components.Map do
   """
   @spec zoom_in(String.t()) :: Phoenix.LiveView.JS.t()
   def zoom_in(map_id) do
-    JS.push("map:zoom_in", target: "##{map_id}")
+    JS.dispatch("maplibrex:zoom_in", to: "##{map_id}")
   end
 
   @doc """
@@ -257,7 +257,7 @@ defmodule MaplibreX.Components.Map do
   """
   @spec zoom_out(String.t()) :: Phoenix.LiveView.JS.t()
   def zoom_out(map_id) do
-    JS.push("map:zoom_out", target: "##{map_id}")
+    JS.dispatch("maplibrex:zoom_out", to: "##{map_id}")
   end
 
   @doc """
@@ -265,7 +265,7 @@ defmodule MaplibreX.Components.Map do
   """
   @spec reset_north(String.t()) :: Phoenix.LiveView.JS.t()
   def reset_north(map_id) do
-    JS.push("map:reset_north", target: "##{map_id}")
+    JS.dispatch("maplibrex:reset_north", to: "##{map_id}")
   end
 
   # Private helper to conditionally add keys to a map

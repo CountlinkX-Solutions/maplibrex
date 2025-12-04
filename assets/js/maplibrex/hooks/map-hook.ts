@@ -62,6 +62,56 @@ export const MapHook: LiveViewHook = {
         config
       };
 
+      // Agregar event listeners para comandos JS
+      el.addEventListener('maplibrex:fly_to', ((e: CustomEvent) => {
+        const { center, zoom, duration, bearing, pitch } = e.detail;
+        map.flyTo({
+          center: center as [number, number],
+          zoom: zoom,
+          duration: duration || 1000,
+          ...(bearing !== undefined && { bearing }),
+          ...(pitch !== undefined && { pitch }),
+          essential: true
+        });
+      }) as EventListener);
+
+      el.addEventListener('maplibrex:jump_to', ((e: CustomEvent) => {
+        const { center, zoom, bearing, pitch } = e.detail;
+        map.jumpTo({
+          center: center as [number, number],
+          zoom: zoom,
+          ...(bearing !== undefined && { bearing }),
+          ...(pitch !== undefined && { pitch })
+        });
+      }) as EventListener);
+
+      el.addEventListener('maplibrex:fit_bounds', ((e: CustomEvent) => {
+        const { bounds, padding, duration, maxZoom } = e.detail;
+        map.fitBounds(bounds as [[number, number], [number, number]], {
+          padding: padding || 50,
+          duration: duration || 1000,
+          ...(maxZoom !== undefined && { maxZoom }),
+          essential: true
+        });
+      }) as EventListener);
+
+      el.addEventListener('maplibrex:set_style', ((e: CustomEvent) => {
+        const { style } = e.detail;
+        map.setStyle(style);
+      }) as EventListener);
+
+      el.addEventListener('maplibrex:zoom_in', () => {
+        map.zoomIn({ duration: 300 });
+      });
+
+      el.addEventListener('maplibrex:zoom_out', () => {
+        map.zoomOut({ duration: 300 });
+      });
+
+      el.addEventListener('maplibrex:reset_north', () => {
+        map.resetNorth({ duration: 300 });
+      });
+
       // Notificar que el mapa está listo
       map.once('load', () => {
         console.log(`[MaplibreX] Map "${mapId}" loaded and ready`);
