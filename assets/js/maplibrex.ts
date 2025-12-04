@@ -23,7 +23,15 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Export hooks
-import { MapHook, MarkerHook } from './maplibrex/hooks';
+import { 
+  MapHook, 
+  MarkerHook,
+  PopupHook,
+  GeoJSONLayerHook,
+  NavigationControlHook,
+  ScaleControlHook,
+  FullscreenControlHook
+} from './maplibrex/hooks';
 
 /**
  * Hooks object to be passed to LiveSocket
@@ -31,11 +39,24 @@ import { MapHook, MarkerHook } from './maplibrex/hooks';
  */
 export const MapHooks = {
   MapHook,
-  MarkerHook
+  MarkerHook,
+  PopupHook,
+  GeoJSONLayerHook,
+  NavigationControlHook,
+  ScaleControlHook,
+  FullscreenControlHook
 };
 
 // Export individual hooks for advanced usage
-export { MapHook, MarkerHook } from './maplibrex/hooks';
+export { 
+  MapHook, 
+  MarkerHook,
+  PopupHook,
+  GeoJSONLayerHook,
+  NavigationControlHook,
+  ScaleControlHook,
+  FullscreenControlHook
+} from './maplibrex/hooks';
 
 // Export core utilities
 export { MapManager, useMap, requireMap } from './maplibrex/core/map-manager';
