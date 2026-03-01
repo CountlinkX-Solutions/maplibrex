@@ -41,4 +41,5 @@ defmodule MaplibreX.Components do
   defdelegate hillshade_layer(assigns), to: MaplibreX.Components.HillshadeLayer
   defdelegate vector_tile_source(assigns), to: MaplibreX.Components.VectorTileSource
   defdelegate raster_tile_source(assigns), to: MaplibreX.Components.RasterTileSource
+  defdelegate image_source(assigns), to: MaplibreX.Components.ImageSource
 end
