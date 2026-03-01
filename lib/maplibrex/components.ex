@@ -38,4 +38,5 @@ defmodule MaplibreX.Components do
   defdelegate heatmap_layer(assigns), to: MaplibreX.Components.HeatmapLayer
   defdelegate fill_extrusion_layer(assigns), to: MaplibreX.Components.FillExtrusionLayer
   defdelegate background_layer(assigns), to: MaplibreX.Components.BackgroundLayer
+  defdelegate hillshade_layer(assigns), to: MaplibreX.Components.HillshadeLayer
 end
