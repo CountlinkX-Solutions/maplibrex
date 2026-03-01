@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.3.0-dev)
 
-### ✅ Componentes Implementados (15)
+### ✅ Componentes Implementados (17)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -22,16 +22,19 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 12. **FillLayer** ✨ - Capa de polígonos para regiones y zonas (Fase 2.3)
 13. **SymbolLayer** ✨ - Capa de iconos y texto para labels (Fase 2.4)
 14. **HeatmapLayer** ✨ - Capa de mapas de calor para densidad (Fase 2.5)
-15. **FillExtrusionLayer** ✨ NEW! - Capa de edificios 3D y polígonos extruidos (Fase 2.6)
+15. **FillExtrusionLayer** ✨ - Capa de edificios 3D y polígonos extruidos (Fase 2.6)
+16. **BackgroundLayer** ✨ - Capa de fondo del mapa (Fase 2.7)
+17. **HillshadeLayer** ✨ NEW! - Capa de sombreado de terreno (Fase 2.8)
 
 **Métricas:**
-- ✅ 186 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 + 10 + 12 nuevos)
+- ✅ 207 tests pasando (87 + 120 nuevos: 12+12+13+13+13+14+10+12+9+12)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
-- ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2)
-- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 6/8 completados - 75%) 🎉
+- ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2) 🎉
+- ✅ **FASE 2 COMPLETADA** (Layer Components - 8/8) 🎉🎉🎉
+- 🟡 **FASE 3 INICIANDO** (Source Components - 0/5)
 
 ---
 
