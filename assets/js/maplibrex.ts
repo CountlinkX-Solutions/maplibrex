@@ -22,7 +22,7 @@
 // Import MapLibre CSS
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Export hooks
+// Export all hooks
 import { 
   MapHook, 
   MarkerHook,
@@ -30,7 +30,26 @@ import {
   GeoJSONLayerHook,
   NavigationControlHook,
   ScaleControlHook,
-  FullscreenControlHook
+  FullscreenControlHook,
+  GeolocateControlHook,
+  AttributionControlHook,
+  CircleLayerHook,
+  LineLayerHook,
+  FillLayerHook,
+  SymbolLayerHook,
+  HeatmapLayerHook,
+  FillExtrusionLayerHook,
+  BackgroundLayerHook,
+  HillshadeLayerHook,
+  VectorTileSourceHook,
+  RasterTileSourceHook,
+  ImageSourceHook,
+  RasterDEMSourceHook,
+  VideoSourceHook,
+  TerrainHook,
+  TerrainControlHook,
+  SkyHook,
+  DeckGlLayerHook
 } from './maplibrex/hooks';
 
 /**
@@ -44,7 +63,26 @@ export const MapHooks = {
   GeoJSONLayerHook,
   NavigationControlHook,
   ScaleControlHook,
-  FullscreenControlHook
+  FullscreenControlHook,
+  GeolocateControlHook,
+  AttributionControlHook,
+  CircleLayerHook,
+  LineLayerHook,
+  FillLayerHook,
+  SymbolLayerHook,
+  HeatmapLayerHook,
+  FillExtrusionLayerHook,
+  BackgroundLayerHook,
+  HillshadeLayerHook,
+  VectorTileSourceHook,
+  RasterTileSourceHook,
+  ImageSourceHook,
+  RasterDEMSourceHook,
+  VideoSourceHook,
+  TerrainHook,
+  TerrainControlHook,
+  SkyHook,
+  DeckGlLayerHook
 };
 
 // Export individual hooks for advanced usage
@@ -55,7 +93,26 @@ export {
   GeoJSONLayerHook,
   NavigationControlHook,
   ScaleControlHook,
-  FullscreenControlHook
+  FullscreenControlHook,
+  GeolocateControlHook,
+  AttributionControlHook,
+  CircleLayerHook,
+  LineLayerHook,
+  FillLayerHook,
+  SymbolLayerHook,
+  HeatmapLayerHook,
+  FillExtrusionLayerHook,
+  BackgroundLayerHook,
+  HillshadeLayerHook,
+  VectorTileSourceHook,
+  RasterTileSourceHook,
+  ImageSourceHook,
+  RasterDEMSourceHook,
+  VideoSourceHook,
+  TerrainHook,
+  TerrainControlHook,
+  SkyHook,
+  DeckGlLayerHook
 } from './maplibrex/hooks';
 
 // Export core utilities

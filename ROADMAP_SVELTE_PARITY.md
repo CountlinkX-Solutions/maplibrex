@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.4.0-dev)
 
-### ✅ Componentes Implementados (25) 🎉🎉🎉🎉
+### ✅ Componentes Implementados (26) 🎉🎉🎉🎉🎉
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -30,16 +30,18 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 20. **ImageSource** ✨ - Fuente de imagen georreferenciada (Fase 3.3)
 21. **RasterDEMSource** ✨ - Fuente de modelo de elevación (Fase 3.4)
 22. **VideoSource** ✨ - Fuente de video georreferenciado (Fase 3.5)
-23. **Terrain** ✨ NEW! - Terreno 3D con exageración configurable (Fase 4.1)
-24. **TerrainControl** ✨ NEW! - Control UI para toggle de terreno 3D (Fase 4.2)
-25. **Sky** ✨ NEW! - Capa de cielo atmosférico para vistas 3D (Fase 4.3)
+23. **Terrain** ✨ - Terreno 3D con exageración configurable (Fase 4.1)
+24. **TerrainControl** ✨ - Control UI para toggle de terreno 3D (Fase 4.2)
+25. **Sky** ✨ - Capa de cielo atmosférico para vistas 3D (Fase 4.3)
+26. **DeckGlLayer** ✨ NEW! - Integración con deck.gl para visualizaciones avanzadas (Fase 5.1)
 
 **Métricas:**
-- ✅ **291 tests pasando** (87 originales + 204 nuevos) - 100% passing rate
+- ✅ **311 tests pasando** (87 originales + 224 nuevos) - 100% passing rate
   - Fase 1: 12+12 = 24 tests
   - Fase 2: 13+13+13+14+10+12+9+12 = 96 tests
   - Fase 3: 12+13+8+13+8 = 54 tests
   - Fase 4: 10+10+10 = 30 tests
+  - Fase 5: 20 tests
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
@@ -941,11 +943,18 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-### **FASE 5: Advanced Integrations (v0.6.0)** ⭐
+### **FASE 5: Advanced Integrations (v0.6.0)** ✅ EN PROGRESO
 **Duración estimada:** 3-4 semanas  
-**Prioridad:** ALTA (según feedback del usuario)
+**Duración real:** 1 día (DeckGlLayer)  
+**Prioridad:** ALTA (según feedback del usuario)  
+**Estado:** 🟡 EN PROGRESO (1/2 componentes - 50%) 🎉  
+**Fecha inicio:** 2024-12-04
 
-#### 5.1 DeckGlLayer 🎯
+#### 5.1 DeckGlLayer ✅ COMPLETADO 🎯
+
+**Status:** ✅ Implementado  
+**Fecha:** 2024-12-04  
+**Tests:** 20/20 pasando  
 
 **Descripción:** Integración con deck.gl para visualizaciones 3D avanzadas.
 

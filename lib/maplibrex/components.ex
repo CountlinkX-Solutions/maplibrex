@@ -47,4 +47,5 @@ defmodule MaplibreX.Components do
   defdelegate terrain(assigns), to: MaplibreX.Components.Terrain
   defdelegate terrain_control(assigns), to: MaplibreX.Components.TerrainControl
   defdelegate sky(assigns), to: MaplibreX.Components.Sky
+  defdelegate deckgl_layer(assigns), to: MaplibreX.Components.DeckGlLayer
 end
