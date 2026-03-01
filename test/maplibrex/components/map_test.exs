@@ -133,18 +133,18 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.fly_to("test-map", [-73.98, 40.75], 12)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:fly_to", target: "#test-map", value: value}]] = command.ops
-      assert value.center == [-73.98, 40.75]
-      assert value.zoom == 12
+      assert [["dispatch", %{event: "maplibrex:fly_to", to: "#test-map", detail: detail}]] = command.ops
+      assert detail.center == [-73.98, 40.75]
+      assert detail.zoom == 12
     end
 
     test "jump_to/4 generates correct JS command" do
       command = MaplibreX.Components.Map.jump_to("test-map", [-73.98, 40.75], 12)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:jump_to", target: "#test-map", value: value}]] = command.ops
-      assert value.center == [-73.98, 40.75]
-      assert value.zoom == 12
+      assert [["dispatch", %{event: "maplibrex:jump_to", to: "#test-map", detail: detail}]] = command.ops
+      assert detail.center == [-73.98, 40.75]
+      assert detail.zoom == 12
     end
 
     test "fit_bounds/3 generates correct JS command" do
@@ -152,38 +152,38 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.fit_bounds("test-map", bounds)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:fit_bounds", target: "#test-map", value: value}]] = command.ops
-      assert value.bounds == bounds
+      assert [["dispatch", %{event: "maplibrex:fit_bounds", to: "#test-map", detail: detail}]] = command.ops
+      assert detail.bounds == bounds
     end
 
     test "set_style/2 generates correct JS command" do
-      style = "mapbox://styles/mapbox/dark-v11"
+      style = ~s(mapbox://styles/mapbox/dark-v11)
       command = MaplibreX.Components.Map.set_style("test-map", style)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:set_style", target: "#test-map", value: value}]] = command.ops
-      assert value.style == style
+      assert [["dispatch", %{event: "maplibrex:set_style", to: "#test-map", detail: detail}]] = command.ops
+      assert detail.style == style
     end
 
     test "zoom_in/1 generates correct JS command" do
       command = MaplibreX.Components.Map.zoom_in("test-map")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:zoom_in", target: "#test-map"}]] = command.ops
+      assert [["dispatch", %{event: "maplibrex:zoom_in", to: "#test-map"}]] = command.ops
     end
 
     test "zoom_out/1 generates correct JS command" do
       command = MaplibreX.Components.Map.zoom_out("test-map")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:zoom_out", target: "#test-map"}]] = command.ops
+      assert [["dispatch", %{event: "maplibrex:zoom_out", to: "#test-map"}]] = command.ops
     end
 
     test "reset_north/1 generates correct JS command" do
       command = MaplibreX.Components.Map.reset_north("test-map")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "map:reset_north", target: "#test-map"}]] = command.ops
+      assert [["dispatch", %{event: "maplibrex:reset_north", to: "#test-map"}]] = command.ops
     end
   end
 end
