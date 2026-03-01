@@ -32,4 +32,5 @@ defmodule MaplibreX.Components do
   defdelegate geolocate_control(assigns), to: MaplibreX.Components.GeolocateControl
   defdelegate attribution_control(assigns), to: MaplibreX.Components.AttributionControl
   defdelegate circle_layer(assigns), to: MaplibreX.Components.CircleLayer
+  defdelegate line_layer(assigns), to: MaplibreX.Components.LineLayer
 end

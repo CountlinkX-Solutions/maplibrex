@@ -14,3 +14,4 @@ export { FullscreenControlHook } from './fullscreen-control-hook';
 export { GeolocateControlHook } from './geolocate-control-hook';
 export { AttributionControlHook } from './attribution-control-hook';
 export { CircleLayerHook } from './circle-layer-hook';
+export { LineLayerHook } from './line-layer-hook';
