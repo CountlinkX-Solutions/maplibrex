@@ -31,4 +31,5 @@ defmodule MaplibreX.Components do
   defdelegate fullscreen_control(assigns), to: MaplibreX.Components.FullscreenControl
   defdelegate geolocate_control(assigns), to: MaplibreX.Components.GeolocateControl
   defdelegate attribution_control(assigns), to: MaplibreX.Components.AttributionControl
+  defdelegate circle_layer(assigns), to: MaplibreX.Components.CircleLayer
 end
