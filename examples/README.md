@@ -1,98 +1,37 @@
-# MaplibreX Demo Examples
+# MaplibreX Examples
 
-Este directorio contiene ejemplos de uso de MaplibreX en aplicaciones Phoenix LiveView.
+## ⚠️ DEPRECATED
 
-## Demo LiveView
+**This examples directory is deprecated and no longer maintained.**
 
-El archivo `demo_live.ex` es un ejemplo completo que demuestra todas las características principales de MaplibreX:
+For up-to-date, working examples of MaplibreX, please visit:
 
-### Características Demostradas
+**👉 [maplibrex_demo](https://github.com/roger120981/maplibrex_demo) 👈**
 
-1. **Mapa Básico** - Renderizado de un mapa interactivo con MapLibre
-2. **Control Programático** - Botones para controlar el mapa desde LiveView
-3. **Marcadores Interactivos** - Múltiples marcadores con diferentes estilos
-4. **Drag & Drop** - Marcador azul draggable que actualiza su estado
-5. **Popups** - Información contextual en marcadores
-6. **Eventos Bidireccionales** - LiveView ↔ MapLibre communication
-7. **Estado Reactivo** - Actualización automática del UI
+The demo repository includes:
 
-### Cómo Usar
+- ✅ **Complete working examples** for all MaplibreX components
+- ✅ **Best practices** for using MaplibreX in Phoenix LiveView
+- ✅ **Live demos** you can run locally
+- ✅ **Source code** you can reference and copy
+- ✅ **Up-to-date** with the latest MaplibreX version
 
-Este archivo es solo de referencia y NO se compila con la librería. Para probarlo en tu aplicación Phoenix:
+## What was here?
 
-1. Copia el contenido a tu proyecto Phoenix
-2. Ajusta el nombre del módulo según tu aplicación
-3. Agrega una ruta en tu router:
+This directory previously contained basic examples for development and testing purposes. However, these examples are now outdated and may not work correctly with the current version of MaplibreX.
 
-```elixir
-# router.ex
-live "/map-demo", MaplibreXDemo.DemoLive
-```
+## Migration
 
-4. Asegúrate de tener MaplibreX configurado:
+If you were using code from this directory, please:
 
-```javascript
-// app.js
-import { MapHooks } from "../deps/maplibrex/priv/static/assets/js/maplibrex"
+1. Visit https://github.com/roger120981/maplibrex_demo
+2. Clone the demo repository
+3. Review the updated examples
+4. Update your code to match the current best practices
 
-let liveSocket = new LiveSocket("/live", Socket, {
-  hooks: MapHooks,
-  params: {_csrf_token: csrfToken}
-})
-```
+## Need Help?
 
-### Código de Ejemplo
-
-```elixir
-# Mapa básico
-<.map
-  id="demo-map"
-  center={[-74.5, 40]}
-  zoom={9}
-  style="https://demotiles.maplibre.org/style.json"
-  class="w-full h-96"
-/>
-
-# Marcador con popup
-<.marker
-  id="marker-1"
-  map_id="demo-map"
-  lng_lat={[-74.5, 40]}
-  color="red"
-  popup_text="New York City"
-/>
-
-# Marcador draggable
-<.marker
-  id="marker-2"
-  map_id="demo-map"
-  lng_lat={@marker_position}
-  draggable
-/>
-
-# Control programático desde LiveView
-<button phx-click={MaplibreX.Components.Map.fly_to("demo-map", [-73.98, 40.75], 12)}>
-  Fly to NYC
-</button>
-
-# Manejar eventos
-def handle_event("marker:drag_end", %{"markerId" => id, "lngLat" => lngLat}, socket) do
-  {:noreply, assign(socket, marker_position: lngLat)}
-end
-```
-
-## Próximos Ejemplos
-
-Planeamos agregar más ejemplos demostrando:
-- Popups independientes
-- Controles de navegación
-- Capas GeoJSON
-- Clustering de marcadores
-- Mapas con múltiples estilos
-- Integración con datos de base de datos
-
-## Recursos
-
-- [Documentación MaplibreX](../README.md)
-- [MapLibre GL JS Docs](https://maplibre.org/maplibre-gl-js-docs/)
-- [Phoenix LiveView Docs](https://hexdocs.pm/phoenix_live_view/)
+- 📚 [Documentation](https://hexdocs.pm/maplibrex)
+- 🐛 [Issue Tracker](https://github.com/roger120981/maplibrex/issues)
+- 💬 [Discussions](https://github.com/roger120981/maplibrex/discussions)
+- 📦 [Demo Repository](https://github.com/roger120981/maplibrex_demo)

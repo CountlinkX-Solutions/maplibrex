@@ -18,6 +18,18 @@ Inspired by [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre), Mapli
 - 📦 **Self-Contained** - All assets bundled, no CDN required
 - 🧪 **Well-Tested** - Comprehensive unit and E2E tests
 
+## 🚀 Demo Application
+
+Check out the **live demo** and complete working examples:
+
+- **📦 Demo Repository**: https://github.com/roger120981/maplibrex_demo
+- **💡 Live Examples**: See all MaplibreX components in action
+- **📖 Source Code**: Complete working examples for reference
+- **🎯 Best Practices**: Learn how to use MaplibreX effectively
+
+> **Note**: The `examples/` directory in this repository is deprecated.  
+> Please refer to the [maplibrex_demo](https://github.com/roger120981/maplibrex_demo) repository for up-to-date, working examples.
+
 ## Installation
 
 Add `maplibrex` to your list of dependencies in `mix.exs`:
