@@ -26,3 +26,4 @@ export { RasterTileSourceHook } from './raster-tile-source-hook';
 export { ImageSourceHook } from './image-source-hook';
 export { RasterDEMSourceHook } from './raster-dem-source-hook';
 export { VideoSourceHook } from './video-source-hook';
+export { TerrainHook } from './terrain-hook';
