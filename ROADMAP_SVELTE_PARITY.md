@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.2.0-dev)
 
-### ✅ Componentes Implementados (8)
+### ✅ Componentes Implementados (9)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -15,23 +15,28 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 5. **NavigationControl** - Controles de navegación (zoom, brújula)
 6. **ScaleControl** - Barra de escala
 7. **FullscreenControl** - Toggle de pantalla completa
-8. **GeolocateControl** ✨ NEW! - Control de geolocalización con tracking (Fase 1)
+8. **GeolocateControl** ✨ - Control de geolocalización con tracking (Fase 1.1)
+9. **AttributionControl** ✨ NEW! - Control de atribución personalizable (Fase 1.2)
 
 **Métricas:**
-- ✅ 99 tests pasando (87 + 12 nuevos)
+- ✅ 111 tests pasando (87 + 12 + 12 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
+- ✅ **FASE 1 COMPLETADA** (Essential Controls)
 
 ---
 
 ## 🚀 Plan de Implementación
 
-### **FASE 1: Controles Esenciales (v0.2.0)**
+### **FASE 1: Controles Esenciales (v0.2.0)** ✅ COMPLETADA
 **Duración estimada:** 1-2 semanas  
+**Duración real:** 1 día  
 **Prioridad:** ALTA  
-**Estado:** 🟡 EN PROGRESO (1/2 completados)
+**Estado:** ✅ COMPLETADA (2/2 componentes)  
+**Fecha inicio:** 2024-12-04  
+**Fecha fin:** 2024-12-04
 
 #### 1.1 GeolocateControl ✅ COMPLETADO
 
@@ -97,7 +102,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 1.2 AttributionControl
+#### 1.2 AttributionControl ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `5439eaa`  
+**Fecha:** 2024-12-04  
+**Tests:** 12/12 pasando  
 
 **Descripción:** Control de atribución personalizable.
 
