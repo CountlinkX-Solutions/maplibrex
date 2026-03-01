@@ -36,7 +36,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 26. **DeckGlLayer** ✨ NEW! - Integración con deck.gl para visualizaciones avanzadas (Fase 5.1)
 
 **Métricas:**
-- ✅ **311 tests pasando** (87 originales + 224 nuevos) - 100% passing rate
+- ✅ **322 tests pasando** (87 originales + 235 nuevos) - 100% passing rate
   - Fase 1: 12+12 = 24 tests
   - Fase 2: 13+13+13+14+10+12+9+12 = 96 tests
   - Fase 3: 12+13+8+13+8 = 54 tests
@@ -47,10 +47,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2) 🎉
-- ✅ **FASE 2 COMPLETADA** (Layer Components - 8/8) 🎉
+- ✅ **FASE 2 COMPLETADA** (Layer Components - 8/8) 🎉🎉
 - ✅ **FASE 3 COMPLETADA** (Source Components - 5/5) 🎉
-- ✅ **FASE 4 COMPLETADA** (3D & Terrain - 3/3) 🎉🎉🎉🎉
-- 🎯 **4 FASES COMPLETAS** - 18 componentes nuevos en un día!
+- ✅ **FASE 4 COMPLETADA** (3D & Terrain - 3/3) 🎉
+- 🟡 **FASE 5 EN PROGRESO** (Advanced Integrations - 1/2 - 50%)
+- 🎯 **4 FASES COMPLETAS + 1 EN PROGRESO** - 19 componentes nuevos!
 
 ---
 
@@ -183,11 +184,13 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-### **FASE 2: Layer Components Especializados (v0.3.0)** 🟡 EN PROGRESO
+### **FASE 2: Layer Components Especializados (v0.3.0)** ✅ COMPLETADA
 **Duración estimada:** 3-4 semanas  
+**Duración real:** 1 día  
 **Prioridad:** ALTA  
-**Estado:** 🟡 EN PROGRESO (6/8 componentes - 75%) 🎉  
-**Fecha inicio:** 2024-12-04
+**Estado:** ✅ COMPLETADA (8/8 componentes - 100%) 🎉🎉  
+**Fecha inicio:** 2024-12-04  
+**Fecha fin:** 2024-12-04
 
 > **Nota:** Estos componentes complementan el `GeoJSONLayer` existente, proporcionando APIs especializadas para casos de uso comunes. El `GeoJSONLayer` genérico se mantiene para casos avanzados.
 
@@ -537,7 +540,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 2.7 BackgroundLayer
+#### 2.7 BackgroundLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado  
+**Fecha:** 2024-12-04  
+**Tests:** 9/9 pasando  
 
 **Descripción:** Capa de fondo del mapa.
 
@@ -553,12 +560,21 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 />
 ```
 
+**Archivos creados:**
+- `lib/maplibrex/components/background_layer.ex`
+- `assets/js/maplibrex/hooks/background-layer-hook.ts`
+- `test/maplibrex/components/background_layer_test.exs`
+
 **Complejidad:** Baja  
-**Tiempo estimado:** 1-2 días
+**Tiempo real:** 1 día
 
 ---
 
-#### 2.8 HillshadeLayer
+#### 2.8 HillshadeLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado  
+**Fecha:** 2024-12-04  
+**Tests:** 12/12 pasando  
 
 **Descripción:** Capa de sombreado de terreno.
 
@@ -576,8 +592,13 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 />
 ```
 
+**Archivos creados:**
+- `lib/maplibrex/components/hillshade_layer.ex`
+- `assets/js/maplibrex/hooks/hillshade-layer-hook.ts`
+- `test/maplibrex/components/hillshade_layer_test.exs`
+
 **Complejidad:** Media  
-**Tiempo estimado:** 2-3 días
+**Tiempo real:** 1 día
 
 ---
 
@@ -1548,6 +1569,9 @@ Para v1.0:
 
 Este roadmap está abierto a discusión y ajustes. Los PRs son bienvenidos para cualquier ítem del roadmap.
 
-**Última actualización:** 2024-12-04  
+**Última actualización:** 2026-03-01  
 **Branch:** feature/svelte-maplibre-parity  
-**Versión objetivo:** v1.0.0
+**Versión objetivo:** v1.0.0  
+**Commits recientes:**
+- `51d294f` - fix: update map_test.exs (322 tests, 0 failures)
+- `33c076a` - feat: add DeckGlLayer component
