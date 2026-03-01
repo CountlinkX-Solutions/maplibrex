@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.3.0-dev)
 
-### ✅ Componentes Implementados (14)
+### ✅ Componentes Implementados (15)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -21,16 +21,17 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 11. **LineLayer** ✨ - Capa de líneas para rutas y caminos (Fase 2.2)
 12. **FillLayer** ✨ - Capa de polígonos para regiones y zonas (Fase 2.3)
 13. **SymbolLayer** ✨ - Capa de iconos y texto para labels (Fase 2.4)
-14. **HeatmapLayer** ✨ NEW! - Capa de mapas de calor para densidad (Fase 2.5)
+14. **HeatmapLayer** ✨ - Capa de mapas de calor para densidad (Fase 2.5)
+15. **FillExtrusionLayer** ✨ NEW! - Capa de edificios 3D y polígonos extruidos (Fase 2.6)
 
 **Métricas:**
-- ✅ 174 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 + 10 nuevos)
+- ✅ 186 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 + 10 + 12 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2)
-- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 5/8 completados - 62.5%)
+- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 6/8 completados - 75%) 🎉
 
 ---
 
@@ -166,7 +167,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 ### **FASE 2: Layer Components Especializados (v0.3.0)** 🟡 EN PROGRESO
 **Duración estimada:** 3-4 semanas  
 **Prioridad:** ALTA  
-**Estado:** 🟡 EN PROGRESO (5/8 componentes - 62.5%)  
+**Estado:** 🟡 EN PROGRESO (6/8 componentes - 75%) 🎉  
 **Fecha inicio:** 2024-12-04
 
 > **Nota:** Estos componentes complementan el `GeoJSONLayer` existente, proporcionando APIs especializadas para casos de uso comunes. El `GeoJSONLayer` genérico se mantiene para casos avanzados.
@@ -471,7 +472,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 2.6 FillExtrusionLayer
+#### 2.6 FillExtrusionLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `869f684`  
+**Fecha:** 2024-12-04  
+**Tests:** 12/12 pasando  
 
 **Descripción:** Capa especializada para edificios y polígonos 3D extruidos.
 
