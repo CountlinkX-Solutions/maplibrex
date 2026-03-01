@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.4.0-dev)
 
-### ✅ Componentes Implementados (26) 🎉🎉🎉🎉🎉
+### ✅ Componentes Implementados (27) 🎉🎉🎉🎉🎉
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -33,15 +33,16 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 23. **Terrain** ✨ - Terreno 3D con exageración configurable (Fase 4.1)
 24. **TerrainControl** ✨ - Control UI para toggle de terreno 3D (Fase 4.2)
 25. **Sky** ✨ - Capa de cielo atmosférico para vistas 3D (Fase 4.3)
-26. **DeckGlLayer** ✨ NEW! - Integración con deck.gl para visualizaciones avanzadas (Fase 5.1)
+26. **DeckGlLayer** ✨ - Integración con deck.gl para visualizaciones avanzadas (Fase 5.1)
+27. **CustomLayer** ✨ NEW! - Custom WebGL layers para visualizaciones de partículas (Fase 5.2)
 
 **Métricas:**
-- ✅ **322 tests pasando** (87 originales + 235 nuevos) - 100% passing rate
+- ✅ **337 tests pasando** (87 originales + 250 nuevos) - 100% passing rate
   - Fase 1: 12+12 = 24 tests
   - Fase 2: 13+13+13+14+10+12+9+12 = 96 tests
   - Fase 3: 12+13+8+13+8 = 54 tests
   - Fase 4: 10+10+10 = 30 tests
-  - Fase 5: 20 tests
+  - Fase 5: 20+15 = 35 tests
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
@@ -50,8 +51,8 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 - ✅ **FASE 2 COMPLETADA** (Layer Components - 8/8) 🎉🎉
 - ✅ **FASE 3 COMPLETADA** (Source Components - 5/5) 🎉
 - ✅ **FASE 4 COMPLETADA** (3D & Terrain - 3/3) 🎉
-- 🟡 **FASE 5 EN PROGRESO** (Advanced Integrations - 1/2 - 50%)
-- 🎯 **4 FASES COMPLETAS + 1 EN PROGRESO** - 19 componentes nuevos!
+- ✅ **FASE 5 COMPLETADA** (Advanced Integrations - 2/2 - 100%) 🎉🎉🎉🎉🎉
+- 🎯 **5 FASES COMPLETAS** - 20 componentes nuevos!
 
 ---
 
@@ -964,12 +965,13 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-### **FASE 5: Advanced Integrations (v0.6.0)** ✅ EN PROGRESO
+### **FASE 5: Advanced Integrations (v0.6.0)** ✅ COMPLETADA
 **Duración estimada:** 3-4 semanas  
-**Duración real:** 1 día (DeckGlLayer)  
+**Duración real:** 1 día  
 **Prioridad:** ALTA (según feedback del usuario)  
-**Estado:** 🟡 EN PROGRESO (1/2 componentes - 50%) 🎉  
-**Fecha inicio:** 2024-12-04
+**Estado:** ✅ COMPLETADA (2/2 componentes - 100%) 🎉🎉🎉🎉🎉  
+**Fecha inicio:** 2024-12-04  
+**Fecha fin:** 2026-03-01
 
 #### 5.1 DeckGlLayer ✅ COMPLETADO 🎯
 
@@ -1198,22 +1200,113 @@ end
 
 ---
 
-#### 5.2 Custom WebGL Layers
+#### 5.2 CustomLayer ✅ COMPLETADO 🎯
 
-**Descripción:** Soporte para custom WebGL layers.
+**Status:** ✅ Implementado en commit `d3d5a33`  
+**Fecha:** 2026-03-01  
+**Tests:** 15/15 pasando  
 
-**API Propuesta:**
+**Descripción:** Custom WebGL layers para visualizaciones avanzadas con partículas (ocean currents, wind flow, etc.)
+
+**Casos de uso:**
+- Visualización de corrientes oceánicas
+- Flujos de viento
+- Sistemas de partículas personalizados
+- Efectos WebGL custom con GLSL shaders
+
+**API Implementada:**
 ```elixir
+# Con preset predefinido
 <.custom_layer
-  id="custom-webgl"
+  id="ocean-currents"
   map_id="my-map"
-  render_function="myCustomRender"
-  type="custom"
+  preset="ocean_currents"
+  uniforms={%{
+    u_color: [0.2, 0.6, 0.9],
+    u_opacity: 0.8,
+    u_point_size: 3.0
+  }}
+/>
+
+# Con preset wind_flow
+<.custom_layer
+  id="winds"
+  map_id="my-map"
+  preset="wind_flow"
+  uniforms={%{
+    u_color: [0.9, 0.9, 0.9],
+    u_opacity: 0.6,
+    u_point_size: 2.0
+  }}
+/>
+
+# Con shaders GLSL personalizados
+<.custom_layer
+  id="custom-viz"
+  map_id="my-map"
+  vertex_shader={@my_vertex_shader}
+  fragment_shader={@my_fragment_shader}
+  uniforms={%{...}}
+  before_id="water"
+  min_zoom={3}
+  max_zoom={15}
 />
 ```
 
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa
+- `preset` - Preset predefinido: "ocean_currents" o "wind_flow"
+- `vertex_shader` - Código GLSL del vertex shader custom
+- `fragment_shader` - Código GLSL del fragment shader custom
+- `uniforms` - Parámetros del shader (colores, opacidades, tamaños)
+- `before_id` - ID de la capa antes de la cual insertar
+- `min_zoom` - Zoom mínimo de visibilidad
+- `max_zoom` - Zoom máximo de visibilidad
+
+**Presets incluidos:**
+- **ocean_currents** - Visualización de corrientes oceánicas (azul, partículas medianas)
+- **wind_flow** - Visualización de flujos de viento (blanco/gris, partículas pequeñas)
+
+**Arquitectura implementada:**
+- **Types** (`custom-webgl.ts`) - CustomLayerConfig, WebGLLayerImplementation, ShaderProgram
+- **Manager** (`custom-webgl-manager.ts`) - Compilación de shaders, gestión de recursos WebGL
+- **Shaders** (`particle-system.ts`) - Shaders GLSL para sistemas de partículas
+- **Hook** (`custom-layer-hook.ts`) - Integración con Phoenix LiveView
+- **Component** (`custom_layer.ex`) - Componente Elixir con API declarativa
+
+**Características:**
+- Sistema de partículas con 1000 partículas renderizadas
+- Shaders GLSL compilados en WebGL
+- Gestión automática de recursos (buffers, programs, textures)
+- Uniforms dinámicos actualizables
+- Soporte para múltiples capas custom simultáneas
+- Limpieza automática de recursos en destroy
+
+**Eventos:**
+- No emite eventos (es una capa de renderizado puro)
+
+**Archivos creados:**
+- `lib/maplibrex/components/custom_layer.ex`
+- `assets/js/maplibrex/hooks/custom-layer-hook.ts`
+- `assets/js/maplibrex/types/custom-webgl.ts`
+- `assets/js/maplibrex/utils/custom-webgl-manager.ts`
+- `assets/js/maplibrex/shaders/particle-system.ts`
+- `test/maplibrex/components/custom_layer_test.exs`
+
+**Tests implementados (15):**
+- Renderizado básico con presets
+- Configuración de uniforms
+- Shaders custom
+- Parámetros opcionales (before_id, zoom constraints)
+- Manejo de valores nil
+- Múltiples capas simultáneas
+- Formatos de uniforms (atom/string keys)
+
 **Complejidad:** Alta  
-**Tiempo estimado:** 1 semana
+**Tiempo real:** 1 día
+
+**Referencia:** Inspirado en la arquitectura de custom layers de MapLibre GL JS y sistemas de partículas WebGL
 
 ---
 
@@ -1573,5 +1666,6 @@ Este roadmap está abierto a discusión y ajustes. Los PRs son bienvenidos para 
 **Branch:** feature/svelte-maplibre-parity  
 **Versión objetivo:** v1.0.0  
 **Commits recientes:**
+- `d3d5a33` - feat: Add CustomLayer component for advanced WebGL visualizations (337 tests, 0 failures)
 - `51d294f` - fix: update map_test.exs (322 tests, 0 failures)
 - `33c076a` - feat: add DeckGlLayer component
