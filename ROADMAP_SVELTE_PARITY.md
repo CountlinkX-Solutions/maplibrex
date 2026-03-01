@@ -4,9 +4,9 @@
 
 Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre), agregando componentes especializados de capas, fuentes, controles y características avanzadas, manteniendo la arquitectura y prácticas actuales del proyecto.
 
-## 📊 Estado Actual (v0.1.x)
+## 📊 Estado Actual (v0.2.0-dev)
 
-### ✅ Componentes Implementados (7)
+### ✅ Componentes Implementados (8)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -15,9 +15,10 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 5. **NavigationControl** - Controles de navegación (zoom, brújula)
 6. **ScaleControl** - Barra de escala
 7. **FullscreenControl** - Toggle de pantalla completa
+8. **GeolocateControl** ✨ NEW! - Control de geolocalización con tracking (Fase 1)
 
 **Métricas:**
-- ✅ 87 tests pasando
+- ✅ 99 tests pasando (87 + 12 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
@@ -29,9 +30,14 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ### **FASE 1: Controles Esenciales (v0.2.0)**
 **Duración estimada:** 1-2 semanas  
-**Prioridad:** ALTA
+**Prioridad:** ALTA  
+**Estado:** 🟡 EN PROGRESO (1/2 completados)
 
-#### 1.1 GeolocateControl
+#### 1.1 GeolocateControl ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `3b51a3b`  
+**Fecha:** 2024-12-04  
+**Tests:** 12/12 pasando  
 
 **Descripción:** Control de geolocalización del usuario con seguimiento en tiempo real.
 
