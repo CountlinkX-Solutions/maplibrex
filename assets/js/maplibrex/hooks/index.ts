@@ -24,3 +24,4 @@ export { HillshadeLayerHook } from './hillshade-layer-hook';
 export { VectorTileSourceHook } from './vector-tile-source-hook';
 export { RasterTileSourceHook } from './raster-tile-source-hook';
 export { ImageSourceHook } from './image-source-hook';
+export { RasterDEMSourceHook } from './raster-dem-source-hook';
