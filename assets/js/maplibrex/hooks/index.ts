@@ -12,3 +12,4 @@ export { NavigationControlHook } from './navigation-control-hook';
 export { ScaleControlHook } from './scale-control-hook';
 export { FullscreenControlHook } from './fullscreen-control-hook';
 export { GeolocateControlHook } from './geolocate-control-hook';
+export { AttributionControlHook } from './attribution-control-hook';
