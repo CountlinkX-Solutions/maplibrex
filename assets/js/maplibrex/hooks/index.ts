@@ -22,3 +22,4 @@ export { FillExtrusionLayerHook } from './fill-extrusion-layer-hook';
 export { BackgroundLayerHook } from './background-layer-hook';
 export { HillshadeLayerHook } from './hillshade-layer-hook';
 export { VectorTileSourceHook } from './vector-tile-source-hook';
+export { RasterTileSourceHook } from './raster-tile-source-hook';
