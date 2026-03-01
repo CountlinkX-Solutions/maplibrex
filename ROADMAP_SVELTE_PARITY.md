@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.3.0-dev)
 
-### ✅ Componentes Implementados (12)
+### ✅ Componentes Implementados (13)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -19,16 +19,17 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 9. **AttributionControl** ✨ - Control de atribución personalizable (Fase 1.2)
 10. **CircleLayer** ✨ - Capa de círculos con estilos data-driven (Fase 2.1)
 11. **LineLayer** ✨ - Capa de líneas para rutas y caminos (Fase 2.2)
-12. **FillLayer** ✨ NEW! - Capa de polígonos para regiones y zonas (Fase 2.3)
+12. **FillLayer** ✨ - Capa de polígonos para regiones y zonas (Fase 2.3)
+13. **SymbolLayer** ✨ NEW! - Capa de iconos y texto para labels (Fase 2.4)
 
 **Métricas:**
-- ✅ 150 tests pasando (87 + 12 + 12 + 13 + 13 + 13 nuevos)
+- ✅ 164 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2)
-- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 3/8 completados - 37.5%)
+- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 4/8 completados - 50%)
 
 ---
 
@@ -164,7 +165,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 ### **FASE 2: Layer Components Especializados (v0.3.0)** 🟡 EN PROGRESO
 **Duración estimada:** 3-4 semanas  
 **Prioridad:** ALTA  
-**Estado:** 🟡 EN PROGRESO (3/8 componentes - 37.5%)  
+**Estado:** 🟡 EN PROGRESO (4/8 componentes - 50%)  
 **Fecha inicio:** 2024-12-04
 
 > **Nota:** Estos componentes complementan el `GeoJSONLayer` existente, proporcionando APIs especializadas para casos de uso comunes. El `GeoJSONLayer` genérico se mantiene para casos avanzados.
@@ -358,7 +359,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 2.4 SymbolLayer
+#### 2.4 SymbolLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `78acce4`  
+**Fecha:** 2024-12-04  
+**Tests:** 14/14 pasando  
 
 **Descripción:** Capa especializada para renderizar iconos y texto.
 
