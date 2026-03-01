@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.4.0-dev)
 
-### ✅ Componentes Implementados (22) 🎉🎉🎉
+### ✅ Componentes Implementados (25) 🎉🎉🎉🎉
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -25,25 +25,30 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 15. **FillExtrusionLayer** ✨ - Capa de edificios 3D y polígonos extruidos (Fase 2.6)
 16. **BackgroundLayer** ✨ - Capa de fondo del mapa (Fase 2.7)
 17. **HillshadeLayer** ✨ - Capa de sombreado de terreno (Fase 2.8)
-18. **VectorTileSource** ✨ NEW! - Fuente de tiles vectoriales (Fase 3.1)
-19. **RasterTileSource** ✨ NEW! - Fuente de tiles raster (Fase 3.2)
-20. **ImageSource** ✨ NEW! - Fuente de imagen georreferenciada (Fase 3.3)
-21. **RasterDEMSource** ✨ NEW! - Fuente de modelo de elevación (Fase 3.4)
-22. **VideoSource** ✨ NEW! - Fuente de video georreferenciado (Fase 3.5)
+18. **VectorTileSource** ✨ - Fuente de tiles vectoriales (Fase 3.1)
+19. **RasterTileSource** ✨ - Fuente de tiles raster (Fase 3.2)
+20. **ImageSource** ✨ - Fuente de imagen georreferenciada (Fase 3.3)
+21. **RasterDEMSource** ✨ - Fuente de modelo de elevación (Fase 3.4)
+22. **VideoSource** ✨ - Fuente de video georreferenciado (Fase 3.5)
+23. **Terrain** ✨ NEW! - Terreno 3D con exageración configurable (Fase 4.1)
+24. **TerrainControl** ✨ NEW! - Control UI para toggle de terreno 3D (Fase 4.2)
+25. **Sky** ✨ NEW! - Capa de cielo atmosférico para vistas 3D (Fase 4.3)
 
 **Métricas:**
-- ✅ **261 tests pasando** (87 originales + 174 nuevos)
+- ✅ **291 tests pasando** (87 originales + 204 nuevos) - 100% passing rate
   - Fase 1: 12+12 = 24 tests
   - Fase 2: 13+13+13+14+10+12+9+12 = 96 tests
   - Fase 3: 12+13+8+13+8 = 54 tests
+  - Fase 4: 10+10+10 = 30 tests
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2) 🎉
 - ✅ **FASE 2 COMPLETADA** (Layer Components - 8/8) 🎉
-- ✅ **FASE 3 COMPLETADA** (Source Components - 5/5) 🎉🎉🎉
-- 🎯 **3 FASES COMPLETAS** - 15 componentes nuevos en un día!
+- ✅ **FASE 3 COMPLETADA** (Source Components - 5/5) 🎉
+- ✅ **FASE 4 COMPLETADA** (3D & Terrain - 3/3) 🎉🎉🎉🎉
+- 🎯 **4 FASES COMPLETAS** - 18 componentes nuevos en un día!
 
 ---
 
@@ -787,11 +792,19 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-### **FASE 4: 3D & Terrain (v0.5.0)**
+### **FASE 4: 3D & Terrain (v0.5.0)** ✅ COMPLETADA
 **Duración estimada:** 2-3 semanas  
-**Prioridad:** MEDIA
+**Duración real:** 1 día  
+**Prioridad:** MEDIA  
+**Estado:** ✅ COMPLETADA (3/3 componentes) 🎉🎉🎉🎉  
+**Fecha inicio:** 2024-12-04  
+**Fecha fin:** 2024-12-04
 
-#### 4.1 Terrain
+#### 4.1 Terrain ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `517d42d`  
+**Fecha:** 2024-12-04  
+**Tests:** 10/10 pasando  
 
 **Descripción:** Habilita terreno 3D en el mapa.
 
@@ -832,9 +845,13 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 4.2 TerrainControl
+#### 4.2 TerrainControl ✅ COMPLETADO
 
-**Descripción:** Toggle para habilitar/deshabilitar terreno 3D.
+**Status:** ✅ Implementado en commit `43318e9`  
+**Fecha:** 2024-12-04  
+**Tests:** 10/10 pasando  
+
+**Descripción:** Toggle para habilitar/deshabilitar terreno 3D con control UI interactivo.
 
 **API Propuesta:**
 ```elixir
@@ -844,32 +861,83 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
   position="top-right"
   terrain_source_id="terrain-source"
   exaggeration={1.5}
+  enabled={false}
 />
 ```
 
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa
+- `terrain_source_id` (required) - ID del RasterDEMSource
+- `position` - Posición del control (default: "top-right")
+- `exaggeration` - Exageración vertical cuando habilitado (default: 1.5)
+- `enabled` - Estado inicial (default: false)
+
+**Eventos:**
+- `terrain_control:toggled` - Toggle activado (con estado)
+- `terrain_control:error` - Error al cambiar terreno
+
+**Archivos creados:**
+- `lib/maplibrex/components/terrain_control.ex`
+- `assets/js/maplibrex/hooks/terrain-control-hook.ts`
+- `test/maplibrex/components/terrain_control_test.exs`
+
 **Complejidad:** Baja-Media  
-**Tiempo estimado:** 2-3 días
+**Tiempo real:** 1 día
 
 ---
 
-#### 4.3 Sky
+#### 4.3 Sky ✅ COMPLETADO
 
-**Descripción:** Capa de cielo para vistas 3D.
+**Status:** ✅ Implementado en commit `88120b7`  
+**Fecha:** 2024-12-04  
+**Tests:** 10/10 pasando  
+
+**Descripción:** Capa de cielo atmosférico para vistas 3D con soporte para atmosphere y gradient.
 
 **API Propuesta:**
 ```elixir
 <.sky
   map_id="my-map"
-  paint={%{
-    "sky-type" => "atmosphere",
-    "sky-atmosphere-sun" => [0.0, 90.0],
-    "sky-atmosphere-color" => "rgba(135, 206, 235, 1)"
-  }}
+  type="atmosphere"
+  atmosphere_sun={[0.0, 90.0]}
+  atmosphere_sun_intensity={10}
+  atmosphere_color="rgba(135, 206, 235, 1)"
+  atmosphere_halo_color="rgba(255, 255, 255, 1)"
+/>
+
+<!-- Gradient sky -->
+<.sky
+  map_id="my-map"
+  type="gradient"
+  gradient_center={[0, 0]}
+  gradient_radius={90}
+  gradient={["#87CEEB", "#E0F6FF", "#98D3E8"]}
 />
 ```
 
+**Atributos:**
+- `map_id` (required) - ID del mapa
+- `type` - Tipo de cielo: "atmosphere" o "gradient" (default: "atmosphere")
+- `atmosphere_sun` - Posición del sol [azimuth, polar] (default: [0.0, 90.0])
+- `atmosphere_sun_intensity` - Intensidad del sol (default: 10)
+- `atmosphere_color` - Color del cielo (default: "rgba(135, 206, 235, 1)")
+- `atmosphere_halo_color` - Color del halo (default: "rgba(255, 255, 255, 1)")
+- `gradient_center` - Centro del gradiente (default: [0, 0])
+- `gradient_radius` - Radio del gradiente (default: 90)
+- `gradient` - Colores del gradiente (default: ["#87CEEB", "#E0F6FF", "#98D3E8"])
+
+**Eventos:**
+- `sky:added` - Capa de cielo agregada
+- `sky:removed` - Capa de cielo removida
+
+**Archivos creados:**
+- `lib/maplibrex/components/sky.ex`
+- `assets/js/maplibrex/hooks/sky-hook.ts`
+- `test/maplibrex/components/sky_test.exs`
+
 **Complejidad:** Baja  
-**Tiempo estimado:** 2-3 días
+**Tiempo real:** 1 día
 
 ---
 
