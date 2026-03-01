@@ -16,3 +16,4 @@ export { AttributionControlHook } from './attribution-control-hook';
 export { CircleLayerHook } from './circle-layer-hook';
 export { LineLayerHook } from './line-layer-hook';
 export { FillLayerHook } from './fill-layer-hook';
+export { SymbolLayerHook } from './symbol-layer-hook';
