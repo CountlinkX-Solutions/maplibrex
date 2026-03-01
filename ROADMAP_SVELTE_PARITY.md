@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.3.0-dev)
 
-### ✅ Componentes Implementados (13)
+### ✅ Componentes Implementados (14)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -20,16 +20,17 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 10. **CircleLayer** ✨ - Capa de círculos con estilos data-driven (Fase 2.1)
 11. **LineLayer** ✨ - Capa de líneas para rutas y caminos (Fase 2.2)
 12. **FillLayer** ✨ - Capa de polígonos para regiones y zonas (Fase 2.3)
-13. **SymbolLayer** ✨ NEW! - Capa de iconos y texto para labels (Fase 2.4)
+13. **SymbolLayer** ✨ - Capa de iconos y texto para labels (Fase 2.4)
+14. **HeatmapLayer** ✨ NEW! - Capa de mapas de calor para densidad (Fase 2.5)
 
 **Métricas:**
-- ✅ 164 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 nuevos)
+- ✅ 174 tests pasando (87 + 12 + 12 + 13 + 13 + 13 + 14 + 10 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls - 2/2)
-- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 4/8 completados - 50%)
+- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 5/8 completados - 62.5%)
 
 ---
 
@@ -165,7 +166,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 ### **FASE 2: Layer Components Especializados (v0.3.0)** 🟡 EN PROGRESO
 **Duración estimada:** 3-4 semanas  
 **Prioridad:** ALTA  
-**Estado:** 🟡 EN PROGRESO (4/8 componentes - 50%)  
+**Estado:** 🟡 EN PROGRESO (5/8 componentes - 62.5%)  
 **Fecha inicio:** 2024-12-04
 
 > **Nota:** Estos componentes complementan el `GeoJSONLayer` existente, proporcionando APIs especializadas para casos de uso comunes. El `GeoJSONLayer` genérico se mantiene para casos avanzados.
@@ -415,7 +416,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-#### 2.5 HeatmapLayer
+#### 2.5 HeatmapLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `6c39596`  
+**Fecha:** 2024-12-04  
+**Tests:** 10/10 pasando  
 
 **Descripción:** Capa especializada para mapas de calor (densidad).
 
