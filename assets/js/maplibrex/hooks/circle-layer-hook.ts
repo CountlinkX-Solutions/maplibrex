@@ -5,7 +5,6 @@
  * renderizando puntos como círculos con estilos configurables.
  */
 
-import maplibregl from 'maplibre-gl';
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
 
