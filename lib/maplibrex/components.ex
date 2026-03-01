@@ -43,4 +43,5 @@ defmodule MaplibreX.Components do
   defdelegate raster_tile_source(assigns), to: MaplibreX.Components.RasterTileSource
   defdelegate image_source(assigns), to: MaplibreX.Components.ImageSource
   defdelegate raster_dem_source(assigns), to: MaplibreX.Components.RasterDEMSource
+  defdelegate video_source(assigns), to: MaplibreX.Components.VideoSource
 end
