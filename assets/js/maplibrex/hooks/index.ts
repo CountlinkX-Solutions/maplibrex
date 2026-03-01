@@ -30,3 +30,4 @@ export { TerrainHook } from './terrain-hook';
 export { TerrainControlHook } from './terrain-control-hook';
 export { SkyHook } from './sky-hook';
 export { DeckGlLayerHook } from './deckgl-layer-hook';
+export { CustomLayerHook } from './custom-layer-hook';

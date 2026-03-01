@@ -48,7 +48,7 @@ export const SkyHook: LiveViewHook = {
           // @ts-ignore - sky type is valid in MapLibre but not in current type definitions
           map.addLayer({
             id: 'sky',
-            type: 'sky',
+            type: 'sky' as any,
             paint: config.paint
           });
 
