@@ -46,4 +46,5 @@ defmodule MaplibreX.Components do
   defdelegate video_source(assigns), to: MaplibreX.Components.VideoSource
   defdelegate terrain(assigns), to: MaplibreX.Components.Terrain
   defdelegate terrain_control(assigns), to: MaplibreX.Components.TerrainControl
+  defdelegate sky(assigns), to: MaplibreX.Components.Sky
 end
