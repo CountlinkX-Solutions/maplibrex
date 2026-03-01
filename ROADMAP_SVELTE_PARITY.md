@@ -4,9 +4,9 @@
 
 Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre), agregando componentes especializados de capas, fuentes, controles y características avanzadas, manteniendo la arquitectura y prácticas actuales del proyecto.
 
-## 📊 Estado Actual (v0.2.0-dev)
+## 📊 Estado Actual (v0.3.0-dev)
 
-### ✅ Componentes Implementados (9)
+### ✅ Componentes Implementados (10)
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -16,15 +16,17 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 6. **ScaleControl** - Barra de escala
 7. **FullscreenControl** - Toggle de pantalla completa
 8. **GeolocateControl** ✨ - Control de geolocalización con tracking (Fase 1.1)
-9. **AttributionControl** ✨ NEW! - Control de atribución personalizable (Fase 1.2)
+9. **AttributionControl** ✨ - Control de atribución personalizable (Fase 1.2)
+10. **CircleLayer** ✨ NEW! - Capa de círculos con estilos data-driven (Fase 2.1)
 
 **Métricas:**
-- ✅ 111 tests pasando (87 + 12 + 12 nuevos)
+- ✅ 124 tests pasando (87 + 12 + 12 + 13 nuevos)
 - ✅ Comandos JS funcionando con `JS.dispatch()`
 - ✅ Arquitectura TypeScript sólida
 - ✅ Sistema de eventos bidireccional
 - ✅ Demo funcionando: https://github.com/roger120981/maplibrex_demo
 - ✅ **FASE 1 COMPLETADA** (Essential Controls)
+- 🟡 **FASE 2 EN PROGRESO** (Layer Components - 1/8 completados)
 
 ---
 
@@ -157,13 +159,19 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ---
 
-### **FASE 2: Layer Components Especializados (v0.3.0)**
+### **FASE 2: Layer Components Especializados (v0.3.0)** 🟡 EN PROGRESO
 **Duración estimada:** 3-4 semanas  
-**Prioridad:** ALTA
+**Prioridad:** ALTA  
+**Estado:** 🟡 EN PROGRESO (1/8 componentes)  
+**Fecha inicio:** 2024-12-04
 
 > **Nota:** Estos componentes complementan el `GeoJSONLayer` existente, proporcionando APIs especializadas para casos de uso comunes. El `GeoJSONLayer` genérico se mantiene para casos avanzados.
 
-#### 2.1 CircleLayer
+#### 2.1 CircleLayer ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `414ad13`  
+**Fecha:** 2024-12-04  
+**Tests:** 13/13 pasando  
 
 **Descripción:** Capa especializada para renderizar puntos como círculos con radio variable.
 
