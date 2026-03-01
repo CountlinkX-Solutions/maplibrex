@@ -29,4 +29,5 @@ defmodule MaplibreX.Components do
   defdelegate navigation_control(assigns), to: MaplibreX.Components.NavigationControl
   defdelegate scale_control(assigns), to: MaplibreX.Components.ScaleControl
   defdelegate fullscreen_control(assigns), to: MaplibreX.Components.FullscreenControl
+  defdelegate geolocate_control(assigns), to: MaplibreX.Components.GeolocateControl
 end
