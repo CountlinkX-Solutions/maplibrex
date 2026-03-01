@@ -18,3 +18,4 @@ export { LineLayerHook } from './line-layer-hook';
 export { FillLayerHook } from './fill-layer-hook';
 export { SymbolLayerHook } from './symbol-layer-hook';
 export { HeatmapLayerHook } from './heatmap-layer-hook';
+export { FillExtrusionLayerHook } from './fill-extrusion-layer-hook';

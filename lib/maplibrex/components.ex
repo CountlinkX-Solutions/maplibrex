@@ -36,4 +36,5 @@ defmodule MaplibreX.Components do
   defdelegate fill_layer(assigns), to: MaplibreX.Components.FillLayer
   defdelegate symbol_layer(assigns), to: MaplibreX.Components.SymbolLayer
   defdelegate heatmap_layer(assigns), to: MaplibreX.Components.HeatmapLayer
+  defdelegate fill_extrusion_layer(assigns), to: MaplibreX.Components.FillExtrusionLayer
 end
