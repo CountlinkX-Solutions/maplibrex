@@ -53,7 +53,8 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 - ✅ **FASE 3 COMPLETADA** (Source Components - 5/5) 🎉
 - ✅ **FASE 4 COMPLETADA** (3D & Terrain - 3/3) 🎉
 - ✅ **FASE 5 COMPLETADA** (Advanced Integrations - 2/2 - 100%) 🎉🎉🎉🎉🎉
-- 🎯 **5 FASES COMPLETAS** - 20 componentes nuevos!
+- ✅ **FASE 6 COMPLETADA** (Utilities & Helpers - 1/1 core component) 🎉🎉🎉🎉🎉🎉
+- 🎯 **6 FASES COMPLETAS** - 21 componentes nuevos!
 
 ---
 
