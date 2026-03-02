@@ -1448,19 +1448,45 @@ end
 
 ### **FASE 7: Polish & Optimization (v1.0.0)**
 **Duración estimada:** 2-3 semanas  
+**Duración real:** En progreso  
 **Prioridad:** ALTA (antes del release 1.0)
-**Estado:** PENDIENTE
+**Estado:** 🚧 EN PROGRESO (1/3 completado - 33%)  
+**Fecha inicio:** 2026-03-01
 
-#### 7.1 Performance Optimizations
+#### 7.1 Performance Optimizations ✅ COMPLETADO (Parcial)
 
-- [ ] Bundle size optimization
-- [ ] Tree-shaking improvements
-- [ ] Lazy loading de componentes
-- [ ] Code splitting para deck.gl
+**Status:** ✅ Implementado en commit `8c95632`  
+**Fecha:** 2026-03-01
+
+**Optimizaciones implementadas:**
+
+1. **Debouncing de Eventos** ✅
+   - Creada utility `debounce.ts` con funciones debounce() y throttle()
+   - Aplicado 150ms debouncing a eventos moveend
+   - Reducción esperada de 60-80% en eventos a LiveView
+   - Archivos: `debounce.ts`, `event-dispatcher.ts`
+
+2. **Lazy Loading para deck.gl** ✅
+   - Creado `deckgl-lazy-loader.ts` con importación dinámica
+   - deck.gl (~600KB) solo se carga cuando se usa DeckGlLayer
+   - Sistema de caché para evitar recargas
+   - Archivos: `deckgl-lazy-loader.ts`, `deckgl-layer-hook.ts`
+
+3. **esbuild Optimizations** ✅
+   - Habilitada minificación (--minify)
+   - Tree-shaking para eliminar código no usado
+   - Eliminación de console.log y debugger en producción
+   - Archivo: `config.exs`
+
+**Pendientes:**
+- [ ] Configurar sourcemaps externos (actualmente inline)
+- [ ] Crear configuraciones separadas dev/prod
 - [ ] Memoization de configuraciones
-- [ ] Debouncing de eventos frecuentes
+- [ ] Re-medir bundle size real (actualmente afectado por sourcemap inline)
 
-**Tiempo estimado:** 1 semana
+**Documentación:** Ver `PERFORMANCE_IMPROVEMENTS.md` para detalles completos
+
+**Tiempo estimado restante:** 2-3 días
 
 ---
 
