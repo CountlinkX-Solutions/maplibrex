@@ -1,6 +1,6 @@
 import Config
 
-# Configuración de esbuild
+# Configuración de esbuild con optimizaciones de performance
 config :esbuild,
   version: "0.17.11",
   maplibrex: [
@@ -13,7 +13,11 @@ config :esbuild,
       --external:/images/*
       --loader:.ts=ts
       --loader:.tsx=tsx
-      --sourcemap
+      --minify
+      --tree-shaking=true
+      --legal-comments=none
+      --drop:console
+      --drop:debugger
     ),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}

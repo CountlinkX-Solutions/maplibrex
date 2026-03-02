@@ -14,6 +14,7 @@ import type {
   MapClickEventPayload,
   EventHandler
 } from '../types';
+import { debounce } from '../utils/debounce';
 
 export class EventDispatcher {
   private hook: HookContext;
@@ -32,8 +33,9 @@ export class EventDispatcher {
    * Configura los eventos estándar del mapa que se envían a LiveView
    */
   setupDefaultMapEvents(): void {
-    // Eventos de movimiento
-    this.onMapEvent('moveend', () => {
+    // Eventos de movimiento con debouncing (150ms)
+    // Reduce round-trips a LiveView durante pan/zoom continuo
+    const debouncedMoveEnd = debounce(() => {
       const center = this.map.getCenter();
       const zoom = this.map.getZoom();
       const bearing = this.map.getBearing();
@@ -49,7 +51,9 @@ export class EventDispatcher {
       };
 
       this.pushToLiveView('map:moved', payload);
-    });
+    }, 150);
+    
+    this.onMapEvent('moveend', debouncedMoveEnd);
 
     // Eventos de click
     this.onMapEvent('click', (e: any) => {

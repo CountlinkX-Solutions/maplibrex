@@ -3,12 +3,15 @@
  * 
  * Gestiona el lifecycle de layers deck.gl en el contexto de LiveView,
  * sincronizando actualizaciones entre servidor y cliente.
+ * 
+ * Uses lazy loading to only load deck.gl when needed, reducing initial bundle size.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
 import { DeckGLLayerManager } from '../utils/deckgl-manager';
 import type { DeckGLLayerConfig } from '../types/deckgl';
+import { loadDeckGL } from '../utils/deckgl-lazy-loader';
 
 interface DeckGlLayerHookState {
   config: DeckGLLayerConfig;
@@ -16,7 +19,7 @@ interface DeckGlLayerHookState {
 }
 
 export const DeckGlLayerHook: LiveViewHook = {
-  mounted(this: any) {
+  async mounted(this: any) {
     const el = this.el as HTMLElement;
     
     try {
@@ -35,6 +38,9 @@ export const DeckGlLayerHook: LiveViewHook = {
       }
       
       console.log(`[MaplibreX] Mounting DeckGL layer: ${config.id}`);
+      
+      // Lazy load deck.gl modules (only on first use)
+      await loadDeckGL();
       
       // Initialize DeckGL manager
       const deckglManager = new DeckGLLayerManager(map, this);
