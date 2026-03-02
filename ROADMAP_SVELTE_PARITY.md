@@ -6,7 +6,7 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 
 ## 📊 Estado Actual (v0.4.0-dev)
 
-### ✅ Componentes Implementados (27) 🎉🎉🎉🎉🎉
+### ✅ Componentes Implementados (28) 🎉🎉🎉🎉🎉
 
 1. **Map** - Componente principal del mapa con comandos JS funcionando
 2. **Marker** - Marcadores con popups y drag & drop
@@ -34,10 +34,11 @@ Alcanzar paridad de funcionalidades con [svelte-maplibre](https://github.com/dim
 24. **TerrainControl** ✨ - Control UI para toggle de terreno 3D (Fase 4.2)
 25. **Sky** ✨ - Capa de cielo atmosférico para vistas 3D (Fase 4.3)
 26. **DeckGlLayer** ✨ - Integración con deck.gl para visualizaciones avanzadas (Fase 5.1)
-27. **CustomLayer** ✨ NEW! - Custom WebGL layers para visualizaciones de partículas (Fase 5.2)
+27. **CustomLayer** ✨ - Custom WebGL layers para visualizaciones de partículas (Fase 5.2)
+28. **RasterLayer** ✨ NEW! - Capa para renderizar tiles raster desde fuentes raster (Fase 6.5)
 
 **Métricas:**
-- ✅ **337 tests pasando** (87 originales + 250 nuevos) - 100% passing rate
+- ✅ **350 tests pasando** (87 originales + 263 nuevos) - 100% passing rate
   - Fase 1: 12+12 = 24 tests
   - Fase 2: 13+13+13+14+10+12+9+12 = 96 tests
   - Fase 3: 12+13+8+13+8 = 54 tests
@@ -1392,25 +1393,55 @@ end
 
 ---
 
-#### 6.5 RasterLayer
+#### 6.5 RasterLayer ✅ COMPLETADO
 
-**Descripción:** Capa para renderizar sources raster.
+**Status:** ✅ Implementado en commit `3c1521c`  
+**Fecha:** 2026-03-01  
+**Tests:** 13/13 pasando  
 
-**API Propuesta:**
+**Descripción:** Capa para renderizar sources raster (tiles de imágenes).
+
+**Casos de uso:** Satélite, overlays de radar meteorológico, mapas base raster.
+
+**API Implementada:**
 ```elixir
 <.raster_layer
   id="satellite-layer"
   map_id="my-map"
-  source="satellite"
+  source_id="satellite"
   paint={%{
     "raster-opacity" => 0.85,
-    "raster-fade-duration" => 300
+    "raster-fade-duration" => 300,
+    "raster-hue-rotate" => 0,
+    "raster-brightness-min" => 0,
+    "raster-brightness-max" => 1,
+    "raster-saturation" => 0,
+    "raster-contrast" => 0,
+    "raster-resampling" => "linear"
   }}
+  layout={%{"visibility" => "visible"}}
+  min_zoom={0}
+  max_zoom={22}
 />
 ```
 
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa  
+- `source_id` (required) - ID de la fuente raster
+- `paint` - Propiedades de estilo raster (opacity, hue-rotate, brightness, etc.)
+- `layout` - Propiedades de layout (visibility)
+- `min_zoom` - Zoom mínimo de visibilidad
+- `max_zoom` - Zoom máximo de visibilidad
+- `before_id` - ID de la capa antes de la cual insertar
+
+**Archivos creados:**
+- `lib/maplibrex/components/raster_layer.ex`
+- `assets/js/maplibrex/hooks/raster-layer-hook.ts`
+- `test/maplibrex/components/raster_layer_test.exs`
+
 **Complejidad:** Baja  
-**Tiempo estimado:** 2 días
+**Tiempo real:** 1 día
 
 ---
 
