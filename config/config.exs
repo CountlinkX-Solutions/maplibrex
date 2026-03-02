@@ -18,6 +18,7 @@ config :esbuild,
       --legal-comments=none
       --drop:console
       --drop:debugger
+      --sourcemap=external
     ),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
