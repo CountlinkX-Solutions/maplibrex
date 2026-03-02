@@ -1449,6 +1449,7 @@ end
 ### **FASE 7: Polish & Optimization (v1.0.0)**
 **Duración estimada:** 2-3 semanas  
 **Prioridad:** ALTA (antes del release 1.0)
+**Estado:** PENDIENTE
 
 #### 7.1 Performance Optimizations
 
@@ -1488,6 +1489,180 @@ end
 - [ ] Accessibility testing (WCAG 2.1)
 
 **Tiempo estimado:** 1 semana
+
+---
+
+### **FASE 8: Optional Utility Components (Future)**
+**Duración estimada:** 1 semana  
+**Prioridad:** BAJA (opcional)  
+**Estado:** PENDIENTE
+
+> **Nota:** Estos componentes fueron movidos a una fase futura ya que son de prioridad baja y opcionales. El proyecto está completamente funcional sin ellos. Se implementarán bajo demanda según las necesidades de los usuarios.
+
+#### 8.1 Control (Base Genérico) ⚠️ PENDIENTE
+
+**Descripción:** Componente base para crear controles personalizados en el mapa.
+
+**Casos de uso:** Crear controles UI personalizados con lógica específica de la aplicación.
+
+**API Propuesta:**
+```elixir
+<.control
+  id="custom-control"
+  map_id="my-map"
+  position="top-left"
+  class="custom-control-class"
+>
+  <div class="p-2 bg-white rounded shadow">
+    <button phx-click="my_action">Custom Action</button>
+    <button phx-click="another_action">Another Action</button>
+  </div>
+</.control>
+```
+
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa
+- `position` - Posición del control: "top-left", "top-right", "bottom-left", "bottom-right"
+- `class` - Clases CSS adicionales
+- `slot` - Contenido HTML del control
+
+**Archivos a crear:**
+- `lib/maplibrex/components/control.ex`
+- `assets/js/maplibrex/hooks/control-hook.ts`
+- `test/maplibrex/components/control_test.exs`
+
+**Tests estimados:** 8-10
+
+**Complejidad:** Media  
+**Tiempo estimado:** 2-3 días
+
+---
+
+#### 8.2 ControlButton ⚠️ PENDIENTE
+
+**Descripción:** Botón de control reutilizable con iconos y tooltips.
+
+**Casos de uso:** Agregar botones de acción rápida al mapa sin crear controles custom completos.
+
+**API Propuesta:**
+```elixir
+<.control_button
+  id="toggle-layers"
+  map_id="my-map"
+  position="top-right"
+  icon="layers"
+  tooltip="Toggle Layers"
+  phx-click="toggle_layers"
+  active={@layers_visible}
+/>
+```
+
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa
+- `position` - Posición del control
+- `icon` - Nombre del icono (requiere library de iconos)
+- `tooltip` - Texto del tooltip
+- `active` - Estado activo/inactivo (para styling)
+- `phx-click` - Evento Phoenix a ejecutar
+
+**Dependencias:**
+- Requiere una library de iconos (Heroicons, FontAwesome, etc.)
+
+**Archivos a crear:**
+- `lib/maplibrex/components/control_button.ex`
+- `assets/js/maplibrex/hooks/control-button-hook.ts`
+- `test/maplibrex/components/control_button_test.exs`
+
+**Tests estimados:** 8-10
+
+**Complejidad:** Baja  
+**Tiempo estimado:** 1-2 días
+
+---
+
+#### 8.3 ControlGroup ⚠️ PENDIENTE
+
+**Descripción:** Contenedor para agrupar múltiples controles visualmente.
+
+**Casos de uso:** Organizar múltiples botones de control en un grupo cohesivo.
+
+**API Propuesta:**
+```elixir
+<.control_group 
+  id="actions-group"
+  map_id="my-map"
+  position="top-right"
+>
+  <.control_button icon="layers" tooltip="Layers" phx-click="toggle_layers" />
+  <.control_button icon="settings" tooltip="Settings" phx-click="open_settings" />
+  <.control_button icon="info" tooltip="Info" phx-click="show_info" />
+</.control_group>
+```
+
+**Atributos:**
+- `id` (required) - Identificador único
+- `map_id` (required) - ID del mapa
+- `position` - Posición del grupo
+- `orientation` - "vertical" o "horizontal" (default: "vertical")
+- `slot` - Controles hijos
+
+**Archivos a crear:**
+- `lib/maplibrex/components/control_group.ex`
+- `assets/js/maplibrex/hooks/control-group-hook.ts`
+- `test/maplibrex/components/control_group_test.exs`
+
+**Tests estimados:** 8-10
+
+**Complejidad:** Baja  
+**Tiempo estimado:** 1-2 días
+
+---
+
+#### 8.4 ZoomRange ⚠️ PENDIENTE
+
+**Descripción:** Helper para mostrar/ocultar contenido basado en el nivel de zoom del mapa.
+
+**Casos de uso:** Control de visibilidad de UI o capas según el zoom, sin tener que usar las propiedades nativas min_zoom/max_zoom de las capas.
+
+**API Propuesta:**
+```elixir
+<.zoom_range map_id="my-map" min={10} max={15}>
+  <.circle_layer
+    id="detailed-pois"
+    map_id="my-map"
+    source_id="pois"
+    paint={%{"circle-radius" => 8}}
+  />
+</.zoom_range>
+
+<!-- Solo mostrar UI cuando zoom > 12 -->
+<.zoom_range map_id="my-map" min={12}>
+  <div class="details-panel">
+    Zoom in to see building details
+  </div>
+</.zoom_range>
+```
+
+**Atributos:**
+- `map_id` (required) - ID del mapa
+- `min` - Zoom mínimo (inclusive)
+- `max` - Zoom máximo (inclusive)
+- `slot` - Contenido a mostrar/ocultar
+
+**Nota de rendimiento:**
+El contenido siempre se renderiza en el DOM, solo se oculta con CSS. Para capas del mapa, es más eficiente usar las propiedades nativas `min_zoom` y `max_zoom` de cada capa.
+
+**Archivos a crear:**
+- `lib/maplibrex/components/zoom_range.ex`
+- `assets/js/maplibrex/hooks/zoom-range-hook.ts`
+- `test/maplibrex/components/zoom_range_test.exs`
+
+**Tests estimados:** 8-10
+
+**Complejidad:** Baja  
+**Tiempo estimado:** 1 día
 
 ---
 
