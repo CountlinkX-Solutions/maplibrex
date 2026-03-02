@@ -50,4 +50,8 @@ defmodule MaplibreX.Components do
   defdelegate sky(assigns), to: MaplibreX.Components.Sky
   defdelegate deckgl_layer(assigns), to: MaplibreX.Components.DeckGlLayer
   defdelegate custom_layer(assigns), to: MaplibreX.Components.CustomLayer
+  defdelegate control(assigns), to: MaplibreX.Components.Control
+  defdelegate zoom_range(assigns), to: MaplibreX.Components.ZoomRange
+  defdelegate control_button(assigns), to: MaplibreX.Components.ControlButton
+  defdelegate control_group(assigns), to: MaplibreX.Components.ControlGroup
 end

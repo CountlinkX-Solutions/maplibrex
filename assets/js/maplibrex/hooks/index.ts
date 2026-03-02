@@ -32,3 +32,7 @@ export { TerrainControlHook } from './terrain-control-hook';
 export { SkyHook } from './sky-hook';
 export { DeckGlLayerHook } from './deckgl-layer-hook';
 export { CustomLayerHook } from './custom-layer-hook';
+export { ControlHook } from './control-hook';
+export { ZoomRangeHook } from './zoom-range-hook';
+export { ControlButtonHook } from './control-button-hook';
+export { ControlGroupHook } from './control-group-hook';

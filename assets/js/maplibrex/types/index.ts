@@ -127,6 +127,7 @@ export interface GeoJSONSourceConfig extends MaplibreXConfig {
  */
 export interface ControlConfig extends MaplibreXConfig {
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  className?: string;
 }
 
 /**
@@ -167,6 +168,31 @@ export interface GeolocateControlConfig extends ControlConfig {
   showAccuracyCircle?: boolean;
   showUserLocation?: boolean;
   showUserHeading?: boolean;
+}
+
+/**
+ * ZoomRange configuration
+ */
+export interface ZoomRangeConfig extends MaplibreXConfig {
+  min?: number;
+  max?: number;
+}
+
+/**
+ * ControlButton configuration
+ */
+export interface ControlButtonConfig extends ControlConfig {
+  tooltip?: string;
+  active?: boolean;
+  hasSlot?: boolean;
+  icon?: string;
+}
+
+/**
+ * ControlGroup configuration
+ */
+export interface ControlGroupConfig extends ControlConfig {
+  orientation?: 'vertical' | 'horizontal';
 }
 
 /**
