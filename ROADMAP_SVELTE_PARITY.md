@@ -1492,14 +1492,15 @@ end
 
 ---
 
-### **FASE 8: Optional Utility Components (Future)**
+### **FASE 8: Optional Utility Components (v0.8.0)** ✅ COMPLETADA
 **Duración estimada:** 1 semana  
+**Duración real:** 1 día  
 **Prioridad:** BAJA (opcional)  
-**Estado:** PENDIENTE
+**Estado:** ✅ COMPLETADA (4/4 componentes - 100%) 🎉🎉🎉🎉🎉🎉🎉🎉  
+**Fecha inicio:** 2026-03-01  
+**Fecha fin:** 2026-03-01
 
-> **Nota:** Estos componentes fueron movidos a una fase futura ya que son de prioridad baja y opcionales. El proyecto está completamente funcional sin ellos. Se implementarán bajo demanda según las necesidades de los usuarios.
-
-#### 8.1 Control (Base Genérico) ⚠️ PENDIENTE
+#### 8.1 Control (Base Genérico) ✅ COMPLETADO
 
 **Descripción:** Componente base para crear controles personalizados en el mapa.
 
@@ -1539,7 +1540,15 @@ end
 
 ---
 
-#### 8.2 ControlButton ⚠️ PENDIENTE
+**Status:** ✅ Implementado en commit `138fbc2`  
+**Fecha:** 2026-03-01  
+**Tests:** 12/12 pasando
+
+#### 8.2 ControlButton ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `138fbc2`  
+**Fecha:** 2026-03-01  
+**Tests:** 17/17 pasando
 
 **Descripción:** Botón de control reutilizable con iconos y tooltips.
 
@@ -1582,7 +1591,11 @@ end
 
 ---
 
-#### 8.3 ControlGroup ⚠️ PENDIENTE
+#### 8.3 ControlGroup ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `138fbc2`  
+**Fecha:** 2026-03-01  
+**Tests:** 14/14 pasando
 
 **Descripción:** Contenedor para agrupar múltiples controles visualmente.
 
@@ -1620,7 +1633,11 @@ end
 
 ---
 
-#### 8.4 ZoomRange ⚠️ PENDIENTE
+#### 8.4 ZoomRange ✅ COMPLETADO
+
+**Status:** ✅ Implementado en commit `138fbc2`  
+**Fecha:** 2026-03-01  
+**Tests:** 12/12 pasando
 
 **Descripción:** Helper para mostrar/ocultar contenido basado en el nivel de zoom del mapa.
 
