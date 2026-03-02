@@ -41,6 +41,7 @@ import {
   FillExtrusionLayerHook,
   BackgroundLayerHook,
   HillshadeLayerHook,
+  RasterLayerHook,
   VectorTileSourceHook,
   RasterTileSourceHook,
   ImageSourceHook,
@@ -49,7 +50,8 @@ import {
   TerrainHook,
   TerrainControlHook,
   SkyHook,
-  DeckGlLayerHook
+  DeckGlLayerHook,
+  CustomLayerHook
 } from './maplibrex/hooks';
 
 /**
@@ -74,6 +76,7 @@ export const MapHooks = {
   FillExtrusionLayerHook,
   BackgroundLayerHook,
   HillshadeLayerHook,
+  RasterLayerHook,
   VectorTileSourceHook,
   RasterTileSourceHook,
   ImageSourceHook,
@@ -82,7 +85,8 @@ export const MapHooks = {
   TerrainHook,
   TerrainControlHook,
   SkyHook,
-  DeckGlLayerHook
+  DeckGlLayerHook,
+  CustomLayerHook
 };
 
 // Export individual hooks for advanced usage
@@ -104,6 +108,7 @@ export {
   FillExtrusionLayerHook,
   BackgroundLayerHook,
   HillshadeLayerHook,
+  RasterLayerHook,
   VectorTileSourceHook,
   RasterTileSourceHook,
   ImageSourceHook,
@@ -112,7 +117,8 @@ export {
   TerrainHook,
   TerrainControlHook,
   SkyHook,
-  DeckGlLayerHook
+  DeckGlLayerHook,
+  CustomLayerHook
 } from './maplibrex/hooks';
 
 // Export core utilities
