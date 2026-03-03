@@ -58,9 +58,10 @@ export interface WebGLLayerImplementation {
   renderingMode: '3d';
   
   onAdd(map: any, gl: WebGLRenderingContext): void;
-  render(gl: WebGLRenderingContext, matrix: number[]): void;
+  // According to MapLibre GL JS docs, render receives args object with projection data
+  render(gl: WebGLRenderingContext, args: any): void;
   onRemove?(map: any, gl: WebGLRenderingContext): void;
-  prerender?(gl: WebGLRenderingContext, matrix: number[]): void;
+  prerender?(gl: WebGLRenderingContext, args: any): void;
 }
 
 export interface ShaderProgram {

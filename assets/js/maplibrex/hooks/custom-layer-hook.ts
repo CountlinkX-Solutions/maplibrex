@@ -6,20 +6,35 @@
 
 import { customWebGLManager } from '../utils/custom-webgl-manager';
 import { PARTICLE_SYSTEM_PRESETS } from '../shaders/particle-system';
+import { MapManager } from '../core/map-manager';
 import type { CustomLayerConfig, WebGLLayerImplementation } from '../types/custom-webgl';
 
 export const CustomLayerHook = {
   mounted(this: any) {
     const config: CustomLayerConfig = JSON.parse(this.el.dataset.config || '{}');
-    console.log('[CustomLayer] Mounted:', config.id);
+    console.log('[CustomLayer] Mounted:', config.id, 'with uniforms:', config.uniforms);
+    
+    // Listen for uniform updates via Phoenix events
+    this.handleEvent(`update_uniforms_${config.id}`, (payload: any) => {
+      console.log('[CustomLayer] Received uniform update:', payload);
+      if (payload.uniforms) {
+        this.currentConfig = {
+          ...this.currentConfig,
+          uniforms: payload.uniforms
+        };
+        // Trigger repaint to apply changes
+        if (this.map) {
+          this.map.triggerRepaint();
+        }
+      }
+    });
 
-    const mapEl = document.getElementById(config.mapId);
-    if (!mapEl || !(mapEl as any).mapInstance) {
-      console.error('[CustomLayer] Map not found:', config.mapId);
+    // Use MapManager instead of DOM to get map instance
+    const map = MapManager.get(config.mapId);
+    if (!map) {
+      console.error('[CustomLayer] Map not found in MapManager:', config.mapId);
       return;
     }
-
-    const map = (mapEl as any).mapInstance;
     
     // Create the custom layer implementation
     const customLayer = this.createCustomLayer(config);
@@ -28,6 +43,13 @@ export const CustomLayerHook = {
     this.layerId = config.id;
     this.map = map;
     this.customLayer = customLayer;
+    this.currentConfig = config;
+    
+    // Store start time for u_time calculation (if needed for animation)
+    if (config.uniforms && 'u_time' in config.uniforms) {
+      this.startTime = performance.now() / 1000;
+      console.log('[CustomLayer] Animation enabled for', config.id);
+    }
 
     // Add layer to map
     map.on('load', () => {
@@ -52,16 +74,26 @@ export const CustomLayerHook = {
 
   updated(this: any) {
     const config: CustomLayerConfig = JSON.parse(this.el.dataset.config || '{}');
-    console.log('[CustomLayer] Updated:', config.id);
+    console.log('[CustomLayer] Updated with uniforms:', config.uniforms);
     
-    // Handle uniform updates
-    if (config.uniforms && this.gl && this.shaderProgram) {
-      customWebGLManager.setUniforms(this.gl, this.shaderProgram, config.uniforms);
+    // Store updated config so render() can access it
+    this.currentConfig = config;
+    
+    // Trigger map repaint to apply uniform updates and continue animation
+    if (this.map) {
+      this.map.triggerRepaint();
     }
   },
 
   destroyed(this: any) {
     console.log('[CustomLayer] Destroyed:', this.layerId);
+    
+    // Stop animation loop
+    this.destroyed = true;
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      console.log('[CustomLayer] Animation loop stopped');
+    }
     
     if (this.map && this.layerId) {
       try {
@@ -121,12 +153,26 @@ export const CustomLayerHook = {
           customWebGLManager.storeProgram(config.id, shaderProgram);
           self.shaderProgram = shaderProgram;
 
-          // Create simple particle data (random positions)
+          // Create particle data in MERCATOR COORDINATES [0, 1]
+          // According to MapLibre GL docs, custom layers work with MercatorCoordinate
+          // which converts lng/lat to normalized [0, 1] range
           const particleCount = 1000;
           const positions = new Float32Array(particleCount * 2);
           for (let i = 0; i < particleCount; i++) {
-            positions[i * 2] = Math.random() * 2 - 1;
-            positions[i * 2 + 1] = Math.random() * 2 - 1;
+            // Generate random lng/lat
+            const lng = Math.random() * 360 - 180;
+            const lat = Math.random() * 170 - 85;
+            
+            // Convert to Mercator coordinates [0, 1]
+            // Formula from MapLibre: x = (lng + 180) / 360
+            // y = (180 - (180 / π * ln(tan(π/4 + lat * π / 360)))) / 360
+            const x = (lng + 180) / 360;
+            const latRad = lat * Math.PI / 180;
+            const mercatorY = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
+            const y = (180 - mercatorY * 180 / Math.PI) / 360;
+            
+            positions[i * 2] = x;
+            positions[i * 2 + 1] = y;
           }
 
           buffer = customWebGLManager.createBuffer(gl, positions);
@@ -139,8 +185,18 @@ export const CustomLayerHook = {
         }
       },
 
-      render(_glContext: WebGLRenderingContext, matrix: number[]) {
-        if (!initialized || !shaderProgram) return;
+      render(_glContext: WebGLRenderingContext, args: any) {
+        if (!initialized || !shaderProgram) {
+          return;
+        }
+        
+        // According to MapLibre GL JS docs, use args.defaultProjectionData.mainMatrix
+        const matrix = args?.defaultProjectionData?.mainMatrix;
+        
+        if (!matrix || matrix.length !== 16) {
+          console.warn('[CustomLayer] Invalid matrix in args.defaultProjectionData:', matrix);
+          return;
+        }
 
         gl.useProgram(shaderProgram.program);
 
@@ -148,13 +204,18 @@ export const CustomLayerHook = {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        // Set matrix uniform
+        // Set matrix uniform - according to MapLibre docs
         if (shaderProgram.uniforms.u_matrix) {
           gl.uniformMatrix4fv(shaderProgram.uniforms.u_matrix, false, matrix);
         }
 
-        // Set other uniforms
-        const uniforms = config.uniforms || {};
+        // Calculate u_time dynamically if animation is enabled
+        let uniforms = self.currentConfig?.uniforms || config.uniforms || {};
+        if (self.startTime !== undefined && uniforms.u_time !== undefined) {
+          const currentTime = performance.now() / 1000 - self.startTime;
+          uniforms = {...uniforms, u_time: currentTime};
+        }
+        
         customWebGLManager.setUniforms(gl, shaderProgram, uniforms);
 
         // Bind buffer and set attribute
@@ -173,8 +234,12 @@ export const CustomLayerHook = {
 
         // Draw particles
         gl.drawArrays(gl.POINTS, 0, 1000);
-
         gl.disable(gl.BLEND);
+        
+        // Trigger repaint for continuous animation (official MapLibre pattern)
+        if (self.startTime !== undefined && self.map) {
+          self.map.triggerRepaint();
+        }
       },
 
       onRemove() {
