@@ -103,6 +103,9 @@ export const MarkerHook: LiveViewHook = {
       // Click event
       marker.getElement().addEventListener('click', (e) => {
         e.stopPropagation();
+        if (popup) {
+          marker.togglePopup();  // ← línea añadida
+        }
         this.pushEvent('marker:clicked', {
           markerId: config.id,
           lngLat: marker.getLngLat().toArray()
