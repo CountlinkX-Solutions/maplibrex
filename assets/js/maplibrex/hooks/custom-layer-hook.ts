@@ -134,7 +134,7 @@ export const CustomLayerHook = {
     return {
       id: config.id,
       type: 'custom',
-      renderingMode: '3d',
+      renderingMode: '2d',
 
       onAdd(_map: any, glContext: WebGLRenderingContext) {
         gl = glContext;
@@ -185,59 +185,66 @@ export const CustomLayerHook = {
         }
       },
 
-      render(_glContext: WebGLRenderingContext, args: any) {
+      render(_glContext: WebGLRenderingContext, matrixOrArgs: any) {
         if (!initialized || !shaderProgram) {
           return;
         }
-        
-        // According to MapLibre GL JS docs, use args.defaultProjectionData.mainMatrix
-        const matrix = args?.defaultProjectionData?.mainMatrix;
-        
+
+        // Support both MapLibre APIs:
+        // - Old (< 3.x): render(gl, matrix) where matrix is Float32Array directly
+        // - New (>= 3.x): render(gl, args) where args.defaultProjectionData.mainMatrix holds it
+        let matrix: Float32Array | number[] | null = null;
+        if (matrixOrArgs instanceof Float32Array || Array.isArray(matrixOrArgs)) {
+          matrix = matrixOrArgs;
+        } else {
+          matrix = matrixOrArgs?.defaultProjectionData?.mainMatrix ?? null;
+        }
+
         if (!matrix || matrix.length !== 16) {
-          console.warn('[CustomLayer] Invalid matrix in args.defaultProjectionData:', matrix);
           return;
         }
 
-        gl.useProgram(shaderProgram.program);
+        // ── Save GL state so we don't corrupt other MapLibre layers ──
+        const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+        const prevBlend = gl.isEnabled(gl.BLEND);
 
-        // Enable blending for particles
+        // ── Render ──
+        gl.useProgram(shaderProgram.program);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        // Set matrix uniform - according to MapLibre docs
         if (shaderProgram.uniforms.u_matrix) {
           gl.uniformMatrix4fv(shaderProgram.uniforms.u_matrix, false, matrix);
         }
 
-        // Calculate u_time dynamically if animation is enabled
+        // u_time is driven client-side from performance.now() for smooth, jitter-free animation
         let uniforms = self.currentConfig?.uniforms || config.uniforms || {};
         if (self.startTime !== undefined && uniforms.u_time !== undefined) {
           const currentTime = performance.now() / 1000 - self.startTime;
-          uniforms = {...uniforms, u_time: currentTime};
+          uniforms = { ...uniforms, u_time: currentTime };
         }
-        
+
+
         customWebGLManager.setUniforms(gl, shaderProgram, uniforms);
 
-        // Bind buffer and set attribute
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         if (shaderProgram.attributes.a_position !== undefined) {
           gl.enableVertexAttribArray(shaderProgram.attributes.a_position);
-          gl.vertexAttribPointer(
-            shaderProgram.attributes.a_position,
-            2, // 2 components per vertex (x, y)
-            gl.FLOAT,
-            false,
-            0,
-            0
-          );
+          gl.vertexAttribPointer(shaderProgram.attributes.a_position, 2, gl.FLOAT, false, 0, 0);
         }
 
-        // Draw particles
         gl.drawArrays(gl.POINTS, 0, 1000);
-        gl.disable(gl.BLEND);
-        
-        // Trigger repaint for continuous animation (official MapLibre pattern)
-        if (self.startTime !== undefined && self.map) {
+
+        // ── Restore GL state ──
+        gl.useProgram(prevProgram);
+        if (!prevBlend) gl.disable(gl.BLEND);
+        if (shaderProgram.attributes.a_position !== undefined) {
+          gl.disableVertexAttribArray(shaderProgram.attributes.a_position);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // Drive continuous animation: only when u_time is active (client-side loop)
+        if (self.startTime !== undefined && self.map && !self.destroyed) {
           self.map.triggerRepaint();
         }
       },
