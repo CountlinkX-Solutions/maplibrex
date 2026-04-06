@@ -134,7 +134,7 @@ export const CustomLayerHook = {
     return {
       id: config.id,
       type: 'custom',
-      renderingMode: '2d',
+      renderingMode: '3d',
 
       onAdd(_map: any, glContext: WebGLRenderingContext) {
         gl = glContext;
