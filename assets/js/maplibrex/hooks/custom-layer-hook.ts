@@ -49,6 +49,10 @@ export const CustomLayerHook = {
     if (config.uniforms && 'u_time' in config.uniforms) {
       this.startTime = performance.now() / 1000;
       console.log('[CustomLayer] Animation enabled for', config.id);
+      // map.repaint = true tells MapLibre to continuously re-render every frame.
+      // At the end of each _render() cycle MapLibre checks this flag and calls
+      // triggerRepaint() automatically — no external rAF loop needed.
+      map.repaint = true;
     }
 
     // Add layer to map
@@ -87,12 +91,11 @@ export const CustomLayerHook = {
 
   destroyed(this: any) {
     console.log('[CustomLayer] Destroyed:', this.layerId);
-    
-    // Stop animation loop
+
     this.destroyed = true;
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-      console.log('[CustomLayer] Animation loop stopped');
+    // Turn off continuous repaint when the animated layer is removed
+    if (this.map && this.startTime !== undefined) {
+      this.map.repaint = false;
     }
     
     if (this.map && this.layerId) {
@@ -204,9 +207,14 @@ export const CustomLayerHook = {
           return;
         }
 
-        // ── Save GL state so we don't corrupt other MapLibre layers ──
+        // ── Save GL state (MapLibre v5 uses WebGL2 + VAOs — must save/restore VAO binding) ──
+        const gl2 = gl as WebGL2RenderingContext;
+        const prevVAO = gl2.getParameter(gl2.VERTEX_ARRAY_BINDING) as WebGLVertexArrayObject | null;
         const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
         const prevBlend = gl.isEnabled(gl.BLEND);
+
+        // Unbind VAO so our vertex attribute calls don't corrupt MapLibre's VAO state
+        gl2.bindVertexArray(null);
 
         // ── Render ──
         gl.useProgram(shaderProgram.program);
@@ -223,7 +231,6 @@ export const CustomLayerHook = {
           const currentTime = performance.now() / 1000 - self.startTime;
           uniforms = { ...uniforms, u_time: currentTime };
         }
-
 
         customWebGLManager.setUniforms(gl, shaderProgram, uniforms);
 
@@ -242,11 +249,10 @@ export const CustomLayerHook = {
           gl.disableVertexAttribArray(shaderProgram.attributes.a_position);
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        // Restore MapLibre's VAO
+        gl2.bindVertexArray(prevVAO);
 
-        // Drive continuous animation: only when u_time is active (client-side loop)
-        if (self.startTime !== undefined && self.map && !self.destroyed) {
-          self.map.triggerRepaint();
-        }
+        // Animation loop is driven by the independent rAF in mounted(), not here.
       },
 
       onRemove() {
