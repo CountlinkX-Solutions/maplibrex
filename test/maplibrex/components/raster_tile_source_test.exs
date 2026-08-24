@@ -238,7 +238,7 @@ defmodule MaplibreX.Components.RasterTileSourceTest do
       end
     end
 
-    test "includes default values in configuration" do
+    test "omits TileJSON-declared properties so the server values win" do
       assigns = %{
         id: "satellite",
         map_id: "test-map",
@@ -250,11 +250,11 @@ defmodule MaplibreX.Components.RasterTileSourceTest do
         <.raster_tile_source id={@id} map_id={@map_id} url={@url} />
         """)
 
-      # Should include defaults: tileSize, minzoom, maxzoom, scheme, tms, volatile
-      assert html =~ ~s(&quot;tileSize&quot;:512)
-      assert html =~ ~s(&quot;minzoom&quot;:0)
-      assert html =~ ~s(&quot;maxzoom&quot;:22)
-      assert html =~ ~s(&quot;scheme&quot;:&quot;xyz&quot;)
+      # These would override the TileJSON; MapLibre's own defaults match them.
+      refute html =~ "tileSize"
+      refute html =~ "minzoom"
+      refute html =~ "maxzoom"
+      refute html =~ "scheme"
       assert html =~ ~s(&quot;tms&quot;:false)
       assert html =~ ~s(&quot;volatile&quot;:false)
     end

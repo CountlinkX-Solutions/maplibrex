@@ -53,6 +53,17 @@ First public release.
 
 ### Fixed
 
+- Source components no longer send `minzoom`, `maxzoom`, `tileSize`, `scheme`
+  or `encoding` unless set explicitly. They defaulted to MapLibre's own values
+  and were serialised unconditionally, which overrode whatever the TileJSON
+  declared — a terrarium DEM was decoded as Mapbox Terrain-RGB and rendered
+  as spikes, and `maxzoom: 22` requested tiles servers do not have.
+- `map` accepts `min_pitch` and `max_pitch`. MapLibre caps pitch at 60 and
+  silently clamps anything above it, so a 3D terrain view asking for 70 was
+  flattened with no indication why.
+- `map`'s numeric attributes are no longer typed `:integer`. `zoom={3.5}`,
+  `bearing={-17.6}` and fractional pitch are all valid MapLibre values.
+
 - The map container is rendered with `phx-update="ignore"`. Without it, any
   LiveView re-render that touched the map element's dynamics patched the
   container away: MapLibre kept rendering into a detached node while the page

@@ -223,7 +223,7 @@ defmodule MaplibreX.Components.RasterDEMSourceTest do
       end
     end
 
-    test "includes default values in configuration" do
+    test "omits TileJSON-declared properties so the server values win" do
       assigns = %{
         id: "terrain",
         map_id: "test-map",
@@ -235,12 +235,35 @@ defmodule MaplibreX.Components.RasterDEMSourceTest do
         <.raster_dem_source id={@id} map_id={@map_id} url={@url} />
         """)
 
-      # Should include defaults: tileSize, minzoom, maxzoom, encoding, volatile
-      assert html =~ ~s(&quot;tileSize&quot;:512)
-      assert html =~ ~s(&quot;minzoom&quot;:0)
-      assert html =~ ~s(&quot;maxzoom&quot;:22)
-      assert html =~ ~s(&quot;encoding&quot;:&quot;mapbox&quot;)
+      # Sending these would override the TileJSON. Decoding a terrarium DEM as
+      # Mapbox Terrain-RGB renders the terrain as spikes, and forcing maxzoom
+      # 22 requests tiles the server does not have. MapLibre's own defaults are
+      # the same values, so omitting them costs nothing.
+      refute html =~ "tileSize"
+      refute html =~ "minzoom"
+      refute html =~ "maxzoom"
+      refute html =~ "encoding"
       assert html =~ ~s(&quot;volatile&quot;:false)
+    end
+
+    test "sends the properties when they are set explicitly" do
+      assigns = %{id: "terrain", map_id: "test-map", url: "https://example.com/dem.json"}
+
+      html =
+        rendered_to_string(~H"""
+        <.raster_dem_source
+          id={@id}
+          map_id={@map_id}
+          url={@url}
+          encoding="terrarium"
+          tile_size={256}
+          max_zoom={14}
+        />
+        """)
+
+      assert html =~ ~s(&quot;encoding&quot;:&quot;terrarium&quot;)
+      assert html =~ ~s(&quot;tileSize&quot;:256)
+      assert html =~ ~s(&quot;maxzoom&quot;:14)
     end
   end
 end

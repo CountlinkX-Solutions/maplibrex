@@ -238,10 +238,12 @@ defmodule MaplibreX.Components.VectorTileSourceTest do
       refute html =~ ~s(&quot;tiles&quot;)
       refute html =~ ~s(&quot;attribution&quot;)
 
-      # But should include defaults: minzoom, maxzoom, scheme, volatile
-      assert html =~ ~s(&quot;minzoom&quot;:0)
-      assert html =~ ~s(&quot;maxzoom&quot;:22)
-      assert html =~ ~s(&quot;scheme&quot;:&quot;xyz&quot;)
+      # Nor the TileJSON-declared properties: sending them would override what
+      # the server advertises. MapLibre's own defaults match them anyway.
+      refute html =~ ~s(&quot;minzoom&quot;)
+      refute html =~ ~s(&quot;maxzoom&quot;)
+      refute html =~ ~s(&quot;scheme&quot;)
+
       assert html =~ ~s(&quot;volatile&quot;:false)
     end
   end

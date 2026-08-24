@@ -126,12 +126,12 @@ defmodule MaplibreX.Components.RasterTileSource do
   attr :map_id, :string, required: true
   attr :url, :string, default: nil
   attr :tiles, :list, default: nil
-  attr :tile_size, :integer, default: 512
-  attr :min_zoom, :integer, default: 0
-  attr :max_zoom, :integer, default: 22
+  attr :tile_size, :integer, default: nil
+  attr :min_zoom, :integer, default: nil
+  attr :max_zoom, :integer, default: nil
   attr :attribution, :string, default: nil
   attr :bounds, :list, default: nil
-  attr :scheme, :string, default: "xyz"
+  attr :scheme, :string, default: nil
   attr :tms, :boolean, default: false
   attr :volatile, :boolean, default: false
 

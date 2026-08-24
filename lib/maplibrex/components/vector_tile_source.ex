@@ -125,11 +125,11 @@ defmodule MaplibreX.Components.VectorTileSource do
   attr :map_id, :string, required: true
   attr :url, :string, default: nil
   attr :tiles, :list, default: nil
-  attr :min_zoom, :integer, default: 0
-  attr :max_zoom, :integer, default: 22
+  attr :min_zoom, :integer, default: nil
+  attr :max_zoom, :integer, default: nil
   attr :attribution, :string, default: nil
   attr :bounds, :list, default: nil
-  attr :scheme, :string, default: "xyz"
+  attr :scheme, :string, default: nil
   attr :promote_id, :map, default: nil
   attr :volatile, :boolean, default: false
 
