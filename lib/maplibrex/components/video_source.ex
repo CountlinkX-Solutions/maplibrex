@@ -109,7 +109,7 @@ defmodule MaplibreX.Components.VideoSource do
     end
 
     # Validate URLs
-    if length(assigns.urls) == 0 do
+    if assigns.urls == [] do
       raise ArgumentError, "VideoSource requires at least one video URL"
     end
 

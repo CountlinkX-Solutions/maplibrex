@@ -143,7 +143,7 @@ defmodule MaplibreX.Components.ControlButton do
 
     # Warn if neither icon nor slot provided
     has_icon = !is_nil(assigns.icon) && assigns.icon != ""
-    has_slot = assigns[:inner_block] != nil && length(assigns.inner_block) > 0
+    has_slot = assigns[:inner_block] not in [nil, []]
 
     if !has_icon && !has_slot do
       IO.warn(

@@ -200,7 +200,7 @@ defmodule MaplibreX.Components.GeoJSONLayer do
         data: data,
         generateId: assigns.generate_id
       }
-      |> maybe_put(:cluster, assigns.cluster && assigns.cluster)
+      |> maybe_put(:cluster, assigns.cluster)
       |> maybe_put(:clusterMaxZoom, assigns.cluster && assigns.cluster_max_zoom)
       |> maybe_put(:clusterRadius, assigns.cluster && assigns.cluster_radius)
       |> maybe_put(:clusterProperties, assigns.cluster_properties)
