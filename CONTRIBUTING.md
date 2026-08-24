@@ -54,7 +54,7 @@ and phoenix_live_view commit theirs.
 If you touch anything under `assets/js/`, rebuild it and commit the result:
 
 ```bash
-MIX_ENV=prod mix assets.deploy
+mix assets.deploy
 ```
 
 CI fails if you forget.

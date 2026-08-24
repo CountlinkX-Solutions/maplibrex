@@ -34,6 +34,32 @@ config :esbuild,
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
+# The bundle that ships in the Hex package and is committed to the repository.
+#
+# This profile is deliberately separate from `maplibrex` and is never
+# overridden per environment: the published artifact must be byte-identical no
+# matter which MIX_ENV builds it, otherwise the CI staleness check compares a
+# dev build against a prod one. It also lets `mix publish` run in :dev, where
+# ex_doc lives.
+config :esbuild,
+  maplibrex_release: [
+    args: ~w(
+        js/maplibrex.ts
+        --bundle
+        --format=esm
+        --target=es2022
+        --outdir=../priv/static/assets/js
+        --loader:.ts=ts
+        --minify
+        --tree-shaking=true
+        --legal-comments=none
+        --drop:debugger
+        --sourcemap=external
+      ) ++ external_peers,
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
 # MaplibreX defaults. Host applications override these in their own config.
 config :maplibrex,
   default_style: "https://demotiles.maplibre.org/style.json",

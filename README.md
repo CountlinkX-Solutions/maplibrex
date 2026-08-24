@@ -231,8 +231,12 @@ Publishing (the alias builds `priv/static` first — never run `mix hex.publish`
 directly, or the package ships without its JavaScript):
 
 ```bash
-MIX_ENV=prod mix publish
+mix publish
 ```
+
+Run it in `:dev`: `hex.publish` builds the documentation, and `ex_doc` is a
+dev-only dependency. The release bundle is built by its own esbuild profile,
+so the output is identical whatever `MIX_ENV` is set to.
 
 ## Contributing
 

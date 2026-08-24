@@ -161,11 +161,14 @@ defmodule MaplibreX.MixProject do
       setup: ["deps.get", "cmd --cd assets npm install"],
       "assets.build": ["esbuild maplibrex"],
       "assets.watch": ["esbuild maplibrex --watch"],
-      # Produces the bundle that ships in the Hex package.
-      "assets.deploy": ["esbuild maplibrex --minify"],
+      # Produces the bundle that ships in the Hex package. Uses its own esbuild
+      # profile so the output does not depend on MIX_ENV.
+      "assets.deploy": ["esbuild maplibrex_release"],
       typecheck: ["cmd --cd assets npx tsc --noEmit"],
       # Hex has no prepublish hook, so the asset build is wired in here. Never
-      # run `mix hex.publish` directly or the package ships an empty priv/static.
+      # run `mix hex.publish` directly or the package ships an empty
+      # priv/static. Run this in :dev — hex.publish needs ex_doc to build the
+      # documentation, and ex_doc is a dev-only dependency.
       publish: ["assets.deploy", "hex.publish"],
       ci: ["format --check-formatted", "compile --warnings-as-errors", "credo --strict", "test"]
     ]
