@@ -1,133 +1,115 @@
 defmodule MaplibreX do
   @moduledoc """
-  MaplibreX - MapLibre GL JS Components for Phoenix LiveView
+  MapLibre GL JS components for Phoenix LiveView.
 
-  MaplibreX provides declarative and reactive Phoenix LiveView components for
-  integrating MapLibre GL JS maps into your Elixir applications.
+  MaplibreX exposes MapLibre GL JS as declarative LiveView components: the map
+  follows your assigns, and map interactions arrive as ordinary
+  `handle_event/3` callbacks. See the [README](readme.html) for installation and
+  the full component list.
 
-  ## Installation
+  ## Quick start
 
-  Add `maplibrex` to your list of dependencies in `mix.exs`:
+      defmodule MyAppWeb.MapLive do
+        use MyAppWeb, :live_view
+        import MaplibreX.Components
 
-      def deps do
-        [
-          {:maplibrex, "~> 0.1.0"}
-        ]
+        def mount(_params, _session, socket) do
+          {:ok, assign(socket, center: [-74.5, 40], zoom: 9)}
+        end
+
+        def render(assigns) do
+          ~H\"\"\"
+          <.map id="my-map" center={@center} zoom={@zoom} class="h-96 w-full" />
+          <.navigation_control id="nav" map_id="my-map" position="top-left" />
+          \"\"\"
+        end
+
+        def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
+          {:noreply, assign(socket, center: center, zoom: zoom)}
+        end
       end
 
   ## Configuration
 
-  Configure MaplibreX in your `config/config.exs`:
+  Every value is optional; these are the defaults:
 
       config :maplibrex,
         default_style: "https://demotiles.maplibre.org/style.json",
         default_center: [0, 0],
         default_zoom: 10
 
-  ## Setup
-
-  In your assets JavaScript file (e.g., `assets/js/app.js`), import and register the hooks:
-
-      import { MapHooks } from "../deps/maplibrex/priv/static/assets/js/maplibrex"
-
-      let liveSocket = new LiveSocket("/live", Socket, {
-        hooks: MapHooks,
-        params: {_csrf_token: csrfToken}
-      })
-
-  ## Usage
-
-  Import the components in your LiveView module:
-
-      defmodule MyAppWeb.MapLive do
-        use MyAppWeb, :live_view
-        import MaplibreX.Components
-
-        def render(assigns) do
-          ~H\"\"\"
-          <.map
-            id="my-map"
-            center={[-74.5, 40]}
-            zoom={9}
-            style="https://demotiles.maplibre.org/style.json"
-            class="h-96"
-          />
-          \"\"\"
-        end
-      end
-
-  ## Components
-
-  - `MaplibreX.Components.Map` - Main map component
-  - `MaplibreX.Components.Marker` - Marker component (coming soon)
-  - `MaplibreX.Components.Popup` - Popup component (coming soon)
-  - `MaplibreX.Components.GeoJSONLayer` - GeoJSON layer component (coming soon)
-
   ## Events
 
-  MaplibreX components emit various events that you can handle in your LiveView:
+  Components push these to your LiveView:
 
-  - `map:moved` - When the map is moved
-  - `map:clicked` - When the map is clicked
-  - `map:loaded` - When the map finishes loading
-  - `map:zoom_changed` - When the zoom level changes
-  - `map:error` - When an error occurs
+    * `map:loaded` - the map finished loading
+    * `map:moved` - the map was panned, zoomed, rotated or pitched (debounced 150ms)
+    * `map:clicked` - the map was clicked
+    * `map:zoom_changed` - the zoom level changed
+    * `map:error` - MapLibre reported an error
+    * `marker:clicked`, `marker:drag_start`, `marker:dragging`, `marker:drag_end`
+    * `layer:feature_click`, `layer:feature_mouseenter`, `layer:feature_mouseleave`
 
-  Example event handling:
+  ## Controlling the map
 
-      def handle_event("map:clicked", %{"lngLat" => [lng, lat]}, socket) do
-        IO.puts("Map clicked at: \#{lng}, \#{lat}")
-        {:noreply, socket}
-      end
+  Map commands are `Phoenix.LiveView.JS` structs, so they execute on the client
+  with no server round-trip:
 
-  ## JavaScript Commands
+      alias MaplibreX.Components.Map
 
-  You can send commands to the map from your LiveView:
+      <button phx-click={Map.fly_to("my-map", [-74.5, 40], 12)}>Fly to NYC</button>
+      <button phx-click={Map.zoom_in("my-map")}>Zoom in</button>
 
-      # Fly to a location
-      push_event(socket, "map:fly_to", %{
-        center: [-74.5, 40],
-        zoom: 12,
-        duration: 2000
-      })
-
-      # Fit to bounds
-      push_event(socket, "map:fit_bounds", %{
-        bounds: [[-74, 40], [-73, 41]],
-        padding: 50
-      })
+  See `MaplibreX.Components.Map` for the full command set.
   """
+
+  @default_style "https://demotiles.maplibre.org/style.json"
+  @default_center [0, 0]
+  @default_zoom 10
 
   @doc """
-  Returns the default configuration for MaplibreX.
+  Returns every configured value for `:maplibrex`.
   """
+  @spec config() :: keyword()
   def config do
     Application.get_all_env(:maplibrex)
   end
 
   @doc """
-  Returns the default map style URL.
+  Returns the configured default map style URL.
+
+  Defaults to `#{@default_style}`.
   """
+  @spec default_style() :: String.t() | map()
   def default_style do
-    Application.get_env(:maplibrex, :default_style, "https://demotiles.maplibre.org/style.json")
+    Application.get_env(:maplibrex, :default_style, @default_style)
   end
 
   @doc """
-  Returns the default map center coordinates.
+  Returns the configured default map center as `[longitude, latitude]`.
+
+  Defaults to `#{inspect(@default_center)}`.
   """
+  @spec default_center() :: [number()]
   def default_center do
-    Application.get_env(:maplibrex, :default_center, [0, 0])
+    Application.get_env(:maplibrex, :default_center, @default_center)
   end
 
   @doc """
-  Returns the default zoom level.
+  Returns the configured default zoom level.
+
+  Defaults to `#{@default_zoom}`.
   """
+  @spec default_zoom() :: number()
   def default_zoom do
-    Application.get_env(:maplibrex, :default_zoom, 10)
+    Application.get_env(:maplibrex, :default_zoom, @default_zoom)
   end
 
   @doc """
-  Returns the version of MaplibreX.
+  Returns the installed MaplibreX version.
   """
-  def version, do: "0.1.0"
+  @spec version() :: String.t()
+  def version do
+    Application.spec(:maplibrex, :vsn) |> to_string()
+  end
 end

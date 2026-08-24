@@ -1,77 +1,92 @@
 defmodule MaplibreX.Components.DeckGlLayer do
   @moduledoc """
-  Componente para renderizar capas de deck.gl en el mapa.
+  Renders a deck.gl layer on top of a MapLibre map.
 
-  deck.gl es una biblioteca de visualización WebGL para grandes datasets.
-  Este componente permite integrar capas de deck.gl con MapLibre GL JS
-  en el contexto de Phoenix LiveView.
+  deck.gl is a WebGL visualisation library for large datasets. This component
+  wires deck.gl layers into MapLibre GL JS from Phoenix LiveView.
 
-  ## Atributos
+  The deck.gl packages are lazy-loaded the first time a layer mounts, so
+  applications that never use this component pay nothing for it. They are
+  optional peer dependencies — see the installation guide in the README.
 
-    * `id` (required) - Identificador único del layer
-    * `map_id` (required) - ID del mapa donde se renderizará
-    * `layer_type` (required) - Tipo de deck.gl layer (ej: "ScatterplotLayer", "ArcLayer")
-    * `data` (required) - Lista de datos a visualizar
-    * `props` - Mapa con propiedades específicas del layer (default: %{})
-    * `before_id` - ID de capa antes de la cual insertar (default: nil)
-    * `opacity` - Opacidad del layer 0-1 (default: 1.0)
-    * `visible` - Visibilidad del layer (default: true)
-    * `pickable` - Si el layer es clickeable (default: false)
-    * `auto_highlight` - Highlight automático en hover (default: false)
-    * `update_triggers` - Mapa de triggers para actualización (default: %{})
+  > #### Requires maplibre-gl v5 {: .warning}
+  >
+  > `@deck.gl/mapbox` reads MapLibre's internal `map.transform`, which
+  > maplibre-gl v6 removed, and every published version still does. Under v6
+  > this component raises with a message naming the constraint. The rest of
+  > MaplibreX works on both v5 and v6.
 
-  ## Tipos de Layers Soportados
+  ## Attributes
 
-  ### Layers Básicos
-    * `ScatterplotLayer` - Puntos con radio variable
-    * `ArcLayer` - Arcos entre puntos
-    * `LineLayer` - Líneas y rutas
-    * `PolygonLayer` - Polígonos 2D
-    * `PathLayer` - Caminos
-    * `ColumnLayer` - Columnas 3D
-    * `TextLayer` - Etiquetas de texto
-    * `IconLayer` - Iconos
+    * `id` (required) - Unique layer identifier
+    * `map_id` (required) - Id of the map to render into
+    * `layer_type` (required) - deck.gl layer type, e.g. `"ScatterplotLayer"`, `"ArcLayer"`
+    * `data` (required) - List of records to visualise
+    * `props` - Layer-specific properties (default: `%{}`)
+    * `before_id` - Insert the layer before this layer id (default: `nil`)
+    * `opacity` - Layer opacity, 0-1 (default: `1.0`)
+    * `visible` - Layer visibility (default: `true`)
+    * `pickable` - Whether the layer responds to pointer events (default: `false`)
+    * `auto_highlight` - Highlight objects on hover (default: `false`)
+    * `update_triggers` - deck.gl update triggers (default: `%{}`)
 
-  ### Layers de Agregación
-    * `HexagonLayer` - Hexágonos agregados
-    * `GridLayer` - Grid de celdas
-    * `ScreenGridLayer` - Grid en coordenadas de pantalla
-    * `HeatmapLayer` - Mapa de calor
-    * `ContourLayer` - Líneas de contorno
+  ## Supported layer types
 
-  ### Layers Avanzados
-    * `GeoJsonLayer` - Renderizado de GeoJSON
+  ### Basic layers
 
-  ## Eventos
+    * `ScatterplotLayer` - Points with a variable radius
+    * `ArcLayer` - Arcs between point pairs
+    * `LineLayer` - Lines and routes
+    * `PolygonLayer` - 2D polygons
+    * `PathLayer` - Paths
+    * `ColumnLayer` - 3D columns
+    * `TextLayer` - Text labels
+    * `IconLayer` - Icons
 
-  Este componente emite los siguientes eventos:
+  ### Aggregation layers
 
-    * `deckgl:layer_loaded` - Layer cargado exitosamente
-    * `deckgl:click` - Click en un objeto del layer
-    * `deckgl:hover` - Hover sobre un objeto del layer
-    * `deckgl:drag_start` - Inicio de drag en un objeto
-    * `deckgl:drag` - Dragging de un objeto
-    * `deckgl:drag_end` - Fin de drag
-    * `deckgl:error` - Error al procesar el layer
+    * `HexagonLayer` - Aggregated hexagonal bins
+    * `GridLayer` - Grid cells
+    * `ScreenGridLayer` - Grid in screen coordinates
+    * `HeatmapLayer` - Heatmap
+    * `ContourLayer` - Contour lines
 
-  ## Ejemplos
+  ### Advanced layers
 
-      # ScatterplotLayer básico
+    * `GeoJsonLayer` - GeoJSON rendering
+
+  ## Events
+
+  This component emits:
+
+    * `deckgl:layer_loaded` - Layer loaded successfully
+    * `deckgl:click` - An object in the layer was clicked
+    * `deckgl:hover` - The pointer entered an object
+    * `deckgl:drag_start` - Drag started on an object
+    * `deckgl:drag` - Object is being dragged
+    * `deckgl:drag_end` - Drag finished
+    * `deckgl:error` - The layer failed to process
+
+  ## Examples
+
+  A basic `ScatterplotLayer`:
+
       <.deckgl_layer
         id="points"
         map_id="my-map"
         layer_type="ScatterplotLayer"
         data={@points}
         pickable={true}
-        props=%{
+        props={%{
           "getPosition" => "coordinates",
           "getRadius" => 1000,
           "getFillColor" => [255, 140, 0],
           "radiusMinPixels" => 2
-        }
+        }}
       />
 
-      # ArcLayer para visualizar conexiones
+  An `ArcLayer` visualising connections:
+
       <.deckgl_layer
         id="arcs"
         map_id="my-map"
@@ -79,35 +94,35 @@ defmodule MaplibreX.Components.DeckGlLayer do
         data={@flights}
         pickable={true}
         auto_highlight={true}
-        props=%{
+        props={%{
           "getSourcePosition" => "from",
           "getTargetPosition" => "to",
           "getSourceColor" => [255, 140, 0],
           "getTargetColor" => [255, 200, 0],
           "getWidth" => 2
-        }
+        }}
       />
 
-      # HexagonLayer para densidad
+  A `HexagonLayer` showing density:
+
       <.deckgl_layer
         id="hexagons"
         map_id="my-map"
         layer_type="HexagonLayer"
         data={@events}
-        props=%{
+        props={%{
           "getPosition" => "location",
           "elevationScale" => 4,
           "radius" => 200,
           "extruded" => true,
           "coverage" => 0.9
-        }
+        }}
       />
 
-  ## Manejo de Eventos
+  ## Handling events
 
       def handle_event("deckgl:click", %{"object" => object, "coordinate" => coord}, socket) do
-        # object contiene los datos del feature clickeado
-        # coordinate contiene [lng, lat]
+        # `object` holds the clicked feature's data, `coord` is [lng, lat]
         {:noreply, socket}
       end
 
@@ -117,30 +132,30 @@ defmodule MaplibreX.Components.DeckGlLayer do
 
   ## Accessors
 
-  Los accessors pueden especificarse de varias formas:
+  Accessors accept several forms:
 
-      # Como string (nombre de propiedad)
-      "getPosition" => "coordinates"  # d => d.coordinates
+      # A string naming a property
+      "getPosition" => "coordinates"       # d => d.coordinates
 
-      # Como array MapLibre-style
-      "getPosition" => ["get", "coords"]  # d => d.coords
+      # A MapLibre-style expression
+      "getPosition" => ["get", "coords"]   # d => d.coords
 
-      # Como valor constante
-      "getFillColor" => [255, 0, 0]  # Siempre rojo
+      # A constant value
+      "getFillColor" => [255, 0, 0]        # always red
 
   ## Performance
 
-  Para datasets grandes (>100k puntos):
+  For large datasets (>100k points):
 
-    * Use `HexagonLayer` o `GridLayer` en lugar de `ScatterplotLayer`
-    * Configure `updateTriggers` apropiadamente
-    * Considere filtrado de datos en el servidor
-    * Use layers de agregación cuando sea posible
+    * Prefer `HexagonLayer` or `GridLayer` over `ScatterplotLayer`
+    * Set `update_triggers` so deck.gl only recomputes what changed
+    * Filter data server-side before sending it to the client
+    * Reach for aggregation layers wherever they fit
 
-  ## Referencias
+  ## References
 
-    * deck.gl Documentation: https://deck.gl/docs
-    * Layer Catalog: https://deck.gl/docs/api-reference/layers
+    * deck.gl documentation: https://deck.gl/docs
+    * Layer catalog: https://deck.gl/docs/api-reference/layers
   """
 
   use Phoenix.Component
@@ -152,32 +167,31 @@ defmodule MaplibreX.Components.DeckGlLayer do
   )
 
   @doc """
-  Renderiza un deck.gl layer.
+  Renders a deck.gl layer.
 
-  ## Ejemplo
+  ## Example
 
       <.deckgl_layer
         id="my-layer"
         map_id="map"
         layer_type="ScatterplotLayer"
         data={@points}
-        props=%{"getPosition" => "coords"}
+        props={%{"getPosition" => "coords"}}
       />
   """
-  attr :id, :string, required: true, doc: "Identificador único del layer"
-  attr :map_id, :string, required: true, doc: "ID del mapa"
-  attr :layer_type, :string, required: true, doc: "Tipo de deck.gl layer"
-  attr :data, :list, required: true, doc: "Datos a visualizar"
-  attr :props, :map, default: %{}, doc: "Propiedades del layer"
-  attr :before_id, :string, default: nil, doc: "ID de capa para ordenamiento"
-  attr :opacity, :float, default: 1.0, doc: "Opacidad (0-1)"
-  attr :visible, :boolean, default: true, doc: "Visibilidad"
-  attr :pickable, :boolean, default: false, doc: "Si es clickeable"
-  attr :auto_highlight, :boolean, default: false, doc: "Highlight en hover"
-  attr :update_triggers, :map, default: %{}, doc: "Triggers de actualización"
+  attr :id, :string, required: true, doc: "Unique layer identifier"
+  attr :map_id, :string, required: true, doc: "Id of the map to render into"
+  attr :layer_type, :string, required: true, doc: "deck.gl layer type"
+  attr :data, :list, required: true, doc: "Records to visualise"
+  attr :props, :map, default: %{}, doc: "Layer-specific properties"
+  attr :before_id, :string, default: nil, doc: "Insert before this layer id"
+  attr :opacity, :float, default: 1.0, doc: "Opacity, 0-1"
+  attr :visible, :boolean, default: true, doc: "Layer visibility"
+  attr :pickable, :boolean, default: false, doc: "Whether the layer responds to pointer events"
+  attr :auto_highlight, :boolean, default: false, doc: "Highlight objects on hover"
+  attr :update_triggers, :map, default: %{}, doc: "deck.gl update triggers"
 
   def deckgl_layer(assigns) do
-    # Validaciones
     validate_layer_type!(assigns.layer_type)
     validate_opacity!(assigns.opacity)
     validate_data!(assigns.data)
