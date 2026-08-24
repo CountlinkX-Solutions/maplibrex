@@ -68,10 +68,14 @@ defmodule MaplibreX.Components.Map do
 
   * `id` (required) - Unique identifier for the map
   * `center` - Map center coordinates as `[longitude, latitude]`. Defaults to `[0, 0]`
-  * `zoom` - Initial zoom level. Defaults to `10`
+  * `zoom` - Initial zoom level, fractional values allowed. Defaults to `10`
   * `style` - Map style URL or style object. Defaults to MaplibreX config
   * `min_zoom` - Minimum zoom level. Optional
   * `max_zoom` - Maximum zoom level. Optional
+  * `min_pitch` - Minimum pitch in degrees. Optional
+  * `max_pitch` - Maximum pitch in degrees, 0-85. Optional. MapLibre caps pitch
+    at 60 by default and silently clamps anything above it, so a 3D terrain
+    view that wants a steeper camera has to raise this
   * `bearing` - Initial bearing (rotation). Defaults to `0`
   * `pitch` - Initial pitch (tilt). Defaults to `0`
   * `bounds` - Fit map to bounds `[[west, south], [east, north]]`. Optional
@@ -97,12 +101,14 @@ defmodule MaplibreX.Components.Map do
   """
   attr :id, :string, required: true
   attr :center, :list, default: nil
-  attr :zoom, :integer, default: nil
+  attr :zoom, :any, default: nil, doc: "number"
   attr :style, :any, default: nil
-  attr :min_zoom, :integer, default: nil
-  attr :max_zoom, :integer, default: nil
-  attr :bearing, :integer, default: 0
-  attr :pitch, :integer, default: 0
+  attr :min_zoom, :any, default: nil, doc: "number"
+  attr :max_zoom, :any, default: nil, doc: "number"
+  attr :min_pitch, :any, default: nil, doc: "number, degrees"
+  attr :max_pitch, :any, default: nil, doc: "number, degrees 0-85"
+  attr :bearing, :any, default: 0, doc: "number, degrees"
+  attr :pitch, :any, default: 0, doc: "number, degrees"
   attr :bounds, :list, default: nil
   attr :max_bounds, :list, default: nil
   attr :interactive, :boolean, default: true
@@ -135,6 +141,8 @@ defmodule MaplibreX.Components.Map do
       }
       |> maybe_put(:minZoom, assigns.min_zoom)
       |> maybe_put(:maxZoom, assigns.max_zoom)
+      |> maybe_put(:minPitch, assigns.min_pitch)
+      |> maybe_put(:maxPitch, assigns.max_pitch)
       |> maybe_put(:bounds, assigns.bounds)
       |> maybe_put(:maxBounds, assigns.max_bounds)
 

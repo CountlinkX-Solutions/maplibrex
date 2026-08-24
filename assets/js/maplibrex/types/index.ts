@@ -47,6 +47,8 @@ export interface MapConfig extends MaplibreXConfig {
   style: string | object;
   minZoom?: number;
   maxZoom?: number;
+  minPitch?: number;
+  maxPitch?: number;
   bearing?: number;
   pitch?: number;
   bounds?: [[number, number], [number, number]];

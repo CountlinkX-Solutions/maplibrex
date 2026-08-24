@@ -43,6 +43,8 @@ export const MapHook: LiveViewHook = {
         style: config.style as any,
         minZoom: config.minZoom,
         maxZoom: config.maxZoom,
+        minPitch: config.minPitch,
+        maxPitch: config.maxPitch,
         bearing: config.bearing || 0,
         pitch: config.pitch || 0,
         bounds: config.bounds as any,

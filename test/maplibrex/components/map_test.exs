@@ -28,6 +28,32 @@ defmodule MaplibreX.Components.MapTest do
       assert html =~ ~s(data-config=)
     end
 
+    test "passes pitch limits through so a steep 3D camera is not clamped" do
+      assigns = %{id: "test-map"}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id={@id} pitch={70} max_pitch={85} min_pitch={10} />
+        """)
+
+      # MapLibre caps pitch at 60 by default, so a terrain view asking for 70
+      # is silently flattened unless maxPitch travels with it.
+      assert html =~ "maxPitch&quot;:85"
+      assert html =~ "minPitch&quot;:10"
+    end
+
+    test "omits pitch limits when they are not given" do
+      assigns = %{id: "test-map"}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id={@id} />
+        """)
+
+      refute html =~ "maxPitch"
+      refute html =~ "minPitch"
+    end
+
     test "marks the container phx-update=ignore so LiveView cannot patch away the map" do
       assigns = %{id: "test-map"}
 
