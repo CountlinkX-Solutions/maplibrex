@@ -93,7 +93,8 @@ defmodule MaplibreX.Components.SkyTest do
         <.sky map_id={@map_id} type={@type} gradient={@gradient} />
         """)
 
-      assert html =~ ~s(&quot;sky-gradient&quot;:[&quot;#FF0000&quot;,&quot;#00FF00&quot;,&quot;#0000FF&quot;])
+      assert html =~
+               ~s(&quot;sky-gradient&quot;:[&quot;#FF0000&quot;,&quot;#00FF00&quot;,&quot;#0000FF&quot;])
     end
 
     test "renders with custom atmosphere colors" do

@@ -188,7 +188,8 @@ defmodule MaplibreX.Components.SymbolLayerTest do
         <.symbol_layer id={@id} map_id={@map_id} source_id={@source_id} filter={@filter} />
         """)
 
-      assert html =~ ~s(&quot;filter&quot;:[&quot;==&quot;,&quot;type&quot;,&quot;restaurant&quot;])
+      assert html =~
+               ~s(&quot;filter&quot;:[&quot;==&quot;,&quot;type&quot;,&quot;restaurant&quot;])
     end
 
     test "renders with min_zoom constraint" do
@@ -248,16 +249,20 @@ defmodule MaplibreX.Components.SymbolLayerTest do
           "icon-image" => [
             "match",
             ["get", "type"],
-            "restaurant", "restaurant-15",
-            "hotel", "lodging-15",
+            "restaurant",
+            "restaurant-15",
+            "hotel",
+            "lodging-15",
             "marker-15"
           ],
           "icon-size" => [
             "interpolate",
             ["linear"],
             ["zoom"],
-            10, 0.5,
-            15, 1.5
+            10,
+            0.5,
+            15,
+            1.5
           ]
         }
       }

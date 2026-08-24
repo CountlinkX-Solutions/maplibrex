@@ -246,7 +246,10 @@ defmodule MaplibreX.Components.PopupTest do
       command = MaplibreX.Components.Popup.set_location("my-popup", [-122.4, 37.8])
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "popup:set_location", target: "#my-popup", value: value}]] = command.ops
+
+      assert [["push", %{event: "popup:set_location", target: "#my-popup", value: value}]] =
+               command.ops
+
       assert value.popup_id == "my-popup"
       assert value.lng_lat == [-122.4, 37.8]
     end

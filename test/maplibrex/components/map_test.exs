@@ -28,6 +28,20 @@ defmodule MaplibreX.Components.MapTest do
       assert html =~ ~s(data-config=)
     end
 
+    test "marks the container phx-update=ignore so LiveView cannot patch away the map" do
+      assigns = %{id: "test-map"}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id={@id} />
+        """)
+
+      # MapLibre owns this container's DOM. Without phx-update="ignore", any
+      # re-render that touches the element's dynamics patches the container and
+      # leaves MapLibre rendering into a detached node.
+      assert html =~ ~s(phx-update="ignore")
+    end
+
     test "includes correct configuration in data-config" do
       assigns = %{
         id: "test-map",
@@ -133,7 +147,10 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.fly_to("test-map", [-73.98, 40.75], 12)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["dispatch", %{event: "maplibrex:fly_to", to: "#test-map", detail: detail}]] = command.ops
+
+      assert [["dispatch", %{event: "maplibrex:fly_to", to: "#test-map", detail: detail}]] =
+               command.ops
+
       assert detail.center == [-73.98, 40.75]
       assert detail.zoom == 12
     end
@@ -142,7 +159,10 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.jump_to("test-map", [-73.98, 40.75], 12)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["dispatch", %{event: "maplibrex:jump_to", to: "#test-map", detail: detail}]] = command.ops
+
+      assert [["dispatch", %{event: "maplibrex:jump_to", to: "#test-map", detail: detail}]] =
+               command.ops
+
       assert detail.center == [-73.98, 40.75]
       assert detail.zoom == 12
     end
@@ -152,7 +172,10 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.fit_bounds("test-map", bounds)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["dispatch", %{event: "maplibrex:fit_bounds", to: "#test-map", detail: detail}]] = command.ops
+
+      assert [["dispatch", %{event: "maplibrex:fit_bounds", to: "#test-map", detail: detail}]] =
+               command.ops
+
       assert detail.bounds == bounds
     end
 
@@ -161,7 +184,10 @@ defmodule MaplibreX.Components.MapTest do
       command = MaplibreX.Components.Map.set_style("test-map", style)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["dispatch", %{event: "maplibrex:set_style", to: "#test-map", detail: detail}]] = command.ops
+
+      assert [["dispatch", %{event: "maplibrex:set_style", to: "#test-map", detail: detail}]] =
+               command.ops
+
       assert detail.style == style
     end
 

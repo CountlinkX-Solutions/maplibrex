@@ -62,8 +62,10 @@ defmodule MaplibreX.Components.HeatmapLayerTest do
             "interpolate",
             ["linear"],
             ["get", "magnitude"],
-            0, 0,
-            6, 1
+            0,
+            0,
+            6,
+            1
           ]
         }
       }
@@ -87,8 +89,10 @@ defmodule MaplibreX.Components.HeatmapLayerTest do
             "interpolate",
             ["linear"],
             ["zoom"],
-            0, 1,
-            9, 3
+            0,
+            1,
+            9,
+            3
           ]
         }
       }
@@ -112,9 +116,12 @@ defmodule MaplibreX.Components.HeatmapLayerTest do
             "interpolate",
             ["linear"],
             ["heatmap-density"],
-            0, "rgba(33,102,172,0)",
-            0.5, "rgb(209,229,240)",
-            1, "rgb(178,24,43)"
+            0,
+            "rgba(33,102,172,0)",
+            0.5,
+            "rgb(209,229,240)",
+            1,
+            "rgb(178,24,43)"
           ]
         }
       }
@@ -201,29 +208,37 @@ defmodule MaplibreX.Components.HeatmapLayerTest do
             "interpolate",
             ["linear"],
             ["get", "mag"],
-            0, 0,
-            6, 1
+            0,
+            0,
+            6,
+            1
           ],
           "heatmap-intensity" => [
             "interpolate",
             ["linear"],
             ["zoom"],
-            0, 1,
-            9, 3
+            0,
+            1,
+            9,
+            3
           ],
           "heatmap-color" => [
             "interpolate",
             ["linear"],
             ["heatmap-density"],
-            0, "rgba(33,102,172,0)",
-            1, "rgb(178,24,43)"
+            0,
+            "rgba(33,102,172,0)",
+            1,
+            "rgb(178,24,43)"
           ],
           "heatmap-radius" => [
             "interpolate",
             ["linear"],
             ["zoom"],
-            0, 2,
-            9, 20
+            0,
+            2,
+            9,
+            20
           ],
           "heatmap-opacity" => 1
         },

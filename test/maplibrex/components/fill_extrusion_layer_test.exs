@@ -84,9 +84,12 @@ defmodule MaplibreX.Components.FillExtrusionLayerTest do
             "interpolate",
             ["linear"],
             ["get", "height"],
-            0, "#fbb03b",
-            50, "#223b53",
-            100, "#e55e5e"
+            0,
+            "#fbb03b",
+            50,
+            "#223b53",
+            100,
+            "#e55e5e"
           ]
         }
       }
@@ -207,8 +210,10 @@ defmodule MaplibreX.Components.FillExtrusionLayerTest do
             "interpolate",
             ["linear"],
             ["get", "height"],
-            0, "#fbb03b",
-            100, "#e55e5e"
+            0,
+            "#fbb03b",
+            100,
+            "#e55e5e"
           ],
           "fill-extrusion-height" => ["get", "height"],
           "fill-extrusion-base" => ["get", "min_height"],

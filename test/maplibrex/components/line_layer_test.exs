@@ -100,7 +100,8 @@ defmodule MaplibreX.Components.LineLayerTest do
         <.line_layer id={@id} map_id={@map_id} source_id={@source_id} filter={@filter} />
         """)
 
-      assert html =~ ~s(&quot;filter&quot;:[&quot;in&quot;,&quot;class&quot;,&quot;motorway&quot;,&quot;trunk&quot;])
+      assert html =~
+               ~s(&quot;filter&quot;:[&quot;in&quot;,&quot;class&quot;,&quot;motorway&quot;,&quot;trunk&quot;])
     end
 
     test "renders with min_zoom constraint" do

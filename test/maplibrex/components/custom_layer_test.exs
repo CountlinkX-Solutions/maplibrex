@@ -99,7 +99,8 @@ defmodule MaplibreX.Components.CustomLayerTest do
       assigns = %{
         id: "custom-shader-layer",
         map_id: "test-map",
-        vertex_shader: "attribute vec2 a_position; void main() { gl_Position = vec4(a_position, 0.0, 1.0); }"
+        vertex_shader:
+          "attribute vec2 a_position; void main() { gl_Position = vec4(a_position, 0.0, 1.0); }"
       }
 
       html =

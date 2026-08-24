@@ -215,20 +215,28 @@ defmodule MaplibreX.Components.GeoJSONLayerTest do
 
   describe "JS commands" do
     test "set_paint_property/3 generates correct JS command" do
-      command = MaplibreX.Components.GeoJSONLayer.set_paint_property("layer-id", "fill-color", "#ff0000")
+      command =
+        MaplibreX.Components.GeoJSONLayer.set_paint_property("layer-id", "fill-color", "#ff0000")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_paint_property", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_paint_property", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.property == "fill-color"
       assert value.value == "#ff0000"
     end
 
     test "set_layout_property/3 generates correct JS command" do
-      command = MaplibreX.Components.GeoJSONLayer.set_layout_property("layer-id", "visibility", "none")
+      command =
+        MaplibreX.Components.GeoJSONLayer.set_layout_property("layer-id", "visibility", "none")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.property == "visibility"
       assert value.value == "none"
@@ -239,7 +247,10 @@ defmodule MaplibreX.Components.GeoJSONLayerTest do
       command = MaplibreX.Components.GeoJSONLayer.set_filter("layer-id", filter)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_filter", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_filter", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.filter == filter
     end
@@ -249,7 +260,10 @@ defmodule MaplibreX.Components.GeoJSONLayerTest do
       command = MaplibreX.Components.GeoJSONLayer.set_data("layer-id", new_data)
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_data", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_data", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.data == new_data
     end
@@ -258,7 +272,10 @@ defmodule MaplibreX.Components.GeoJSONLayerTest do
       command = MaplibreX.Components.GeoJSONLayer.show("layer-id")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.property == "visibility"
       assert value.value == "visible"
@@ -268,7 +285,10 @@ defmodule MaplibreX.Components.GeoJSONLayerTest do
       command = MaplibreX.Components.GeoJSONLayer.hide("layer-id")
 
       assert %Phoenix.LiveView.JS{} = command
-      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] = command.ops
+
+      assert [["push", %{event: "layer:set_layout_property", target: "#layer-id", value: value}]] =
+               command.ops
+
       assert value.layer_id == "layer-id"
       assert value.property == "visibility"
       assert value.value == "none"
