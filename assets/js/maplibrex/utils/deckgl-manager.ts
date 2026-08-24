@@ -1,15 +1,18 @@
 /**
- * Manager para capas de deck.gl
+ * Manager for deck.gl layers
  * 
- * Gestiona la integración entre deck.gl y MapLibre GL JS,
- * manejando el overlay, layers y eventos.
+ * Manages the integration between deck.gl and MapLibre GL JS,
+ * handling the overlay, its layers and their events.
  */
 
-import { MapboxOverlay } from '@deck.gl/mapbox';
+import type { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { createDeckLayer } from './deckgl-layer-factory';
+import { requireDeckGL } from './deckgl-lazy-loader';
 import type { DeckGLLayerConfig } from '../types/deckgl';
+
+import { logger } from '../core/logger';
 
 export class DeckGLLayerManager {
   private map: MapLibreMap;
@@ -24,11 +27,14 @@ export class DeckGLLayerManager {
   }
   
   /**
-   * Inicializa el overlay de deck.gl sobre MapLibre
+   * Initialise the deck.gl overlay on top of MapLibre
    */
   private initializeOverlay(): void {
-    console.log('[MaplibreX] Initializing DeckGL overlay');
+    logger.debug('[MaplibreX] Initializing DeckGL overlay');
     
+    // Resolved at runtime so @deck.gl/mapbox stays out of the main bundle.
+    const { MapboxOverlay } = requireDeckGL().mapbox;
+
     this.overlay = new MapboxOverlay({
       interleaved: true,
       onClick: this.handleClick.bind(this),
@@ -42,10 +48,10 @@ export class DeckGLLayerManager {
   }
   
   /**
-   * Agrega un layer al overlay
+   * Add a layer to the overlay
    */
   addLayer(config: DeckGLLayerConfig): void {
-    console.log(`[MaplibreX] Adding DeckGL layer: ${config.id}`);
+    logger.debug(`[MaplibreX] Adding DeckGL layer: ${config.id}`);
     
     try {
       const layer = createDeckLayer(config);
@@ -58,10 +64,10 @@ export class DeckGLLayerManager {
   }
   
   /**
-   * Actualiza un layer existente
+   * Update an existing layer
    */
   updateLayer(config: DeckGLLayerConfig): void {
-    console.log(`[MaplibreX] Updating DeckGL layer: ${config.id}`);
+    logger.debug(`[MaplibreX] Updating DeckGL layer: ${config.id}`);
     
     try {
       const layer = createDeckLayer(config);
@@ -74,17 +80,17 @@ export class DeckGLLayerManager {
   }
   
   /**
-   * Remueve un layer del overlay
+   * Remove a layer from the overlay
    */
   removeLayer(layerId: string): void {
-    console.log(`[MaplibreX] Removing DeckGL layer: ${layerId}`);
+    logger.debug(`[MaplibreX] Removing DeckGL layer: ${layerId}`);
     
     this.layers.delete(layerId);
     this.updateOverlay();
   }
   
   /**
-   * Actualiza el overlay con los layers actuales
+   * Refresh the overlay with the current layers
    */
   private updateOverlay(): void {
     if (!this.overlay) return;
@@ -160,7 +166,7 @@ export class DeckGLLayerManager {
    * Limpia recursos
    */
   destroy(): void {
-    console.log('[MaplibreX] Destroying DeckGL manager');
+    logger.debug('[MaplibreX] Destroying DeckGL manager');
     
     if (this.overlay) {
       this.map.removeControl(this.overlay as any);

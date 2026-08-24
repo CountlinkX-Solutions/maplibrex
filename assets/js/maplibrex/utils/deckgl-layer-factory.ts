@@ -1,67 +1,72 @@
 /**
- * Factory para crear layers de deck.gl
+ * Factory for building deck.gl layers
  * 
- * Este factory toma una configuración y crea la instancia apropiada
- * del layer de deck.gl correspondiente.
+ * This factory takes a configuration object and creates the matching
+ * deck.gl layer instance.
  */
 
-import {
-  ScatterplotLayer,
-  ArcLayer,
-  LineLayer,
-  ColumnLayer,
-  PathLayer,
-  PolygonLayer,
-  GeoJsonLayer,
-  TextLayer,
-  IconLayer
-} from '@deck.gl/layers';
-import {
-  HexagonLayer,
-  GridLayer,
-  ScreenGridLayer,
-  HeatmapLayer,
-  ContourLayer
-} from '@deck.gl/aggregation-layers';
 import type { Layer } from '@deck.gl/core';
 import type { DeckGLLayerConfig } from '../types/deckgl';
+import { requireDeckGL } from './deckgl-lazy-loader';
 
-// Mapa de constructores de layers
-const LAYER_CONSTRUCTORS: Record<string, any> = {
-  ScatterplotLayer,
-  ArcLayer,
-  LineLayer,
-  HexagonLayer,
-  GridLayer,
-  ColumnLayer,
-  PathLayer,
-  PolygonLayer,
-  GeoJsonLayer,
-  ScreenGridLayer,
-  HeatmapLayer,
-  ContourLayer,
-  TextLayer,
-  IconLayer
-};
+// The layer types this component supports, split by the package that provides
+// them. The constructors themselves are resolved at call time from the
+// lazily-loaded modules — importing them here would defeat the code split.
+const LAYER_PACKAGES = {
+  layers: [
+    'ScatterplotLayer',
+    'ArcLayer',
+    'LineLayer',
+    'ColumnLayer',
+    'PathLayer',
+    'PolygonLayer',
+    'GeoJsonLayer',
+    'TextLayer',
+    'IconLayer'
+  ],
+  aggregation: ['HexagonLayer', 'GridLayer', 'ScreenGridLayer', 'HeatmapLayer', 'ContourLayer']
+} as const;
+
+const SUPPORTED_LAYER_TYPES: string[] = [
+  ...LAYER_PACKAGES.layers,
+  ...LAYER_PACKAGES.aggregation
+];
 
 /**
- * Crea una instancia de deck.gl layer desde una configuración
+ * Look up a layer constructor in the loaded deck.gl modules.
+ *
+ * Requires `loadDeckGL()` to have resolved — the DeckGlLayerHook awaits it
+ * before any layer is created.
+ */
+function layerConstructor(layerType: string): any {
+  const deck = requireDeckGL();
+
+  const modules: Record<string, any> =
+    (LAYER_PACKAGES.aggregation as readonly string[]).includes(layerType)
+      ? deck.aggregation
+      : deck.layers;
+
+  return modules[layerType];
+}
+
+/**
+ * Create a deck.gl layer instance from a configuration object
  * 
- * @param config - Configuración del layer
- * @returns Instancia del layer de deck.gl
- * @throws Error si el tipo de layer no es válido
+ * @param config - Layer configuration
+ * @returns The deck.gl layer instance
+ * @throws Error if the layer type is not supported
  */
 export function createDeckLayer(config: DeckGLLayerConfig): Layer {
-  const LayerConstructor = LAYER_CONSTRUCTORS[config.layerType];
-  
+  const LayerConstructor = layerConstructor(config.layerType);
+
   if (!LayerConstructor) {
     throw new Error(
       `Unknown deck.gl layer type: ${config.layerType}. ` +
-      `Available types: ${Object.keys(LAYER_CONSTRUCTORS).join(', ')}`
+      `Available types: ${SUPPORTED_LAYER_TYPES.join(', ')}`
     );
   }
-  
-  // Procesar accessors - convertir atoms/strings de Elixir a funciones JS
+
+  // Turn Elixir atoms/strings into JS accessor functions
   const processedProps = processAccessors(config.props);
   
   return new LayerConstructor({
@@ -73,18 +78,18 @@ export function createDeckLayer(config: DeckGLLayerConfig): Layer {
 }
 
 /**
- * Procesa accessors para convertir atoms/strings de Elixir a funciones JS
+ * Turn Elixir atoms/strings into JS accessor functions
  * 
- * Ejemplos:
- * - :position -> d => d.position
- * - "coordinates" -> d => d.coordinates  
- * - ["get", "coords"] -> d => d.coords
+ * Examples:
+ * - :position          -> d => d.position
+ * - "coordinates"      -> d => d.coordinates
+ * - ["get", "coords"]  -> d => d.coords
  */
 function processAccessors(props: Record<string, any>): Record<string, any> {
   const processed: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(props)) {
-    // Si es un accessor (empieza con "get")
+    // An accessor: starts with "get"
     if (key.startsWith('get')) {
       processed[key] = createAccessor(value);
     } else {
@@ -96,44 +101,44 @@ function processAccessors(props: Record<string, any>): Record<string, any> {
 }
 
 /**
- * Crea una función accessor desde diferentes formatos
+ * Build an accessor function from any of the supported formats
  */
 function createAccessor(value: any): any {
-  // Si ya es una función, retornarla
+  // Already a function: pass it through
   if (typeof value === 'function') {
     return value;
   }
   
-  // Si es un string/atom (nombre de property)
+  // A string/atom: a property name
   if (typeof value === 'string') {
     return (d: any) => d[value];
   }
   
-  // Si es array tipo ["get", "propName"]
+  // An array of the form ["get", "propName"]
   if (Array.isArray(value) && value[0] === 'get' && value.length === 2) {
     const propName = value[1];
     return (d: any) => d[propName];
   }
   
-  // Si es un array (valor constante)
+  // An array: a constant value
   if (Array.isArray(value)) {
     return value;
   }
   
-  // Valor constante
+  // A constant value
   return value;
 }
 
 /**
- * Valida si un tipo de layer es soportado
+ * Whether a layer type is supported
  */
 export function isValidLayerType(layerType: string): boolean {
-  return layerType in LAYER_CONSTRUCTORS;
+  return SUPPORTED_LAYER_TYPES.includes(layerType);
 }
 
 /**
- * Obtiene la lista de tipos de layers soportados
+ * The list of supported layer types
  */
 export function getSupportedLayerTypes(): string[] {
-  return Object.keys(LAYER_CONSTRUCTORS);
+  return [...SUPPORTED_LAYER_TYPES];
 }
