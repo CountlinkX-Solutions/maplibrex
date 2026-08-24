@@ -95,6 +95,9 @@ First public release.
 
 ### Compatibility
 
+- Requires Elixir 1.15 or later. `phoenix_live_view` requires it, so the
+  earlier `~> 1.14` requirement was never actually satisfiable.
+
 - Supports `maplibre-gl` `>=5.0.0 <7.0.0`. Verified in a browser against
   v5.24.0 and v6.6.0: all nine demo pages render, and reactivity, marker
   add/remove, client-side map commands and paint updates all behave the same

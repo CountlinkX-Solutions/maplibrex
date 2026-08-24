@@ -39,6 +39,8 @@ end
 
 ## Installation
 
+Requires Elixir 1.15+ and Phoenix LiveView 1.0+.
+
 ### 1. Add the dependency
 
 ```elixir

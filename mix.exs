@@ -8,7 +8,7 @@ defmodule MaplibreX.MixProject do
     [
       app: :maplibrex,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -46,7 +46,6 @@ defmodule MaplibreX.MixProject do
       {:esbuild, "~> 0.8", runtime: false},
 
       # Testing & static analysis
-      {:floki, ">= 0.30.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
