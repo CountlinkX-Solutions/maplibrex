@@ -141,9 +141,20 @@ defmodule MaplibreX.Components.Map do
     assigns = assign(assigns, :config, Jason.encode!(config))
 
     ~H"""
+    <%!--
+      phx-update="ignore" is required, not optional. MapLibre GL JS builds its
+      canvas inside this container and adds its own classes to it. Without it,
+      any LiveView re-render that touches this element's dynamics patches the
+      container and destroys the map — leaving a blank div and a live Map
+      instance rendering into a detached node.
+
+      LiveView still merges `data-*` attributes onto ignored elements, so
+      `data-config` keeps flowing and MapHook.updated/0 stays reactive.
+    --%>
     <div
       id={@id}
       phx-hook="MapHook"
+      phx-update="ignore"
       data-config={@config}
       data-testid={@testid || "maplibrex-map-#{@id}"}
       class={@class}
