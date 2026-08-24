@@ -84,6 +84,9 @@ defmodule MaplibreX.MixProject do
         README.md
         LICENSE
         CHANGELOG.md
+        CONTRIBUTING.md
+        CODE_OF_CONDUCT.md
+        SECURITY.md
       )
     ]
   end
@@ -93,7 +96,14 @@ defmodule MaplibreX.MixProject do
       main: "readme",
       source_ref: "v#{@version}",
       source_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "SECURITY.md",
+        "LICENSE"
+      ],
       groups_for_modules: [
         Core: [
           MaplibreX,
