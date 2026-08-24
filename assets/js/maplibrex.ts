@@ -10,7 +10,7 @@
  * @example
  * ```javascript
  * // In your app.js
- * import { MapHooks } from "../deps/maplibrex/priv/static/assets/js/maplibrex"
+ * import { MapHooks } from "maplibrex"
  * 
  * let liveSocket = new LiveSocket("/live", Socket, {
  *   hooks: MapHooks,
@@ -18,9 +18,6 @@
  * })
  * ```
  */
-
-// Import MapLibre CSS
-import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Export all hooks
 import { 

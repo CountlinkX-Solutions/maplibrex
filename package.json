@@ -1,0 +1,49 @@
+{
+  "name": "maplibrex",
+  "version": "0.1.0",
+  "description": "MapLibre GL JS components for Phoenix LiveView",
+  "license": "MIT",
+  "comments": {
+    "maplibre-gl": "maplibre-gl v6 is supported for every component except <.deckgl_layer>: @deck.gl/mapbox still reads the internal map.transform that v6 removed. Pin maplibre-gl to ^5.0.0 if you use deck.gl layers."
+  },
+  "author": "Yendris Rogelio Cruz Mendoza <admin@countlinkx.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CountlinkX-Solutions/maplibrex.git"
+  },
+  "type": "module",
+  "main": "priv/static/assets/js/maplibrex.js",
+  "module": "priv/static/assets/js/maplibrex.js",
+  "types": "assets/js/maplibrex.ts",
+  "exports": {
+    ".": {
+      "types": "./assets/js/maplibrex.ts",
+      "import": "./priv/static/assets/js/maplibrex.js",
+      "default": "./priv/static/assets/js/maplibrex.js"
+    },
+    "./css": "./assets/css/maplibrex.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "peerDependencies": {
+    "@deck.gl/aggregation-layers": "^9.0.0",
+    "@deck.gl/core": "^9.0.0",
+    "@deck.gl/layers": "^9.0.0",
+    "@deck.gl/mapbox": "^9.0.0",
+    "maplibre-gl": ">=5.0.0 <7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@deck.gl/aggregation-layers": {
+      "optional": true
+    },
+    "@deck.gl/core": {
+      "optional": true
+    },
+    "@deck.gl/layers": {
+      "optional": true
+    },
+    "@deck.gl/mapbox": {
+      "optional": true
+    }
+  }
+}
