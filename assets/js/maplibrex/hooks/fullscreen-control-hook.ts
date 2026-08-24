@@ -1,12 +1,15 @@
 /**
- * FullscreenControlHook - Hook para el componente FullscreenControl
+ * FullscreenControlHook - Hook for the FullscreenControl component
  * 
- * Gestiona controles de pantalla completa nativos de MapLibre.
+ * Manages MapLibre's native fullscreen control.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, FullscreenControlConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface FullscreenControlHookState {
   config: FullscreenControlConfig;
@@ -52,15 +55,16 @@ export const FullscreenControlHook: LiveViewHook = {
       const position = (config.position || 'top-right') as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
       map.addControl(control, position);
 
-      // Listen for fullscreen events
-      map.on('fullscreenstart', () => {
+      // FullscreenControl is itself an Evented and fires these on the control,
+      // never on the map — listening on the map silently received nothing.
+      control.on('fullscreenstart', () => {
         this.pushEvent('fullscreen:entered', {
           controlId: config.id,
           mapId: config.mapId
         });
       });
 
-      map.on('fullscreenend', () => {
+      control.on('fullscreenend', () => {
         this.pushEvent('fullscreen:exited', {
           controlId: config.id,
           mapId: config.mapId
@@ -74,7 +78,7 @@ export const FullscreenControlHook: LiveViewHook = {
         control
       };
 
-      console.log(`[MaplibreX] Fullscreen Control "${config.id}" added at ${position}`);
+      logger.debug(`[MaplibreX] Fullscreen Control "${config.id}" added at ${position}`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting fullscreen control:', error);
@@ -88,7 +92,7 @@ export const FullscreenControlHook: LiveViewHook = {
     try {
       // Remove the control from the map
       state.map.removeControl(state.control);
-      console.log(`[MaplibreX] Fullscreen Control "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] Fullscreen Control "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying fullscreen control:', error);
