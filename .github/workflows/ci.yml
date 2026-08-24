@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  MIX_ENV: test
+
+jobs:
+  elixir:
+    name: Elixir (${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.14"
+            otp: "25"
+          - elixir: "1.16"
+            otp: "26"
+          - elixir: "1.17"
+            otp: "27"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
+
+      - run: mix deps.get
+
+      # Only enforce style on the newest pair — older formatters disagree.
+      - name: Check formatting
+        if: matrix.elixir == '1.17'
+        run: mix format --check-formatted
+
+      - run: mix compile --warnings-as-errors
+
+      - name: Credo
+        if: matrix.elixir == '1.17'
+        run: mix credo --strict
+
+      - run: mix test
+
+  typescript:
+    name: TypeScript (maplibre-gl ${{ matrix.maplibre }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # MaplibreX declares maplibre-gl as a peer dependency across both
+        # majors, so both have to type-check.
+        maplibre: ['5', '6']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.17"
+          otp-version: "27"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+
+      # The TypeScript sources import types from the Phoenix packages, which
+      # are installed as `file:../deps/*` — so Elixir deps come first.
+      - run: mix deps.get
+
+      - run: npm ci
+        working-directory: assets
+
+      - name: Pin maplibre-gl to the version under test
+        run: npm install --no-save maplibre-gl@${{ matrix.maplibre }}
+        working-directory: assets
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: assets
+
+      - name: Build distributable bundle
+        run: MIX_ENV=prod mix assets.deploy
+
+      - name: Assert the bundle does not inline peer dependencies
+        run: |
+          bundle=priv/static/assets/js/maplibrex.js
+          size=$(wc -c < "$bundle")
+          echo "bundle size: ${size} bytes"
+          if [ "$size" -gt 262144 ]; then
+            echo "::error::Bundle exceeded 256 KB — a peer dependency is likely being inlined."
+            exit 1
+          fi
+          grep -q 'from"maplibre-gl"' "$bundle" \
+            || { echo "::error::maplibre-gl is not an external import."; exit 1; }

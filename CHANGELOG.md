@@ -1,56 +1,106 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-24
+
+First public release.
+
+### Components
+
+**Core**
+
+- `map` — MapLibre GL JS map with reactive center, zoom, bearing, pitch, style
+  and bounds
+
+**Overlays**
+
+- `marker` — markers with drag & drop and attached popups
+- `popup` — standalone popups with HTML content and programmatic control
+
+**Layers**
+
+- `geojson_layer` — generic GeoJSON rendering with clustering and feature events
+- `circle_layer`, `line_layer`, `fill_layer`, `symbol_layer`, `heatmap_layer`,
+  `fill_extrusion_layer`, `background_layer`, `hillshade_layer`, `raster_layer`
+
+**Sources**
+
+- `vector_tile_source`, `raster_tile_source`, `raster_dem_source`,
+  `image_source`, `video_source`
+
+**Controls**
+
+- `navigation_control`, `scale_control`, `fullscreen_control`,
+  `geolocate_control`, `attribution_control`, `terrain_control`
+- `control`, `control_button`, `control_group`, `zoom_range` — building blocks
+  for custom controls
+
+**3D & terrain**
+
+- `terrain` — 3D terrain with configurable exaggeration
+- `sky` — atmospheric sky layer for 3D views
+
+**Advanced integrations**
+
+- `deckgl_layer` — deck.gl layers, lazy-loaded on first use
+- `custom_layer` — custom WebGL layers with user-supplied GLSL shaders
+
 ### Fixed
-- **Map JS Commands**: Fixed all map JS commands (`fly_to`, `jump_to`, `fit_bounds`, `set_style`, `zoom_in`, `zoom_out`, `reset_north`) that were not working. Changed from `JS.push()` to `JS.dispatch()` for direct client-side communication without server round-trip.
-- Added event listeners in MapHook to handle commands dispatched from Elixir components
-- Commands now work instantly with reduced latency since they don't require server communication
 
-### Changed
-- Map component commands now use `JS.dispatch()` instead of `JS.push()` for better performance
-- All map commands now dispatch custom DOM events (e.g., `maplibrex:fly_to`, `maplibrex:zoom_in`)
-- Hook TypeScript implementation now listens for command events and executes them directly on the map instance
+- The map container is rendered with `phx-update="ignore"`. Without it, any
+  LiveView re-render that touched the map element's dynamics patched the
+  container away: MapLibre kept rendering into a detached node while the page
+  showed an empty `<div>`. LiveView still merges `data-*` attributes onto
+  ignored elements, so reactivity is unaffected.
+- `FullscreenControl` events are subscribed on the control rather than on the
+  map. `FullscreenControl` is its own `Evented` and never fires through the
+  map, so `fullscreen:entered` and `fullscreen:exited` had never reached
+  LiveView.
 
-### Added
-- Comprehensive documentation of fixes in `FIXES_APPLIED.md`
-- Event listeners for all map commands in the MapHook TypeScript implementation
-- Support for all MapLibre flyTo options (bearing, pitch) in commands
+### Architecture
 
-## [0.1.0] - 2025-11-30
+- TypeScript hook layer with a singleton `MapManager` and a bidirectional
+  `EventDispatcher`
+- Map commands (`fly_to`, `jump_to`, `fit_bounds`, `set_style`, `zoom_in`,
+  `zoom_out`, `reset_north`) run client-side via `Phoenix.LiveView.JS.dispatch/3`,
+  with no server round-trip
+- `map:moved` is debounced by 150 ms to cut socket traffic during continuous
+  pan and zoom
+- deck.gl is dynamically imported the first time a `deckgl_layer` mounts. The
+  layer factory and overlay manager resolve their constructors through the
+  lazy loader rather than importing them, so the split actually holds — an
+  earlier static import in `deckgl-manager` and `deckgl-layer-factory` had been
+  pulling all of deck.gl into the main chunk
+- Debug logging is gated behind `window.__MAPLIBREX_DEBUG__` or a map's
+  `debug` attribute; warnings and errors always reach the console
+- 405 tests covering rendered component output, attribute validation and
+  edge cases
 
-### Added
-- Initial release of MaplibreX
-- Core Map component with full MapLibre GL JS integration
-- TypeScript-based hook system with MapManager and EventDispatcher
-- Bidirectional event handling between LiveView and MapLibre
-- Reactive map updates when assigns change
-- JavaScript commands for map control (fly_to, jump_to, fit_bounds, etc.)
-- Comprehensive documentation and examples
-- MapLibre GL JS v5.0.0-pre.2 integration
-- CSS styling with dark mode support
+### Compatibility
 
-### Features
-- `<.map />` component with all standard MapLibre options
-- Event handlers: map:moved, map:clicked, map:loaded, map:zoom_changed, map:error
-- JS commands: fly_to, jump_to, fit_bounds, set_style, zoom_in, zoom_out, reset_north
-- TypeScript types for better developer experience
-- Singleton MapManager for efficient instance management
-- Proper cleanup and reconnection handling
-- Built-in CSS with customization support
-- Marker component with dragging support
-- Popup component
-- GeoJSON layer support
-- Navigation controls
-- Scale controls
-- Fullscreen controls
+- Supports `maplibre-gl` `>=5.0.0 <7.0.0`. Verified in a browser against
+  v5.24.0 and v6.6.0: all nine demo pages render, and reactivity, marker
+  add/remove, client-side map commands and paint updates all behave the same
+  on both.
+- `<.deckgl_layer>` requires maplibre-gl v5. `@deck.gl/mapbox` reads the
+  internal `map.transform` that v6 removed, so a deck.gl layer under v6 raises
+  a message naming the constraint instead of failing inside deck.gl with
+  `Cannot read properties of undefined (reading '_nearZ')`.
+- Sources use `import * as maplibregl from 'maplibre-gl'`: v6 is ESM-only and
+  dropped the default export. The namespace import works on both majors.
 
-## [0.1.0] - 2025-11-30
+### Packaging
 
-### Added
-- Initial public release
+- Ships a prebuilt ESM bundle at
+  `priv/static/assets/js/maplibrex.js` (~65 KB, 12 KB gzipped)
+- `maplibre-gl` and the `@deck.gl/*` packages are peer dependencies rather than
+  bundled, so an application never loads two copies of MapLibre GL
+
+[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/CountlinkX-Solutions/maplibrex/releases/tag/v0.1.0

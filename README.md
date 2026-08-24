@@ -1,38 +1,45 @@
 # MaplibreX
 
 [![Hex.pm](https://img.shields.io/hexpm/v/maplibrex.svg)](https://hex.pm/packages/maplibrex)
-[![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/maplibrex)
-[![License](https://img.shields.io/hexpm/l/maplibrex.svg)](https://github.com/tu-usuario/maplibrex/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/hexdocs-documentation-blue)](https://hexdocs.pm/maplibrex)
+[![License](https://img.shields.io/hexpm/l/maplibrex.svg)](https://github.com/CountlinkX-Solutions/maplibrex/blob/main/LICENSE)
 
-MapLibre GL JS components for Phoenix LiveView. Build interactive, declarative maps in your Elixir applications with ease.
+[MapLibre GL JS](https://maplibre.org/) as declarative Phoenix LiveView components.
+Build interactive maps with assigns and `handle_event/3` instead of hand-written
+JavaScript.
 
-Inspired by [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre), MaplibreX brings the same declarative approach to Phoenix LiveView.
+Inspired by [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre).
 
-## Features
+```elixir
+def render(assigns) do
+  ~H"""
+  <.map id="map" center={@center} zoom={@zoom} class="h-96 w-full" />
+  <.navigation_control id="nav" map_id="map" position="top-left" />
 
-- 🗺️ **Declarative Components** - Use familiar Phoenix LiveView component syntax
-- ⚡ **Reactive** - Maps automatically update when assigns change
-- 🎯 **Type-Safe** - Built with TypeScript for better DX
-- 🔄 **Bidirectional Events** - Full event handling between LiveView and MapLibre
-- 🎨 **Customizable** - Style maps with any MapLibre-compatible style
-- 📦 **Self-Contained** - All assets bundled, no CDN required
-- 🧪 **Well-Tested** - Comprehensive unit and E2E tests
+  <.marker :for={city <- @cities} id={city.id} map_id="map"
+           lng_lat={city.coords} color="#22d3ee" popup_text={city.name} />
+  """
+end
 
-## 🚀 Demo Application
+def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
+  {:noreply, assign(socket, center: center, zoom: zoom)}
+end
+```
 
-Check out the **live demo** and complete working examples:
+## Why
 
-- **📦 Demo Repository**: https://github.com/roger120981/maplibrex_demo
-- **💡 Live Examples**: See all MaplibreX components in action
-- **📖 Source Code**: Complete working examples for reference
-- **🎯 Best Practices**: Learn how to use MaplibreX effectively
-
-> **Note**: The `examples/` directory in this repository is deprecated.  
-> Please refer to the [maplibrex_demo](https://github.com/roger120981/maplibrex_demo) repository for up-to-date, working examples.
+- **Declarative** — components and assigns, not imperative JS glue.
+- **Reactive** — the map follows your assigns; events flow back into `handle_event/3`.
+- **Small** — the published bundle is ~65 KB (12 KB gzipped). MapLibre GL is a
+  peer dependency, so there is never a second copy of it on the page.
+- **Complete** — 32 components covering layers, sources, controls, 3D terrain,
+  deck.gl and custom WebGL layers.
+- **Typed** — the hook layer is written in TypeScript, type-checked in CI.
+- **Tested** — 405 tests against the rendered component output.
 
 ## Installation
 
-Add `maplibrex` to your list of dependencies in `mix.exs`:
+### 1. Add the dependency
 
 ```elixir
 def deps do
@@ -42,58 +49,96 @@ def deps do
 end
 ```
 
-Then run:
+### 2. Install the JavaScript peer dependencies
+
+MaplibreX does not bundle MapLibre GL — your application owns that version.
 
 ```bash
-mix deps.get
-cd assets && npm install
+npm install --prefix assets maplibre-gl
 ```
 
-## Setup
+Only if you plan to use `<.deckgl_layer>` (these are lazy-loaded at runtime, so
+skip them otherwise):
 
-### 1. Configure esbuild
+```bash
+npm install --prefix assets @deck.gl/core @deck.gl/layers \
+                            @deck.gl/aggregation-layers @deck.gl/mapbox
+```
 
-MaplibreX requires esbuild for bundling. Add this to your `config/config.exs`:
+#### Which MapLibre GL version?
+
+MaplibreX supports `>=5.0.0 <7.0.0`.
+
+| | maplibre-gl v5 | maplibre-gl v6 |
+| --- | --- | --- |
+| Every component except `deckgl_layer` | ✅ | ✅ |
+| `<.deckgl_layer>` | ✅ | ❌ |
+
+deck.gl is the single exception: `@deck.gl/mapbox` reads MapLibre's internal
+`map.transform`, which v6 removed. Every published version, including the 9.4
+alphas, still does. If you use `<.deckgl_layer>`, pin `maplibre-gl` to
+`^5.0.0`; MaplibreX raises a message saying exactly this rather than letting
+deck.gl fail with an opaque error.
+
+Note that maplibre-gl v6 is ESM-only, so your `app.js` must be loaded as
+`<script type="module">`.
+
+### 3. Register the hooks
+
+In `assets/js/app.js`:
+
+```javascript
+import { MapHooks } from "maplibrex"
+
+let liveSocket = new LiveSocket("/live", Socket, {
+  hooks: { ...MapHooks },
+  params: { _csrf_token: csrfToken }
+})
+```
+
+The bare `"maplibrex"` import resolves through `NODE_PATH`, the same mechanism
+Phoenix already uses for `phoenix` and `phoenix_live_view`. A generated Phoenix
+app has this in `config/config.exs` already — confirm the `env:` line is there:
 
 ```elixir
 config :esbuild,
-  version: "0.17.11",
-  default: [
-    args: ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+  version: "0.25.4",
+  my_app: [
+    args: ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 ```
 
-### 2. Import and register hooks
-
-In your `assets/js/app.js`, import and register the MaplibreX hooks:
+If you would rather not rely on `NODE_PATH`, import the bundle by path:
 
 ```javascript
-import { Socket } from "phoenix"
-import { LiveSocket } from "phoenix_live_view"
-import { MapHooks } from "../../deps/maplibrex/priv/static/assets/js/maplibrex"
-
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {
-  hooks: MapHooks,
-  params: {_csrf_token: csrfToken}
-})
-
-liveSocket.connect()
+import { MapHooks } from "../../deps/maplibrex/priv/static/assets/js/maplibrex.js"
 ```
 
-### 3. Import CSS
+### 4. Import the stylesheet
 
-In your `assets/css/app.css`, import the MaplibreX styles:
+In `assets/css/app.css`:
 
 ```css
-@import "../../deps/maplibrex/priv/static/assets/css/maplibrex.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
+@import "../../deps/maplibrex/assets/css/maplibrex.css";
 ```
 
-### 4. Configure (Optional)
+### 5. Import the components
 
-Optionally configure default values in `config/config.exs`:
+```elixir
+defmodule MyAppWeb.MapLive do
+  use MyAppWeb, :live_view
+  import MaplibreX.Components
+
+  # ...
+end
+```
+
+## Configuration
+
+Optional defaults, in `config/config.exs`:
 
 ```elixir
 config :maplibrex,
@@ -102,354 +147,96 @@ config :maplibrex,
   default_zoom: 10
 ```
 
-## Usage
+To see MaplibreX's lifecycle logging in the browser console, set
+`window.__MAPLIBREX_DEBUG__ = true` before the bundle loads, or pass
+`debug={true}` to a `<.map>`. Warnings and errors are always logged.
 
-### Basic Map
+## Components
 
-```elixir
-defmodule MyAppWeb.MapLive do
-  use MyAppWeb, :live_view
-  import MaplibreX.Components
+**Core** — `map`
 
-  def render(assigns) do
-    ~H"""
-    <.map
-      id="my-map"
-      center={[-74.5, 40]}
-      zoom={9}
-      style="https://demotiles.maplibre.org/style.json"
-      class="h-96"
-    />
-    """
-  end
-end
-```
+**Overlays** — `marker`, `popup`
 
-### Interactive Map with Event Handling
+**Layers** — `geojson_layer`, `circle_layer`, `line_layer`, `fill_layer`,
+`symbol_layer`, `heatmap_layer`, `fill_extrusion_layer`, `background_layer`,
+`hillshade_layer`, `raster_layer`
 
-```elixir
-defmodule MyAppWeb.InteractiveMapLive do
-  use MyAppWeb, :live_view
-  import MaplibreX.Components
+**Sources** — `vector_tile_source`, `raster_tile_source`, `raster_dem_source`,
+`image_source`, `video_source`
 
-  def mount(_params, _session, socket) do
-    {:ok,
-     assign(socket,
-       center: [-74.5, 40],
-       zoom: 9,
-       clicked_location: nil
-     )}
-  end
+**Controls** — `navigation_control`, `scale_control`, `fullscreen_control`,
+`geolocate_control`, `attribution_control`, `terrain_control`, `control`,
+`control_button`, `control_group`, `zoom_range`
 
-  def render(assigns) do
-    ~H"""
-    <div class="space-y-4">
-      <.map
-        id="interactive-map"
-        center={@center}
-        zoom={@zoom}
-        style="https://demotiles.maplibre.org/style.json"
-        class="h-96"
-      />
+**3D & terrain** — `terrain`, `sky`
 
-      <div :if={@clicked_location}>
-        Clicked at: <%= inspect(@clicked_location) %>
-      </div>
+**Advanced** — `deckgl_layer`, `custom_layer`
 
-      <div class="flex gap-2">
-        <button
-          phx-click={MaplibreX.Components.Map.fly_to("interactive-map", [-73.98, 40.75], 12)}
-          class="btn"
-        >
-          Fly to NYC
-        </button>
+Every component is documented with attributes, events and examples on
+[HexDocs](https://hexdocs.pm/maplibrex).
 
-        <button
-          phx-click={MaplibreX.Components.Map.zoom_in("interactive-map")}
-          class="btn"
-        >
-          Zoom In
-        </button>
+## Events
 
-        <button
-          phx-click={MaplibreX.Components.Map.zoom_out("interactive-map")}
-          class="btn"
-        >
-          Zoom Out
-        </button>
-      </div>
-    </div>
-    """
-  end
+Map events arrive in your LiveView as ordinary `handle_event/3` calls:
 
-  def handle_event("map:clicked", %{"lngLat" => lngLat}, socket) do
-    {:noreply, assign(socket, clicked_location: lngLat)}
-  end
+| Event | Payload |
+| --- | --- |
+| `map:loaded` | `%{"mapId" => id}` |
+| `map:moved` | `%{"center" => [lng, lat], "zoom" => z, "bearing" => b, "pitch" => p}` |
+| `map:clicked` | `%{"lngLat" => [lng, lat], "point" => [x, y]}` |
+| `map:zoom_changed` | `%{"zoom" => z}` |
+| `map:error` | `%{"error" => message}` |
+| `marker:clicked` | `%{"markerId" => id, "lngLat" => [lng, lat]}` |
+| `marker:drag_start` / `marker:dragging` / `marker:drag_end` | `%{"markerId" => id, "lngLat" => [lng, lat]}` |
+| `layer:feature_click` | `%{"layerId" => id, "feature" => feature}` |
 
-  def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
-    {:noreply, assign(socket, center: center, zoom: zoom)}
-  end
-end
-```
+`map:moved` is debounced by 150 ms so continuous panning does not flood the
+socket.
 
-### Map with Custom Styling
+## Controlling the map
+
+Map commands are `Phoenix.LiveView.JS` structs, so they run entirely on the
+client with no server round-trip:
 
 ```elixir
-<.map
-  id="styled-map"
-  center={[-122.4, 37.8]}
-  zoom={10}
-  style="https://api.maptiler.com/maps/streets/style.json?key=YOUR_KEY"
-  bearing={45}
-  pitch={60}
-  min_zoom={5}
-  max_zoom={18}
-  class="h-screen w-full rounded-lg shadow-lg"
-/>
+alias MaplibreX.Components.Map
+
+<button phx-click={Map.fly_to("map", [-74.5, 40], 12)}>Fly to NYC</button>
+<button phx-click={Map.zoom_in("map")}>Zoom in</button>
+<button phx-click={Map.fit_bounds("map", [[-74, 40], [-73, 41]], padding: 50)}>Fit</button>
 ```
 
-## Available Components
+Available: `fly_to/4`, `jump_to/4`, `fit_bounds/3`, `set_style/2`, `zoom_in/1`,
+`zoom_out/1`, `reset_north/1`.
 
-### Map Component
+## Demo
 
-The main map component with full configuration options.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `center` - Center coordinates `[lng, lat]`
-- `zoom` - Zoom level (0-22)
-- `style` - Map style URL or object
-- `bearing` - Map rotation (0-360)
-- `pitch` - Map tilt (0-60)
-- `min_zoom` - Minimum zoom level
-- `max_zoom` - Maximum zoom level
-- `bounds` - Fit map to bounds
-- `max_bounds` - Restrict panning to bounds
-- `interactive` - Enable/disable interactions
-- `attribution_control` - Show/hide attribution
-
-**Events:**
-- `map:moved` - Map moved (pan, zoom, rotate)
-- `map:clicked` - Map clicked
-- `map:loaded` - Map finished loading
-- `map:zoom_changed` - Zoom level changed
-- `map:error` - Error occurred
-
-### Marker Component
-
-Add markers to your map with full customization.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `lng_lat` (required) - Position `[lng, lat]`
-- `color` - Marker color
-- `scale` - Marker size
-- `rotation` - Rotation in degrees
-- `draggable` - Enable dragging
-- `popup_text` - Simple popup text
-- `popup_html` - Custom popup HTML
-
-**Events:**
-- `marker:clicked` - Marker clicked
-- `marker:drag_start` - Drag started
-- `marker:dragging` - While dragging
-- `marker:drag_end` - Drag ended
-
-### Popup Component
-
-Display popups on the map at specific coordinates.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `lng_lat` - Position `[lng, lat]` (optional, can be set later)
-- `max_width` - Maximum popup width
-- `close_button` - Show close button
-- `close_on_click` - Close on map click
-- `close_on_move` - Close on map move
-- `anchor` - Anchor position
-- `offset` - Pixel offset
-- `open` - Initially open/closed
-
-**Events:**
-- `popup:opened` - Popup opened
-- `popup:closed` - Popup closed
-
-### GeoJSON Layer Component
-
-Render GeoJSON data with full styling control.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `data` (required) - GeoJSON data
-- `type` (required) - Layer type: `fill`, `line`, `circle`, `symbol`, `heatmap`, `fill-extrusion`
-- `paint` - Paint properties for styling
-- `layout` - Layout properties
-- `filter` - Filter expression
-- `min_zoom` / `max_zoom` - Zoom constraints
-- `cluster` - Enable point clustering
-- `cluster_max_zoom` / `cluster_radius` - Clustering options
-
-**Events:**
-- `layer:feature_clicked` - Feature clicked
-- `layer:feature_mouseenter` - Mouse enters feature
-- `layer:feature_mouseleave` - Mouse leaves feature
-- `layer:source_loaded` - Source data loaded
-
-### Navigation Control Component
-
-Add standard navigation controls (zoom and compass) to your map.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `position` - Control position (`top-left`, `top-right`, `bottom-left`, `bottom-right`)
-- `show_compass` - Show compass button (default: `true`)
-- `show_zoom` - Show zoom buttons (default: `true`)
-- `visualize_pitch` - Show pitch visualization (default: `false`)
-
-### Scale Control Component
-
-Display a scale bar showing map distance ratios.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `position` - Control position (default: `bottom-left`)
-- `max_width` - Maximum width in pixels (default: `100`)
-- `unit` - Unit of measurement: `imperial`, `metric`, `nautical` (default: `metric`)
-
-### Fullscreen Control Component
-
-Toggle fullscreen mode for the map.
-
-**Attributes:**
-- `id` (required) - Unique identifier
-- `map_id` (required) - ID of the map
-- `position` - Control position (default: `top-right`)
-- `container_id` - ID of HTML element to make fullscreen (optional)
-
-**Events:**
-- `fullscreen:entered` - Entered fullscreen mode
-- `fullscreen:exited` - Exited fullscreen mode
-
-## JavaScript Commands
-
-Send commands from LiveView to control the map:
-
-```elixir
-# Fly to a location with animation
-MaplibreX.Components.Map.fly_to("map-id", [-74.5, 40], 12, duration: 2000)
-
-# Jump to a location instantly
-MaplibreX.Components.Map.jump_to("map-id", [-74.5, 40], 12)
-
-# Fit to bounds
-MaplibreX.Components.Map.fit_bounds("map-id", [[-74, 40], [-73, 41]], padding: 50)
-
-# Change style
-MaplibreX.Components.Map.set_style("map-id", "new-style-url")
-
-# Zoom in/out
-MaplibreX.Components.Map.zoom_in("map-id")
-MaplibreX.Components.Map.zoom_out("map-id")
-
-# Reset bearing to north
-MaplibreX.Components.Map.reset_north("map-id")
-```
+A full Phoenix application exercising every component:
+**[maplibrex_demo](https://github.com/CountlinkX-Solutions/maplibrex_demo)**
 
 ## Development
 
 ```bash
-# Install dependencies
-mix deps.get
-cd assets && npm install
-
-# Run tests
-mix test
-
-# Build assets
-mix assets.build
-
-# Watch assets during development
-mix assets.watch
-
-# Generate documentation
-mix docs
+mix setup          # deps + npm install
+mix test           # 405 tests
+mix typecheck      # tsc --noEmit
+mix ci             # format check, warnings-as-errors, credo, tests
+mix assets.build   # development bundle
+mix assets.watch   # rebuild on change
 ```
 
-## Testing
+Publishing (the alias builds `priv/static` first — never run `mix hex.publish`
+directly, or the package ships without its JavaScript):
 
-MaplibreX includes comprehensive testing support:
-
-```elixir
-# In your test file
-defmodule MyAppWeb.MapLiveTest do
-  use MyAppWeb.ConnCase, async: true
-  import Phoenix.LiveViewTest
-
-  test "renders map", %{conn: conn} do
-    {:ok, view, html} = live(conn, "/map")
-    
-    assert html =~ "maplibrex-map"
-    assert has_element?(view, "#my-map")
-  end
-
-  test "handles map click events", %{conn: conn} do
-    {:ok, view, _html} = live(conn, "/map")
-    
-    # Simulate map click
-    view
-    |> element("#my-map")
-    |> render_hook("map:clicked", %{
-      "lngLat" => [-74.5, 40],
-      "point" => [100, 200]
-    })
-    
-    # Assert state updated
-    assert view |> element("#clicked-location") |> render() =~ "-74.5"
-  end
-end
+```bash
+MIX_ENV=prod mix publish
 ```
-
-## Architecture
-
-MaplibreX follows best practices from both the Elixir and JavaScript ecosystems:
-
-- **TypeScript Core**: Type-safe JavaScript with full MapLibre GL JS types
-- **Singleton Pattern**: Efficient map instance management
-- **Event Dispatcher**: Bidirectional communication between LiveView and MapLibre
-- **Reactive Components**: Automatic updates when assigns change
-- **Hook Lifecycle**: Proper cleanup and reconnection handling
-
-## Inspiration
-
-This library is inspired by [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre) and aims to bring the same declarative, component-based approach to Phoenix LiveView.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and pull requests are
+welcome.
 
 ## License
 
-MaplibreX is released under the MIT License. See [LICENSE](LICENSE) for details.
-
-## Credits
-
-- MapLibre GL JS team for the excellent mapping library
-- [svelte-maplibre](https://github.com/dimfeld/svelte-maplibre) for inspiration
-- Phoenix and Elixir communities
-
-## Support
-
-- 📚 [Documentation](https://hexdocs.pm/maplibrex)
-- 🐛 [Issue Tracker](https://github.com/tu-usuario/maplibrex/issues)
-- 💬 [Discussions](https://github.com/tu-usuario/maplibrex/discussions)
+MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in MaplibreX does not behave as documented
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The smallest LiveView that shows the problem.
+      render: elixir
+    validations:
+      required: true
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `mix deps | grep -E "maplibrex|phoenix_live_view"`, plus your maplibre-gl version and browser.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output
+      description: Set `window.__MAPLIBREX_DEBUG__ = true` before the bundle loads and paste anything logged.
+      render: shell

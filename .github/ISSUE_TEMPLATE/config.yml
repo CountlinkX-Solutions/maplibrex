@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and usage help
+    url: https://github.com/CountlinkX-Solutions/maplibrex/discussions
+    about: Ask usage questions here rather than opening an issue.
+  - name: Working examples
+    url: https://github.com/CountlinkX-Solutions/maplibrex_demo
+    about: A full Phoenix app exercising every component.

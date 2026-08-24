@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a new component or capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to build?
+      description: Describe the use case rather than the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed API
+      description: How would this look in a LiveView template?
+      render: elixir
+
+  - type: input
+    id: maplibre-ref
+    attributes:
+      label: Relevant MapLibre GL JS documentation
+      description: Link to the underlying MapLibre feature, if there is one.
