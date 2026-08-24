@@ -99,6 +99,17 @@ jobs:
       - name: Build distributable bundle
         run: MIX_ENV=prod mix assets.deploy
 
+      # The bundle is committed so that git dependencies work. Rebuilding it
+      # must be a no-op, or someone changed TypeScript without committing the
+      # result and every `{:maplibrex, github: ...}` user gets stale hooks.
+      - name: Assert the committed bundle is up to date
+        if: matrix.maplibre == '5'
+        run: |
+          if ! git diff --exit-code -- priv/static/assets/js/maplibrex.js; then
+            echo "::error::priv/static/assets/js/maplibrex.js is stale. Run 'MIX_ENV=prod mix assets.deploy' and commit the result."
+            exit 1
+          fi
+
       - name: Assert the bundle does not inline peer dependencies
         run: |
           bundle=priv/static/assets/js/maplibrex.js

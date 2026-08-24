@@ -44,6 +44,21 @@ When adding one, please also:
 - Document attributes, events and at least one example in the `@moduledoc`
 - Add a CHANGELOG entry under `## [Unreleased]`
 
+## The committed bundle
+
+`priv/static/assets/js/maplibrex.js` is a build artifact that is checked in on
+purpose. Applications that depend on MaplibreX through git have no build step
+for it, so the file has to exist in the repository — the same reason phoenix
+and phoenix_live_view commit theirs.
+
+If you touch anything under `assets/js/`, rebuild it and commit the result:
+
+```bash
+MIX_ENV=prod mix assets.deploy
+```
+
+CI fails if you forget.
+
 ## Conventions
 
 - **Language**: all code, comments, documentation and commit messages are in

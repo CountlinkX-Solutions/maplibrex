@@ -27,7 +27,14 @@ maplibrex-*.tar
 
 # Node.js dependencies
 /assets/node_modules/
-/priv/static/
+
+# The built hook bundle IS committed. It is what applications using
+# `{:maplibrex, github: ...}` load, since a git dependency has no build step —
+# the same reason phoenix and phoenix_live_view commit theirs. `mix ci` fails
+# if it ever drifts from the TypeScript sources.
+# The sourcemap stays out: `--sourcemap=external` emits no sourceMappingURL
+# comment, so nothing looks for it, and it is 250 KB of churn.
+/priv/static/assets/js/*.map
 
 # TypeScript build artifacts
 /assets/dist/
