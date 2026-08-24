@@ -1,8 +1,8 @@
 /**
- * LiveView Hook para DeckGL layers
+ * LiveView hook for deck.gl layers
  * 
- * Gestiona el lifecycle de layers deck.gl en el contexto de LiveView,
- * sincronizando actualizaciones entre servidor y cliente.
+ * Manages the lifecycle of deck.gl layers inside LiveView,
+ * keeping server and client updates in sync.
  * 
  * Uses lazy loading to only load deck.gl when needed, reducing initial bundle size.
  */
@@ -12,6 +12,8 @@ import { MapManager } from '../core/map-manager';
 import { DeckGLLayerManager } from '../utils/deckgl-manager';
 import type { DeckGLLayerConfig } from '../types/deckgl';
 import { loadDeckGL } from '../utils/deckgl-lazy-loader';
+
+import { logger } from '../core/logger';
 
 interface DeckGlLayerHookState {
   config: DeckGLLayerConfig;
@@ -37,7 +39,7 @@ export const DeckGlLayerHook: LiveViewHook = {
         return;
       }
       
-      console.log(`[MaplibreX] Mounting DeckGL layer: ${config.id}`);
+      logger.debug(`[MaplibreX] Mounting DeckGL layer: ${config.id}`);
       
       // Lazy load deck.gl modules (only on first use)
       await loadDeckGL();
@@ -76,7 +78,7 @@ export const DeckGlLayerHook: LiveViewHook = {
       
       const newConfig: DeckGLLayerConfig = JSON.parse(configStr);
       
-      console.log(`[MaplibreX] Updating DeckGL layer: ${newConfig.id}`);
+      logger.debug(`[MaplibreX] Updating DeckGL layer: ${newConfig.id}`);
       
       // Update layer
       state.deckglManager?.updateLayer(newConfig);
@@ -95,7 +97,7 @@ export const DeckGlLayerHook: LiveViewHook = {
     if (!state) return;
     
     try {
-      console.log(`[MaplibreX] Destroying DeckGL layer: ${state.config.id}`);
+      logger.debug(`[MaplibreX] Destroying DeckGL layer: ${state.config.id}`);
       
       state.deckglManager?.removeLayer(state.config.id);
       state.deckglManager?.destroy();

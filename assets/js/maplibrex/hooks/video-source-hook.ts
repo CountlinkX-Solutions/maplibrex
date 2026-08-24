@@ -1,12 +1,14 @@
 /**
- * VideoSourceHook - Hook para el componente VideoSource
+ * VideoSourceHook - Hook for the VideoSource component
  * 
- * Este hook gestiona una fuente de video georreferenciado en MapLibre GL JS,
- * utilizada para overlays de drones, cámaras de vigilancia, time-lapse, etc.
+ * This hook manages a georeferenced video source in MapLibre GL JS,
+ * used for drone overlays, surveillance cameras, time-lapse, and similar.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface VideoSourceConfig {
   id: string;
@@ -24,7 +26,7 @@ export const VideoSourceHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on video source element');
@@ -34,30 +36,30 @@ export const VideoSourceHook: LiveViewHook = {
       const config: VideoSourceConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for video source "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSource = () => {
         try {
-          // Verificar que el source no existe ya
+          // Make sure the source is not already registered
           if (map.getSource(config.id)) {
             console.warn(`[MaplibreX] Source "${config.id}" already exists on map "${mapId}"`);
             return;
           }
 
-          // Construir especificación del source
+          // Build the source specification
           const sourceSpec: any = {
             type: 'video',
             urls: config.urls,
             coordinates: config.coordinates
           };
 
-          // Agregar el source al mapa
+          // Add the source to the map
           map.addSource(config.id, sourceSpec);
 
           // Guardar estado
@@ -68,7 +70,7 @@ export const VideoSourceHook: LiveViewHook = {
           // Emitir evento de source agregado
           this.pushEvent('source:added', { source_id: config.id });
 
-          console.log(`[MaplibreX] Video source "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Video source "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding video source "${config.id}":`, error);
@@ -79,11 +81,11 @@ export const VideoSourceHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, agregar el source inmediatamente
+      // If the map has already loaded, add the source immediately
       if (map.isStyleLoaded()) {
         addSource();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSource);
       }
 
@@ -99,7 +101,7 @@ export const VideoSourceHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map) {
-        // Remover el source si existe
+        // Remove the source if present
         if (map.getSource(state.config.id)) {
           try {
             map.removeSource(state.config.id);
@@ -110,7 +112,7 @@ export const VideoSourceHook: LiveViewHook = {
         }
       }
 
-      console.log(`[MaplibreX] Video source "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Video source "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying video source:', error);
     }

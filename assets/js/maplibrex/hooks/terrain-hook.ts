@@ -1,12 +1,14 @@
 /**
- * TerrainHook - Hook para el componente Terrain
+ * TerrainHook - Hook for the Terrain component
  * 
- * Este hook habilita el renderizado de terreno 3D en MapLibre GL JS
- * usando un RasterDEMSource como fuente de datos de elevación.
+ * This hook enables 3D terrain rendering in MapLibre GL JS
+ * using a RasterDEMSource for elevation data.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface TerrainConfig {
   mapId: string;
@@ -23,7 +25,7 @@ export const TerrainHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on terrain element');
@@ -33,17 +35,17 @@ export const TerrainHook: LiveViewHook = {
       const config: TerrainConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for terrain`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const enableTerrain = () => {
         try {
-          // Verificar que el source existe
+          // Make sure the source exists
           const source = map.getSource(config.sourceId);
           if (!source) {
             console.error(`[MaplibreX] Source "${config.sourceId}" not found for terrain`);
@@ -53,7 +55,7 @@ export const TerrainHook: LiveViewHook = {
             return;
           }
 
-          // Habilitar terreno con la fuente especificada
+          // Enable terrain with the given source
           map.setTerrain({
             source: config.sourceId,
             exaggeration: config.exaggeration
@@ -70,7 +72,7 @@ export const TerrainHook: LiveViewHook = {
             exaggeration: config.exaggeration
           });
 
-          console.log(`[MaplibreX] Terrain enabled with source "${config.sourceId}" and exaggeration ${config.exaggeration}`);
+          logger.debug(`[MaplibreX] Terrain enabled with source "${config.sourceId}" and exaggeration ${config.exaggeration}`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error enabling terrain:`, error);
@@ -80,11 +82,11 @@ export const TerrainHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, habilitar terreno inmediatamente
+      // If the map has already loaded, enable terrain immediately
       if (map.isStyleLoaded()) {
         enableTerrain();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', enableTerrain);
       }
 
@@ -105,7 +107,7 @@ export const TerrainHook: LiveViewHook = {
       
       if (!state) return;
 
-      // Si la configuración cambió, actualizar el terreno
+      // Update the terrain when the configuration changed
       if (
         newConfig.sourceId !== state.config.sourceId ||
         newConfig.exaggeration !== state.config.exaggeration
@@ -121,7 +123,7 @@ export const TerrainHook: LiveViewHook = {
             // Actualizar estado
             state.config = newConfig;
 
-            console.log(`[MaplibreX] Terrain updated: source="${newConfig.sourceId}", exaggeration=${newConfig.exaggeration}`);
+            logger.debug(`[MaplibreX] Terrain updated: source="${newConfig.sourceId}", exaggeration=${newConfig.exaggeration}`);
           } catch (error) {
             console.error('[MaplibreX] Error updating terrain:', error);
           }
@@ -143,7 +145,7 @@ export const TerrainHook: LiveViewHook = {
         try {
           map.setTerrain(null);
           this.pushEvent('terrain:disabled', {});
-          console.log(`[MaplibreX] Terrain disabled`);
+          logger.debug(`[MaplibreX] Terrain disabled`);
         } catch (e) {
           console.warn(`[MaplibreX] Could not disable terrain: ${e}`);
         }

@@ -1,12 +1,14 @@
 /**
- * VectorTileSourceHook - Hook para el componente VectorTileSource
+ * VectorTileSourceHook - Hook for the VectorTileSource component
  * 
- * Este hook gestiona una fuente de tiles vectoriales en MapLibre GL JS,
- * que puede ser usada por múltiples capas para renderizar datos.
+ * This hook manages a vector tile source in MapLibre GL JS,
+ * which can be consumed by multiple layers to render data.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface VectorTileSourceConfig {
   id: string;
@@ -33,7 +35,7 @@ export const VectorTileSourceHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on vector tile source element');
@@ -43,23 +45,23 @@ export const VectorTileSourceHook: LiveViewHook = {
       const config: VectorTileSourceConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for vector tile source "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSource = () => {
         try {
-          // Verificar que el source no existe ya
+          // Make sure the source is not already registered
           if (map.getSource(config.id)) {
             console.warn(`[MaplibreX] Source "${config.id}" already exists on map "${mapId}"`);
             return;
           }
 
-          // Construir especificación del source
+          // Build the source specification
           const sourceSpec: any = {
             type: 'vector'
           };
@@ -101,10 +103,10 @@ export const VectorTileSourceHook: LiveViewHook = {
             sourceSpec.volatile = config.volatile;
           }
 
-          // Agregar el source al mapa
+          // Add the source to the map
           map.addSource(config.id, sourceSpec);
 
-          // Configurar event handlers para el source
+          // Wire up the source's event handlers
           const dataHandler = (e: any) => {
             if (e.sourceId === config.id) {
               this.pushEvent('source:data', {
@@ -144,7 +146,7 @@ export const VectorTileSourceHook: LiveViewHook = {
           // Emitir evento de source agregado
           this.pushEvent('source:added', { source_id: config.id });
 
-          console.log(`[MaplibreX] Vector tile source "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Vector tile source "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding vector tile source "${config.id}":`, error);
@@ -155,11 +157,11 @@ export const VectorTileSourceHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, agregar el source inmediatamente
+      // If the map has already loaded, add the source immediately
       if (map.isStyleLoaded()) {
         addSource();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSource);
       }
 
@@ -184,22 +186,22 @@ export const VectorTileSourceHook: LiveViewHook = {
           map.off('error', state.errorHandler);
         }
 
-        // Remover el source si existe
+        // Remove the source if present
         if (map.getSource(state.config.id)) {
-          // Nota: Solo podemos remover el source si no hay capas usándolo
-          // MapLibre lanzará un error si intentamos remover un source en uso
+          // Note: a source can only be removed once no layer references it
+          // MapLibre raises if we try to remove a source that is still in use
           try {
             map.removeSource(state.config.id);
             this.pushEvent('source:removed', { source_id: state.config.id });
           } catch (e) {
             console.warn(`[MaplibreX] Could not remove source "${state.config.id}": ${e}`);
-            // El source probablemente está siendo usado por capas
-            // Las capas deberían removerse primero
+            // The source is probably still in use by a layer
+            // Layers must be removed first
           }
         }
       }
 
-      console.log(`[MaplibreX] Vector tile source "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Vector tile source "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying vector tile source:', error);
     }

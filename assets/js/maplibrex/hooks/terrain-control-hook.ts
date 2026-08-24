@@ -1,11 +1,13 @@
 /**
- * TerrainControlHook - Hook para el componente TerrainControl
+ * TerrainControlHook - Hook for the TerrainControl component
  * 
- * Este hook crea un control UI que permite toggle de terreno 3D on/off.
+ * This hook creates a UI control that toggles 3D terrain on and off.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface TerrainControlConfig {
   id: string;
@@ -27,7 +29,7 @@ export const TerrainControlHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on terrain control element');
@@ -37,7 +39,7 @@ export const TerrainControlHook: LiveViewHook = {
       const config: TerrainControlConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for terrain control "${config.id}"`);
@@ -70,7 +72,7 @@ export const TerrainControlHook: LiveViewHook = {
           this._button.title = this._enabled ? 'Disable 3D Terrain' : 'Enable 3D Terrain';
           this._button.setAttribute('aria-label', this._button.title);
           
-          // Icono para terrain (mountain/3D icon)
+          // Terrain icon (mountain / 3D)
           this._button.innerHTML = `
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
               <path d="M3 20l6-8 4 4 8-12v16H3z"/>
@@ -80,7 +82,7 @@ export const TerrainControlHook: LiveViewHook = {
           // Aplicar estilo inicial
           this._updateButtonStyle();
 
-          // Event listener para toggle
+          // Toggle event listener
           this._button.addEventListener('click', () => {
             this._enabled = !this._enabled;
             this._toggleTerrain();
@@ -98,7 +100,7 @@ export const TerrainControlHook: LiveViewHook = {
 
           this._container.appendChild(this._button);
 
-          // Si está enabled inicialmente, habilitar terreno
+          // Enable terrain straight away when it starts enabled
           if (this._enabled) {
             this._toggleTerrain();
           }
@@ -160,7 +162,7 @@ export const TerrainControlHook: LiveViewHook = {
         }
       }
 
-      // Crear instancia del control
+      // Create the control instance
       const control = new TerrainControl(config, this.pushEvent.bind(this));
 
       // Agregar control al mapa
@@ -173,7 +175,7 @@ export const TerrainControlHook: LiveViewHook = {
         enabled: config.enabled
       };
 
-      console.log(`[MaplibreX] Terrain control "${config.id}" mounted on map "${mapId}" at position "${config.position}"`);
+      logger.debug(`[MaplibreX] Terrain control "${config.id}" mounted on map "${mapId}" at position "${config.position}"`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting terrain control:', error);
@@ -192,7 +194,7 @@ export const TerrainControlHook: LiveViewHook = {
       
       if (!state) return;
 
-      // Si el estado enabled cambió, actualizar el control
+      // Update the control when the enabled state changed
       if (newConfig.enabled !== state.enabled) {
         state.control.setEnabled(newConfig.enabled);
         state.enabled = newConfig.enabled;
@@ -210,7 +212,7 @@ export const TerrainControlHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map && state.control) {
-        // Remover el control del mapa
+        // Remove the control from the map
         try {
           map.removeControl(state.control);
         } catch (e) {
@@ -218,7 +220,7 @@ export const TerrainControlHook: LiveViewHook = {
         }
       }
 
-      console.log(`[MaplibreX] Terrain control "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Terrain control "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying terrain control:', error);
     }

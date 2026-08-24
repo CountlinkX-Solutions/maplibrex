@@ -1,12 +1,14 @@
 /**
- * RasterDEMSourceHook - Hook para el componente RasterDEMSource
+ * RasterDEMSourceHook - Hook for the RasterDEMSource component
  * 
- * Este hook gestiona una fuente de DEM (Digital Elevation Model) en MapLibre GL JS,
- * utilizada para datos de elevación del terreno, hillshading y renderizado 3D.
+ * This hook manages a DEM (Digital Elevation Model) source in MapLibre GL JS,
+ * used for terrain elevation data, hillshading and 3D rendering.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface RasterDEMSourceConfig {
   id: string;
@@ -33,7 +35,7 @@ export const RasterDEMSourceHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on raster DEM source element');
@@ -43,23 +45,23 @@ export const RasterDEMSourceHook: LiveViewHook = {
       const config: RasterDEMSourceConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for raster DEM source "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSource = () => {
         try {
-          // Verificar que el source no existe ya
+          // Make sure the source is not already registered
           if (map.getSource(config.id)) {
             console.warn(`[MaplibreX] Source "${config.id}" already exists on map "${mapId}"`);
             return;
           }
 
-          // Construir especificación del source
+          // Build the source specification
           const sourceSpec: any = {
             type: 'raster-dem'
           };
@@ -101,10 +103,10 @@ export const RasterDEMSourceHook: LiveViewHook = {
             sourceSpec.volatile = config.volatile;
           }
 
-          // Agregar el source al mapa
+          // Add the source to the map
           map.addSource(config.id, sourceSpec);
 
-          // Configurar event handlers para el source
+          // Wire up the source's event handlers
           const dataHandler = (e: any) => {
             if (e.sourceId === config.id) {
               this.pushEvent('source:data', {
@@ -144,7 +146,7 @@ export const RasterDEMSourceHook: LiveViewHook = {
           // Emitir evento de source agregado
           this.pushEvent('source:added', { source_id: config.id });
 
-          console.log(`[MaplibreX] Raster DEM source "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Raster DEM source "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding raster DEM source "${config.id}":`, error);
@@ -155,11 +157,11 @@ export const RasterDEMSourceHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, agregar el source inmediatamente
+      // If the map has already loaded, add the source immediately
       if (map.isStyleLoaded()) {
         addSource();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSource);
       }
 
@@ -184,7 +186,7 @@ export const RasterDEMSourceHook: LiveViewHook = {
           map.off('error', state.errorHandler);
         }
 
-        // Remover el source si existe
+        // Remove the source if present
         if (map.getSource(state.config.id)) {
           try {
             map.removeSource(state.config.id);
@@ -195,7 +197,7 @@ export const RasterDEMSourceHook: LiveViewHook = {
         }
       }
 
-      console.log(`[MaplibreX] Raster DEM source "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Raster DEM source "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying raster DEM source:', error);
     }

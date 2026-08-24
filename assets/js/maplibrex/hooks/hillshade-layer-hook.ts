@@ -1,12 +1,14 @@
 /**
- * HillshadeLayerHook - Hook para el componente HillshadeLayer
+ * HillshadeLayerHook - Hook for the HillshadeLayer component
  * 
- * Este hook gestiona una capa de sombreado de terreno en MapLibre GL JS,
- * renderizando relieve 3D desde una fuente raster-dem.
+ * This hook manages a terrain hillshade layer in MapLibre GL JS,
+ * rendering 3D relief from a raster-dem source.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface HillshadeLayerConfig {
   id: string;
@@ -29,7 +31,7 @@ export const HillshadeLayerHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on hillshade layer element');
@@ -39,23 +41,23 @@ export const HillshadeLayerHook: LiveViewHook = {
       const config: HillshadeLayerConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for hillshade layer "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addLayer = () => {
         try {
-          // Verificar que el source existe
+          // Make sure the source exists
           if (!map.getSource(config.sourceId)) {
             console.warn(`[MaplibreX] Source "${config.sourceId}" not found for hillshade layer "${config.id}". Layer will be added when source is available.`);
             return;
           }
 
-          // Construir especificación de la capa
+          // Build the layer specification
           const layerSpec: any = {
             id: config.id,
             type: 'hillshade',
@@ -77,7 +79,7 @@ export const HillshadeLayerHook: LiveViewHook = {
             layerSpec.maxzoom = config.maxZoom;
           }
 
-          // Agregar la capa al mapa
+          // Add the layer to the map
           map.addLayer(layerSpec, config.beforeId);
 
           // Guardar estado
@@ -88,18 +90,18 @@ export const HillshadeLayerHook: LiveViewHook = {
           // Emitir evento de capa agregada
           this.pushEvent('layer:added', { layer_id: config.id });
 
-          console.log(`[MaplibreX] Hillshade layer "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Hillshade layer "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding hillshade layer "${config.id}":`, error);
         }
       };
 
-      // Si el mapa ya está cargado, agregar la capa inmediatamente
+      // If the map has already loaded, add the layer immediately
       if (map.isStyleLoaded()) {
         addLayer();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addLayer);
       }
 
@@ -115,7 +117,7 @@ export const HillshadeLayerHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map) {
-        // Remover la capa si existe
+        // Remove the layer if present
         if (map.getLayer(state.config.id)) {
           map.removeLayer(state.config.id);
         }
@@ -124,7 +126,7 @@ export const HillshadeLayerHook: LiveViewHook = {
         this.pushEvent('layer:removed', { layer_id: state.config.id });
       }
 
-      console.log(`[MaplibreX] Hillshade layer "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Hillshade layer "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying hillshade layer:', error);
     }

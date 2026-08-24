@@ -1,12 +1,14 @@
 /**
- * BackgroundLayerHook - Hook para el componente BackgroundLayer
+ * BackgroundLayerHook - Hook for the BackgroundLayer component
  * 
- * Este hook gestiona una capa de fondo en MapLibre GL JS,
- * renderizando un color sólido o patrón como base del mapa.
+ * This hook manages a background layer in MapLibre GL JS,
+ * rendering a solid colour or pattern as the map's base.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface BackgroundLayerConfig {
   id: string;
@@ -27,7 +29,7 @@ export const BackgroundLayerHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on background layer element');
@@ -37,17 +39,17 @@ export const BackgroundLayerHook: LiveViewHook = {
       const config: BackgroundLayerConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for background layer "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addLayer = () => {
         try {
-          // Construir especificación de la capa
+          // Build the layer specification
           const layerSpec: any = {
             id: config.id,
             type: 'background',
@@ -64,7 +66,7 @@ export const BackgroundLayerHook: LiveViewHook = {
             layerSpec.maxzoom = config.maxZoom;
           }
 
-          // Agregar la capa al mapa
+          // Add the layer to the map
           map.addLayer(layerSpec, config.beforeId);
 
           // Guardar estado
@@ -75,18 +77,18 @@ export const BackgroundLayerHook: LiveViewHook = {
           // Emitir evento de capa agregada
           this.pushEvent('layer:added', { layer_id: config.id });
 
-          console.log(`[MaplibreX] Background layer "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Background layer "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding background layer "${config.id}":`, error);
         }
       };
 
-      // Si el mapa ya está cargado, agregar la capa inmediatamente
+      // If the map has already loaded, add the layer immediately
       if (map.isStyleLoaded()) {
         addLayer();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addLayer);
       }
 
@@ -102,7 +104,7 @@ export const BackgroundLayerHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map) {
-        // Remover la capa si existe
+        // Remove the layer if present
         if (map.getLayer(state.config.id)) {
           map.removeLayer(state.config.id);
         }
@@ -111,7 +113,7 @@ export const BackgroundLayerHook: LiveViewHook = {
         this.pushEvent('layer:removed', { layer_id: state.config.id });
       }
 
-      console.log(`[MaplibreX] Background layer "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Background layer "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying background layer:', error);
     }

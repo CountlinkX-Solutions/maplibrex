@@ -9,14 +9,16 @@ import { PARTICLE_SYSTEM_PRESETS } from '../shaders/particle-system';
 import { MapManager } from '../core/map-manager';
 import type { CustomLayerConfig, WebGLLayerImplementation } from '../types/custom-webgl';
 
+import { logger } from '../core/logger';
+
 export const CustomLayerHook = {
   mounted(this: any) {
     const config: CustomLayerConfig = JSON.parse(this.el.dataset.config || '{}');
-    console.log('[CustomLayer] Mounted:', config.id, 'with uniforms:', config.uniforms);
+    logger.debug('[CustomLayer] Mounted:', config.id, 'with uniforms:', config.uniforms);
     
     // Listen for uniform updates via Phoenix events
     this.handleEvent(`update_uniforms_${config.id}`, (payload: any) => {
-      console.log('[CustomLayer] Received uniform update:', payload);
+      logger.debug('[CustomLayer] Received uniform update:', payload);
       if (payload.uniforms) {
         this.currentConfig = {
           ...this.currentConfig,
@@ -48,7 +50,7 @@ export const CustomLayerHook = {
     // Store start time for u_time calculation (if needed for animation)
     if (config.uniforms && 'u_time' in config.uniforms) {
       this.startTime = performance.now() / 1000;
-      console.log('[CustomLayer] Animation enabled for', config.id);
+      logger.debug('[CustomLayer] Animation enabled for', config.id);
       // map.repaint = true tells MapLibre to continuously re-render every frame.
       // At the end of each _render() cycle MapLibre checks this flag and calls
       // triggerRepaint() automatically — no external rAF loop needed.
@@ -59,7 +61,7 @@ export const CustomLayerHook = {
     map.on('load', () => {
       try {
         map.addLayer(customLayer, config.beforeId);
-        console.log('[CustomLayer] Added to map:', config.id);
+        logger.debug('[CustomLayer] Added to map:', config.id);
       } catch (error) {
         console.error('[CustomLayer] Error adding layer:', error);
       }
@@ -69,7 +71,7 @@ export const CustomLayerHook = {
     if (map.loaded()) {
       try {
         map.addLayer(customLayer, config.beforeId);
-        console.log('[CustomLayer] Added to map (already loaded):', config.id);
+        logger.debug('[CustomLayer] Added to map (already loaded):', config.id);
       } catch (error) {
         console.error('[CustomLayer] Error adding layer:', error);
       }
@@ -78,7 +80,7 @@ export const CustomLayerHook = {
 
   updated(this: any) {
     const config: CustomLayerConfig = JSON.parse(this.el.dataset.config || '{}');
-    console.log('[CustomLayer] Updated with uniforms:', config.uniforms);
+    logger.debug('[CustomLayer] Updated with uniforms:', config.uniforms);
     
     // Store updated config so render() can access it
     this.currentConfig = config;
@@ -90,7 +92,7 @@ export const CustomLayerHook = {
   },
 
   destroyed(this: any) {
-    console.log('[CustomLayer] Destroyed:', this.layerId);
+    logger.debug('[CustomLayer] Destroyed:', this.layerId);
 
     this.destroyed = true;
     // Turn off continuous repaint when the animated layer is removed
@@ -182,7 +184,7 @@ export const CustomLayerHook = {
           customWebGLManager.storeBuffer(config.id, buffer);
 
           initialized = true;
-          console.log('[CustomLayer] WebGL initialized:', config.id);
+          logger.debug('[CustomLayer] WebGL initialized:', config.id);
         } catch (error) {
           console.error('[CustomLayer] Initialization error:', error);
         }

@@ -1,21 +1,22 @@
 /**
- * MapManager - Singleton para gestionar instancias de mapas
+ * MapManager - Singleton registry of live map instances
  * 
- * Inspirado en el Context API de svelte-maplibre, este manager mantiene
- * un registro de todas las instancias de mapas activas en la aplicación.
- * Permite que múltiples componentes (markers, popups, layers) accedan al
- * mismo mapa de forma segura.
+ * Inspired by svelte-maplibre's Context API, this manager keeps
+ * a registry of every map instance active in the application, so that
+ * multiple components (markers, popups, layers) can safely reach the
+ * same map.
  */
 
 import type { Map } from 'maplibre-gl';
 import type { MapRegistry } from '../types';
 
+import { logger, setDebug as setGlobalDebug } from './logger';
+
 class MapManagerClass {
   private maps: MapRegistry = {};
-  private debug: boolean = false;
 
   /**
-   * Registra una nueva instancia de mapa
+   * Register a new map instance
    */
   register(mapId: string, map: Map): void {
     if (this.maps[mapId]) {
@@ -27,7 +28,7 @@ class MapManagerClass {
   }
 
   /**
-   * Obtiene una instancia de mapa por ID
+   * Look up a map instance by id
    */
   get(mapId: string): Map | undefined {
     const map = this.maps[mapId];
@@ -40,7 +41,7 @@ class MapManagerClass {
   }
 
   /**
-   * Obtiene una instancia de mapa o lanza error si no existe
+   * Look up a map instance, raising if it does not exist
    */
   getOrThrow(mapId: string): Map {
     const map = this.get(mapId);
@@ -53,14 +54,14 @@ class MapManagerClass {
   }
 
   /**
-   * Verifica si existe un mapa con el ID dado
+   * Whether a map with the given id is registered
    */
   has(mapId: string): boolean {
     return mapId in this.maps;
   }
 
   /**
-   * Elimina un mapa del registro
+   * Remove a map from the registry
    */
   unregister(mapId: string): boolean {
     if (!this.maps[mapId]) {
@@ -74,28 +75,28 @@ class MapManagerClass {
   }
 
   /**
-   * Obtiene todos los mapas registrados
+   * Every registered map
    */
   getAll(): MapRegistry {
     return { ...this.maps };
   }
 
   /**
-   * Obtiene los IDs de todos los mapas registrados
+   * The ids of every registered map
    */
   getAllIds(): string[] {
     return Object.keys(this.maps);
   }
 
   /**
-   * Cuenta cuántos mapas están registrados
+   * How many maps are registered
    */
   count(): number {
     return Object.keys(this.maps).length;
   }
 
   /**
-   * Limpia todos los mapas (útil para testing)
+   * Remove every map. Useful in tests
    */
   clear(): void {
     const ids = this.getAllIds();
@@ -115,23 +116,21 @@ class MapManagerClass {
   }
 
   /**
-   * Habilita/deshabilita modo debug
+   * Enable or disable debug mode
    */
   setDebug(enabled: boolean): void {
-    this.debug = enabled;
+    setGlobalDebug(enabled);
   }
 
   /**
-   * Logger interno
+   * Internal logger
    */
-  private log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
-    if (!this.debug && level === 'info') return;
-    
+  private log(level: 'info' | 'warn' | 'error', message: string, data?: unknown): void {
     const prefix = '[MaplibreX MapManager]';
     
     switch (level) {
       case 'info':
-        console.log(prefix, message, data || '');
+        logger.debug(prefix, message, data || '');
         break;
       case 'warn':
         console.warn(prefix, message, data || '');
@@ -149,16 +148,16 @@ class MapManagerClass {
 export const MapManager = new MapManagerClass();
 
 /**
- * Helper para obtener un mapa de forma segura
- * Útil para uso en componentes
+ * Safely look up a map
+ * Handy inside components
  */
 export function useMap(mapId: string): Map | undefined {
   return MapManager.get(mapId);
 }
 
 /**
- * Helper para obtener un mapa o lanzar error
- * Útil cuando el mapa es requerido
+ * Look up a map or raise
+ * Use when the map is required
  */
 export function requireMap(mapId: string): Map {
   return MapManager.getOrThrow(mapId);

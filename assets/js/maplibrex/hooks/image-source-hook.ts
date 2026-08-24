@@ -1,12 +1,14 @@
 /**
- * ImageSourceHook - Hook para el componente ImageSource
+ * ImageSourceHook - Hook for the ImageSource component
  * 
- * Este hook gestiona una fuente de imagen georreferenciada en MapLibre GL JS,
- * utilizada para overlays de radar, mapas históricos, imágenes escaneadas, etc.
+ * This hook manages a georeferenced image source in MapLibre GL JS,
+ * used for radar overlays, historical maps, scanned imagery, and similar.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface ImageSourceConfig {
   id: string;
@@ -24,7 +26,7 @@ export const ImageSourceHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on image source element');
@@ -34,30 +36,30 @@ export const ImageSourceHook: LiveViewHook = {
       const config: ImageSourceConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for image source "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSource = () => {
         try {
-          // Verificar que el source no existe ya
+          // Make sure the source is not already registered
           if (map.getSource(config.id)) {
             console.warn(`[MaplibreX] Source "${config.id}" already exists on map "${mapId}"`);
             return;
           }
 
-          // Construir especificación del source
+          // Build the source specification
           const sourceSpec: any = {
             type: 'image',
             url: config.url,
             coordinates: config.coordinates
           };
 
-          // Agregar el source al mapa
+          // Add the source to the map
           map.addSource(config.id, sourceSpec);
 
           // Guardar estado
@@ -65,15 +67,15 @@ export const ImageSourceHook: LiveViewHook = {
             config
           };
 
-          // Emitir evento de source agregado (cuando la imagen se carga)
-          // Nota: MapLibre carga la imagen asíncronamente
+          // Emit the source-added event once the image has loaded
+          // Note: MapLibre loads the image asynchronously
           const source = map.getSource(config.id) as any;
           if (source && source.onAdd) {
-            // La imagen se cargará en background
+            // The image loads in the background
             this.pushEvent('source:added', { source_id: config.id });
           }
 
-          console.log(`[MaplibreX] Image source "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Image source "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding image source "${config.id}":`, error);
@@ -84,11 +86,11 @@ export const ImageSourceHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, agregar el source inmediatamente
+      // If the map has already loaded, add the source immediately
       if (map.isStyleLoaded()) {
         addSource();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSource);
       }
 
@@ -104,22 +106,22 @@ export const ImageSourceHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map) {
-        // Remover el source si existe
+        // Remove the source if present
         if (map.getSource(state.config.id)) {
-          // Nota: Solo podemos remover el source si no hay capas usándolo
-          // MapLibre lanzará un error si intentamos remover un source en uso
+          // Note: a source can only be removed once no layer references it
+          // MapLibre raises if we try to remove a source that is still in use
           try {
             map.removeSource(state.config.id);
             this.pushEvent('source:removed', { source_id: state.config.id });
           } catch (e) {
             console.warn(`[MaplibreX] Could not remove source "${state.config.id}": ${e}`);
-            // El source probablemente está siendo usado por capas
-            // Las capas deberían removerse primero
+            // The source is probably still in use by a layer
+            // Layers must be removed first
           }
         }
       }
 
-      console.log(`[MaplibreX] Image source "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Image source "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying image source:', error);
     }

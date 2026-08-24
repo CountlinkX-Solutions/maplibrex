@@ -1,7 +1,7 @@
 /**
  * MaplibreX Hooks
  * 
- * Exporta todos los hooks disponibles para uso en LiveView
+ * Exports every hook available for use in LiveView
  */
 
 export { MapHook } from './map-hook';

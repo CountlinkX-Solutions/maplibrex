@@ -1,12 +1,14 @@
 /**
- * RasterTileSourceHook - Hook para el componente RasterTileSource
+ * RasterTileSourceHook - Hook for the RasterTileSource component
  * 
- * Este hook gestiona una fuente de tiles raster en MapLibre GL JS,
- * utilizada para imágenes satelitales, terreno y otros overlays raster.
+ * This hook manages a raster tile source in MapLibre GL JS,
+ * used for satellite imagery, terrain and other raster overlays.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface RasterTileSourceConfig {
   id: string;
@@ -34,7 +36,7 @@ export const RasterTileSourceHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on raster tile source element');
@@ -44,23 +46,23 @@ export const RasterTileSourceHook: LiveViewHook = {
       const config: RasterTileSourceConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for raster tile source "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSource = () => {
         try {
-          // Verificar que el source no existe ya
+          // Make sure the source is not already registered
           if (map.getSource(config.id)) {
             console.warn(`[MaplibreX] Source "${config.id}" already exists on map "${mapId}"`);
             return;
           }
 
-          // Construir especificación del source
+          // Build the source specification
           const sourceSpec: any = {
             type: 'raster'
           };
@@ -106,10 +108,10 @@ export const RasterTileSourceHook: LiveViewHook = {
             sourceSpec.volatile = config.volatile;
           }
 
-          // Agregar el source al mapa
+          // Add the source to the map
           map.addSource(config.id, sourceSpec);
 
-          // Configurar event handlers para el source
+          // Wire up the source's event handlers
           const dataHandler = (e: any) => {
             if (e.sourceId === config.id) {
               this.pushEvent('source:data', {
@@ -149,7 +151,7 @@ export const RasterTileSourceHook: LiveViewHook = {
           // Emitir evento de source agregado
           this.pushEvent('source:added', { source_id: config.id });
 
-          console.log(`[MaplibreX] Raster tile source "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Raster tile source "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding raster tile source "${config.id}":`, error);
@@ -160,11 +162,11 @@ export const RasterTileSourceHook: LiveViewHook = {
         }
       };
 
-      // Si el mapa ya está cargado, agregar el source inmediatamente
+      // If the map has already loaded, add the source immediately
       if (map.isStyleLoaded()) {
         addSource();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSource);
       }
 
@@ -189,22 +191,22 @@ export const RasterTileSourceHook: LiveViewHook = {
           map.off('error', state.errorHandler);
         }
 
-        // Remover el source si existe
+        // Remove the source if present
         if (map.getSource(state.config.id)) {
-          // Nota: Solo podemos remover el source si no hay capas usándolo
-          // MapLibre lanzará un error si intentamos remover un source en uso
+          // Note: a source can only be removed once no layer references it
+          // MapLibre raises if we try to remove a source that is still in use
           try {
             map.removeSource(state.config.id);
             this.pushEvent('source:removed', { source_id: state.config.id });
           } catch (e) {
             console.warn(`[MaplibreX] Could not remove source "${state.config.id}": ${e}`);
-            // El source probablemente está siendo usado por capas
-            // Las capas deberían removerse primero
+            // The source is probably still in use by a layer
+            // Layers must be removed first
           }
         }
       }
 
-      console.log(`[MaplibreX] Raster tile source "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Raster tile source "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying raster tile source:', error);
     }

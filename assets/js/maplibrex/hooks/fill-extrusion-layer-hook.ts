@@ -1,12 +1,14 @@
 /**
- * FillExtrusionLayerHook - Hook para el componente FillExtrusionLayer
+ * FillExtrusionLayerHook - Hook for the FillExtrusionLayer component
  * 
- * Este hook gestiona una capa de polígonos 3D extruidos en MapLibre GL JS,
- * comúnmente usado para edificios y visualizaciones de datos con altura.
+ * This hook manages an extruded 3D polygon layer in MapLibre GL JS,
+ * commonly used for buildings and height-based data visualisations.
  */
 
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface FillExtrusionLayerConfig {
   id: string;
@@ -33,7 +35,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on fill extrusion layer element');
@@ -43,23 +45,23 @@ export const FillExtrusionLayerHook: LiveViewHook = {
       const config: FillExtrusionLayerConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for fill extrusion layer "${config.id}"`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addLayer = () => {
         try {
-          // Verificar que el source existe
+          // Make sure the source exists
           if (!map.getSource(config.sourceId)) {
             console.warn(`[MaplibreX] Source "${config.sourceId}" not found for fill extrusion layer "${config.id}". Layer will be added when source is available.`);
             return;
           }
 
-          // Construir especificación de la capa
+          // Build the layer specification
           const layerSpec: any = {
             id: config.id,
             type: 'fill-extrusion',
@@ -85,7 +87,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
             layerSpec.maxzoom = config.maxZoom;
           }
 
-          // Agregar la capa al mapa
+          // Add the layer to the map
           map.addLayer(layerSpec, config.beforeId);
 
           // Configurar event handlers
@@ -133,18 +135,18 @@ export const FillExtrusionLayerHook: LiveViewHook = {
           // Emitir evento de capa agregada
           this.pushEvent('layer:added', { layer_id: config.id });
 
-          console.log(`[MaplibreX] Fill extrusion layer "${config.id}" mounted on map "${mapId}"`);
+          logger.debug(`[MaplibreX] Fill extrusion layer "${config.id}" mounted on map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding fill extrusion layer "${config.id}":`, error);
         }
       };
 
-      // Si el mapa ya está cargado, agregar la capa inmediatamente
+      // If the map has already loaded, add the layer immediately
       if (map.isStyleLoaded()) {
         addLayer();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addLayer);
       }
 
@@ -171,7 +173,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
           map.off('mouseleave', state.config.id, state.mouseleaveHandler);
         }
 
-        // Remover la capa si existe
+        // Remove the layer if present
         if (map.getLayer(state.config.id)) {
           map.removeLayer(state.config.id);
         }
@@ -180,7 +182,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
         this.pushEvent('layer:removed', { layer_id: state.config.id });
       }
 
-      console.log(`[MaplibreX] Fill extrusion layer "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Fill extrusion layer "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying fill extrusion layer:', error);
     }
