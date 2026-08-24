@@ -1,12 +1,14 @@
 /**
- * SkyHook - Hook para el componente Sky
+ * SkyHook - Hook for the Sky component
  * 
- * Este hook agrega una capa de cielo atmosférico al mapa para
+ * This hook adds an atmospheric sky layer to the map for
  * mejorar visualizaciones 3D.
  */
 
-import type { LiveViewHook } from '../types';
+import type { LiveViewHook, PaintPropertyName } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface SkyConfig {
   mapId: string;
@@ -24,7 +26,7 @@ export const SkyHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on sky element');
@@ -34,14 +36,14 @@ export const SkyHook: LiveViewHook = {
       const config: SkyConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for sky`);
         return;
       }
 
-      // Esperar a que el mapa esté completamente cargado
+      // Wait until the map is fully loaded
       const addSky = () => {
         try {
           // Agregar capa de cielo
@@ -60,18 +62,18 @@ export const SkyHook: LiveViewHook = {
           // Emitir evento
           this.pushEvent('sky:added', {});
 
-          console.log(`[MaplibreX] Sky layer added to map "${mapId}"`);
+          logger.debug(`[MaplibreX] Sky layer added to map "${mapId}"`);
 
         } catch (error) {
           console.error(`[MaplibreX] Error adding sky:`, error);
         }
       };
 
-      // Si el mapa ya está cargado, agregar cielo inmediatamente
+      // If the map has already loaded, add the sky immediately
       if (map.isStyleLoaded()) {
         addSky();
       } else {
-        // Esperar a que el estilo se cargue
+        // Wait for the style to load
         map.once('load', addSky);
       }
 
@@ -92,19 +94,19 @@ export const SkyHook: LiveViewHook = {
       
       if (!state) return;
 
-      // Si la configuración cambió, actualizar el cielo
+      // Update the sky when the configuration changed
       const map = MapManager.get(newConfig.mapId);
       if (map && map.getLayer('sky')) {
         try {
-          // Actualizar paint properties
+          // Update paint properties
           for (const [key, value] of Object.entries(newConfig.paint)) {
-            map.setPaintProperty('sky', key, value);
+            map.setPaintProperty('sky', key as PaintPropertyName, value);
           }
 
-          // Actualizar estado
+          // Store the new configuration
           state.config = newConfig;
 
-          console.log(`[MaplibreX] Sky layer updated`);
+          logger.debug(`[MaplibreX] Sky layer updated`);
         } catch (error) {
           console.error('[MaplibreX] Error updating sky:', error);
         }
@@ -121,11 +123,11 @@ export const SkyHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map && map.getLayer('sky')) {
-        // Remover la capa de cielo
+        // Remove the sky layer
         try {
           map.removeLayer('sky');
           this.pushEvent('sky:removed', {});
-          console.log(`[MaplibreX] Sky layer removed`);
+          logger.debug(`[MaplibreX] Sky layer removed`);
         } catch (e) {
           console.warn(`[MaplibreX] Could not remove sky layer: ${e}`);
         }

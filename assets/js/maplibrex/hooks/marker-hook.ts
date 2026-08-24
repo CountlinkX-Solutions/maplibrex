@@ -1,13 +1,16 @@
 /**
- * MarkerHook - Hook para el componente Marker
+ * MarkerHook - Hook for the Marker component
  * 
- * Gestiona marcadores en el mapa con soporte para drag & drop,
+ * Manages map markers with support for drag & drop,
  * popups, y eventos personalizados.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, MarkerConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface MarkerHookState {
   marker: maplibregl.Marker;
@@ -34,7 +37,7 @@ export const MarkerHook: LiveViewHook = {
         return;
       }
 
-      // Crear opciones del marcador
+      // Build the marker options
       const markerOptions: maplibregl.MarkerOptions = {
         color: config.color || '#3FB1CE',
         scale: config.scale || 1,
@@ -57,7 +60,7 @@ export const MarkerHook: LiveViewHook = {
         .setLngLat(config.lngLat)
         .addTo(map);
 
-      // Configurar popup si existe
+      // Attach a popup if one was configured
       let popup: maplibregl.Popup | undefined;
       if (config.popup) {
         popup = new maplibregl.Popup({
@@ -76,7 +79,7 @@ export const MarkerHook: LiveViewHook = {
         marker.setPopup(popup);
       }
 
-      // Eventos del marcador
+      // Marker events
       if (config.draggable) {
         marker.on('dragstart', () => {
           this.pushEvent('marker:drag_start', {
@@ -119,7 +122,7 @@ export const MarkerHook: LiveViewHook = {
         popup
       };
 
-      console.log(`[MaplibreX] Marker "${config.id}" created`);
+      logger.debug(`[MaplibreX] Marker "${config.id}" created`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting marker:', error);
@@ -138,7 +141,7 @@ export const MarkerHook: LiveViewHook = {
       const newConfig: MarkerConfig = JSON.parse(configStr);
       const oldConfig = state.config;
 
-      // Actualizar posición si cambió
+      // Update the position if it changed
       if (
         newConfig.lngLat[0] !== oldConfig.lngLat[0] ||
         newConfig.lngLat[1] !== oldConfig.lngLat[1]
@@ -146,17 +149,17 @@ export const MarkerHook: LiveViewHook = {
         state.marker.setLngLat(newConfig.lngLat);
       }
 
-      // Actualizar rotación si cambió
+      // Update the rotation if it changed
       if (newConfig.rotation !== undefined && newConfig.rotation !== oldConfig.rotation) {
         state.marker.setRotation(newConfig.rotation);
       }
 
-      // Actualizar draggable si cambió
+      // Update draggable if it changed
       if (newConfig.draggable !== oldConfig.draggable) {
         state.marker.setDraggable(newConfig.draggable || false);
       }
 
-      // Actualizar popup si cambió
+      // Update the popup if it changed
       if (newConfig.popup && state.popup) {
         if (newConfig.popup.text && newConfig.popup.text !== oldConfig.popup?.text) {
           state.popup.setText(newConfig.popup.text);
@@ -165,7 +168,7 @@ export const MarkerHook: LiveViewHook = {
         }
       }
 
-      // Actualizar configuración guardada
+      // Store the new configuration
       state.config = newConfig;
 
     } catch (error) {
@@ -178,9 +181,9 @@ export const MarkerHook: LiveViewHook = {
     if (!state) return;
 
     try {
-      // Remover el marcador
+      // Remove the marker
       state.marker.remove();
-      console.log(`[MaplibreX] Marker "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Marker "${state.config.id}" destroyed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying marker:', error);

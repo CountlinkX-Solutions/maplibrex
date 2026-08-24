@@ -1,12 +1,15 @@
 /**
- * NavigationControlHook - Hook para el componente NavigationControl
+ * NavigationControlHook - Hook for the NavigationControl component
  * 
- * Gestiona controles de navegación nativos de MapLibre (zoom y compass).
+ * Manages MapLibre's native navigation controls (zoom and compass).
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, NavigationControlConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface NavigationControlHookState {
   config: NavigationControlConfig;
@@ -53,7 +56,7 @@ export const NavigationControlHook: LiveViewHook = {
         control
       };
 
-      console.log(`[MaplibreX] Navigation Control "${config.id}" added at ${position}`);
+      logger.debug(`[MaplibreX] Navigation Control "${config.id}" added at ${position}`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting navigation control:', error);
@@ -67,7 +70,7 @@ export const NavigationControlHook: LiveViewHook = {
     try {
       // Remove the control from the map
       state.map.removeControl(state.control);
-      console.log(`[MaplibreX] Navigation Control "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] Navigation Control "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying navigation control:', error);

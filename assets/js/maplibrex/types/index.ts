@@ -261,3 +261,17 @@ export type EventHandler<T = any> = (payload: T) => void;
  * Cleanup function type
  */
 export type CleanupFn = () => void;
+
+/**
+ * MapLibre's paint and layout property names.
+ *
+ * v6 narrowed `setPaintProperty`/`setLayoutProperty` from `string` to the
+ * concrete key unions, but does not export those unions. Deriving them from
+ * the method signatures keeps us correct without depending on an internal
+ * type name.
+ *
+ * MaplibreX receives these names as plain strings from Elixir, so call sites
+ * cast to them at the boundary.
+ */
+export type PaintPropertyName = Parameters<Map['setPaintProperty']>[1];
+export type LayoutPropertyName = Parameters<Map['setLayoutProperty']>[1];

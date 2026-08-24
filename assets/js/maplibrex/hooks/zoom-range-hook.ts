@@ -5,9 +5,12 @@
  * Listens to map zoom events and toggles CSS display property.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, ZoomRangeConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface ZoomRangeHookState {
   config: ZoomRangeConfig;
@@ -78,7 +81,7 @@ export const ZoomRangeHook: LiveViewHook = {
         zoomHandler
       };
 
-      console.log(`[MaplibreX] ZoomRange "${config.id}" initialized (min: ${config.min ?? 'none'}, max: ${config.max ?? 'none'})`);
+      logger.debug(`[MaplibreX] ZoomRange "${config.id}" initialized (min: ${config.min ?? 'none'}, max: ${config.max ?? 'none'})`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting zoom range:', error);
@@ -104,7 +107,7 @@ export const ZoomRangeHook: LiveViewHook = {
       const isVisible = isZoomInRange(currentZoom, newConfig.min, newConfig.max);
       state.contentElement.style.display = isVisible ? '' : 'none';
 
-      console.log(`[MaplibreX] ZoomRange "${newConfig.id}" updated (min: ${newConfig.min ?? 'none'}, max: ${newConfig.max ?? 'none'})`);
+      logger.debug(`[MaplibreX] ZoomRange "${newConfig.id}" updated (min: ${newConfig.min ?? 'none'}, max: ${newConfig.max ?? 'none'})`);
 
     } catch (error) {
       console.error('[MaplibreX] Error updating zoom range:', error);
@@ -118,7 +121,7 @@ export const ZoomRangeHook: LiveViewHook = {
     try {
       // Remove zoom event listener
       state.map.off('zoom', state.zoomHandler);
-      console.log(`[MaplibreX] ZoomRange "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] ZoomRange "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying zoom range:', error);

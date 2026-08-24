@@ -5,9 +5,12 @@
  * Implements MapLibre's IControl interface to integrate with the map's control system.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, ControlButtonConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface ControlButtonHookState {
   config: ControlButtonConfig;
@@ -108,7 +111,7 @@ export const ControlButtonHook: LiveViewHook = {
         buttonElement
       };
 
-      console.log(`[MaplibreX] ControlButton "${config.id}" added at ${position}`);
+      logger.debug(`[MaplibreX] ControlButton "${config.id}" added at ${position}`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting control button:', error);
@@ -140,7 +143,7 @@ export const ControlButtonHook: LiveViewHook = {
       // Update config
       state.config = newConfig;
 
-      console.log(`[MaplibreX] ControlButton "${newConfig.id}" updated`);
+      logger.debug(`[MaplibreX] ControlButton "${newConfig.id}" updated`);
 
     } catch (error) {
       console.error('[MaplibreX] Error updating control button:', error);
@@ -154,7 +157,7 @@ export const ControlButtonHook: LiveViewHook = {
     try {
       // Remove the control from the map
       state.map.removeControl(state.control);
-      console.log(`[MaplibreX] ControlButton "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] ControlButton "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying control button:', error);

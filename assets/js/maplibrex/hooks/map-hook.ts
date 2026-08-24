@@ -1,14 +1,17 @@
 /**
- * MapHook - Hook principal para el componente Map
+ * MapHook - Primary hook for the Map component
  * 
- * Este hook es el punto de entrada principal para integrar MapLibre con LiveView.
- * Gestiona el ciclo de vida completo del mapa: creación, actualización y destrucción.
+ * This hook is the main entry point for integrating MapLibre with LiveView.
+ * It manages the full map lifecycle: creation, updates and teardown.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, MapConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 import { createEventDispatcher } from '../core/event-dispatcher';
+
+import { logger } from '../core/logger';
 
 interface MapHookState {
   map: maplibregl.Map;
@@ -22,7 +25,7 @@ export const MapHook: LiveViewHook = {
     const el = this.el as HTMLElement;
     
     try {
-      // Obtener configuración del elemento
+      // Read the configuration off the element
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on map element');
@@ -32,7 +35,7 @@ export const MapHook: LiveViewHook = {
       const config: MapConfig = JSON.parse(configStr);
       const mapId = config.id;
 
-      // Crear instancia del mapa
+      // Create the map instance
       const map = new maplibregl.Map({
         container: el,
         center: config.center,
@@ -48,21 +51,21 @@ export const MapHook: LiveViewHook = {
         attributionControl: config.attributionControl !== false ? {} as any : false
       });
 
-      // Registrar mapa en el manager
+      // Register the map with the manager
       MapManager.register(mapId, map);
       MapManager.setDebug(config.debug || false);
 
-      // Crear event dispatcher
+      // Create the event dispatcher
       const dispatcher = createEventDispatcher(this, map, mapId, true);
 
-      // Guardar estado en el hook
+      // Stash state on the hook
       (this as any)._maplibrex = {
         map,
         dispatcher,
         config
       };
 
-      // Agregar event listeners para comandos JS
+      // Listen for JS command events
       el.addEventListener('maplibrex:fly_to', ((e: CustomEvent) => {
         const { center, zoom, duration, bearing, pitch } = e.detail;
         map.flyTo({
@@ -112,12 +115,12 @@ export const MapHook: LiveViewHook = {
         map.resetNorth({ duration: 300 });
       });
 
-      // Notificar que el mapa está listo
+      // Report that the map is ready
       map.once('load', () => {
-        console.log(`[MaplibreX] Map "${mapId}" loaded and ready`);
+        logger.debug(`[MaplibreX] Map "${mapId}" loaded and ready`);
       });
 
-      // Manejar errores
+      // Handle errors
       map.on('error', (e) => {
         console.error(`[MaplibreX] Map error:`, e);
       });
@@ -139,7 +142,7 @@ export const MapHook: LiveViewHook = {
       const newConfig: MapConfig = JSON.parse(configStr);
       const oldConfig: MapConfig = state.config;
 
-      // Actualizar centro si cambió
+      // Update the centre if it changed
       if (
         newConfig.center[0] !== oldConfig.center[0] ||
         newConfig.center[1] !== oldConfig.center[1]
@@ -147,27 +150,27 @@ export const MapHook: LiveViewHook = {
         state.map.setCenter(newConfig.center);
       }
 
-      // Actualizar zoom si cambió
+      // Update the zoom if it changed
       if (newConfig.zoom !== oldConfig.zoom) {
         state.map.setZoom(newConfig.zoom);
       }
 
-      // Actualizar bearing si cambió
+      // Update the bearing if it changed
       if (newConfig.bearing !== undefined && newConfig.bearing !== oldConfig.bearing) {
         state.map.setBearing(newConfig.bearing);
       }
 
-      // Actualizar pitch si cambió
+      // Update the pitch if it changed
       if (newConfig.pitch !== undefined && newConfig.pitch !== oldConfig.pitch) {
         state.map.setPitch(newConfig.pitch);
       }
 
-      // Actualizar estilo si cambió
+      // Update the style if it changed
       if (newConfig.style !== oldConfig.style) {
         state.map.setStyle(newConfig.style as any);
       }
 
-      // Actualizar configuración guardada
+      // Store the new configuration
       (state as any).config = newConfig;
 
     } catch (error) {
@@ -182,18 +185,18 @@ export const MapHook: LiveViewHook = {
     try {
       const mapId = state.config.id;
 
-      // Limpiar event dispatcher
+      // Tear down the event dispatcher
       state.dispatcher.cleanup();
 
-      // Remover el mapa
+      // Remove the map
       if (state.map && typeof state.map.remove === 'function') {
         state.map.remove();
       }
 
-      // Desregistrar del manager
+      // Unregister from the manager
       MapManager.unregister(mapId);
 
-      console.log(`[MaplibreX] Map "${mapId}" destroyed`);
+      logger.debug(`[MaplibreX] Map "${mapId}" destroyed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying map:', error);
@@ -201,17 +204,17 @@ export const MapHook: LiveViewHook = {
   },
 
   disconnected(this: any) {
-    // Cuando se desconecta temporalmente (como durante un live navigation)
-    console.log('[MaplibreX] Map disconnected (temporary)');
+    // Temporary disconnect, e.g. during live navigation
+    logger.debug('[MaplibreX] Map disconnected (temporary)');
   },
 
   reconnected(this: any) {
-    // Cuando se reconecta después de una desconexión temporal
+    // Reconnected after a temporary disconnect
     const state: MapHookState | undefined = (this as any)._maplibrex;
     if (state && state.map) {
-      // Resize map por si el contenedor cambió de tamaño
+      // Resize in case the container changed size while disconnected
       state.map.resize();
-      console.log('[MaplibreX] Map reconnected');
+      logger.debug('[MaplibreX] Map reconnected');
     }
   }
 };

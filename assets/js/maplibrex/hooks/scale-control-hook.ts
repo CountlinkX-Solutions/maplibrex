@@ -1,12 +1,15 @@
 /**
- * ScaleControlHook - Hook para el componente ScaleControl
+ * ScaleControlHook - Hook for the ScaleControl component
  * 
  * Gestiona controles de escala nativos de MapLibre.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, ScaleControlConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface ScaleControlHookState {
   config: ScaleControlConfig;
@@ -52,7 +55,7 @@ export const ScaleControlHook: LiveViewHook = {
         control
       };
 
-      console.log(`[MaplibreX] Scale Control "${config.id}" added at ${position} (${config.unit})`);
+      logger.debug(`[MaplibreX] Scale Control "${config.id}" added at ${position} (${config.unit})`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting scale control:', error);
@@ -66,7 +69,7 @@ export const ScaleControlHook: LiveViewHook = {
     try {
       // Remove the control from the map
       state.map.removeControl(state.control);
-      console.log(`[MaplibreX] Scale Control "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] Scale Control "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying scale control:', error);

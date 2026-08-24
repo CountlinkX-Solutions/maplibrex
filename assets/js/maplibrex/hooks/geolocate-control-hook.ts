@@ -1,14 +1,17 @@
 /**
- * GeolocateControlHook - Hook para el componente GeolocateControl
+ * GeolocateControlHook - Hook for the GeolocateControl component
  * 
- * Este hook gestiona un control de geolocalización de MapLibre GL JS,
- * permitiendo a los usuarios encontrar su ubicación actual y opcionalmente
- * rastrear su movimiento en tiempo real.
+ * This hook manages a MapLibre GL JS geolocate control,
+ * letting users find their current location and optionally
+ * track their movement in real time.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface GeolocateControlConfig {
   id: string;
@@ -30,7 +33,7 @@ export const GeolocateControlHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on geolocate control element');
@@ -40,14 +43,14 @@ export const GeolocateControlHook: LiveViewHook = {
       const config: GeolocateControlConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for geolocate control "${config.id}"`);
         return;
       }
 
-      // Crear control de geolocalización
+      // Create the geolocate control
       const control = new maplibregl.GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true
@@ -58,7 +61,7 @@ export const GeolocateControlHook: LiveViewHook = {
         fitBoundsOptions: config.fitBoundsOptions
       });
 
-      // Agregar control al mapa en la posición especificada
+      // Add the control to the map at the given position
       map.addControl(control, config.position);
 
       // Event: geolocate (location found)
@@ -75,19 +78,19 @@ export const GeolocateControlHook: LiveViewHook = {
         };
 
         this.pushEvent('geolocate:location_found', { coords });
-        console.log(`[MaplibreX] Geolocate control "${config.id}": Location found`, coords);
+        logger.debug(`[MaplibreX] Geolocate control "${config.id}": Location found`, coords);
       });
 
       // Event: trackuserlocationstart
       control.on('trackuserlocationstart', () => {
         this.pushEvent('geolocate:tracking_started', {});
-        console.log(`[MaplibreX] Geolocate control "${config.id}": Tracking started`);
+        logger.debug(`[MaplibreX] Geolocate control "${config.id}": Tracking started`);
       });
 
       // Event: trackuserlocationend
       control.on('trackuserlocationend', () => {
         this.pushEvent('geolocate:tracking_stopped', {});
-        console.log(`[MaplibreX] Geolocate control "${config.id}": Tracking stopped`);
+        logger.debug(`[MaplibreX] Geolocate control "${config.id}": Tracking stopped`);
       });
 
       // Event: error
@@ -102,7 +105,7 @@ export const GeolocateControlHook: LiveViewHook = {
       });
 
       // Event: user location updated (durante tracking)
-      // Este evento se dispara continuamente cuando trackUserLocation está activo
+      // This fires continuously while trackUserLocation is on
       map.on('moveend', () => {
         if (control._watchState === 'ACTIVE_LOCK') {
           const center = map.getCenter();
@@ -120,7 +123,7 @@ export const GeolocateControlHook: LiveViewHook = {
         config
       };
 
-      console.log(`[MaplibreX] Geolocate control "${config.id}" mounted on map "${mapId}"`);
+      logger.debug(`[MaplibreX] Geolocate control "${config.id}" mounted on map "${mapId}"`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting geolocate control:', error);
@@ -134,11 +137,11 @@ export const GeolocateControlHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map && state.control) {
-        // Remover el control del mapa
+        // Remove the control from the map
         map.removeControl(state.control);
       }
 
-      console.log(`[MaplibreX] Geolocate control "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Geolocate control "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying geolocate control:', error);
     }

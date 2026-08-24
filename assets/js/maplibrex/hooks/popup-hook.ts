@@ -1,13 +1,16 @@
 /**
- * PopupHook - Hook para el componente Popup
+ * PopupHook - Hook for the Popup component
  * 
- * Gestiona popups independientes en el mapa con soporte para
- * contenido HTML, eventos, y control programático desde LiveView.
+ * Manages standalone map popups with support for
+ * HTML content, events, and programmatic control from LiveView.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, PopupConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface PopupHookState {
   popup: maplibregl.Popup;
@@ -130,7 +133,7 @@ export const PopupHook: LiveViewHook = {
         contentElement
       };
 
-      console.log(`[MaplibreX] Popup "${config.id}" created`);
+      logger.debug(`[MaplibreX] Popup "${config.id}" created`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting popup:', error);
@@ -202,7 +205,7 @@ export const PopupHook: LiveViewHook = {
     try {
       // Remove the popup
       state.popup.remove();
-      console.log(`[MaplibreX] Popup "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Popup "${state.config.id}" destroyed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying popup:', error);

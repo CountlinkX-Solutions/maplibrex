@@ -1,13 +1,16 @@
 /**
- * GeoJSONLayerHook - Hook para el componente GeoJSONLayer
+ * GeoJSONLayerHook - Hook for the GeoJSONLayer component
  * 
- * Gestiona layers de GeoJSON con soporte para múltiples tipos de layer,
- * clustering, eventos de click en features, y actualización dinámica de datos.
+ * Manages GeoJSON layers with support for multiple layer types,
+ * clustering, feature click events, and dynamic data updates.
  */
 
-import maplibregl from 'maplibre-gl';
-import type { LiveViewHook } from '../types';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
+import type { PaintPropertyName, LayoutPropertyName, LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface GeoJSONLayerConfig {
   id: string;
@@ -173,7 +176,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         layerId
       };
 
-      console.log(`[MaplibreX] GeoJSON Layer "${layerId}" created`);
+      logger.debug(`[MaplibreX] GeoJSON Layer "${layerId}" created`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting GeoJSON layer:', error);
@@ -208,7 +211,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         Object.entries(newConfig.layer.paint).forEach(([key, value]) => {
           const oldValue = state.config.layer.paint?.[key];
           if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-            state.map.setPaintProperty(state.layerId, key, value);
+            state.map.setPaintProperty(state.layerId, key as PaintPropertyName, value);
           }
         });
       }
@@ -218,7 +221,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         Object.entries(newConfig.layer.layout).forEach(([key, value]) => {
           const oldValue = state.config.layer.layout?.[key];
           if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-            state.map.setLayoutProperty(state.layerId, key, value);
+            state.map.setLayoutProperty(state.layerId, key as LayoutPropertyName, value);
           }
         });
       }
@@ -251,7 +254,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         state.map.removeSource(state.sourceId);
       }
 
-      console.log(`[MaplibreX] GeoJSON Layer "${state.layerId}" destroyed`);
+      logger.debug(`[MaplibreX] GeoJSON Layer "${state.layerId}" destroyed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying GeoJSON layer:', error);

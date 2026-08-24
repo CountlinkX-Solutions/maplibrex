@@ -1,13 +1,16 @@
 /**
- * AttributionControlHook - Hook para el componente AttributionControl
+ * AttributionControlHook - Hook for the AttributionControl component
  * 
- * Este hook gestiona un control de atribución de MapLibre GL JS,
- * mostrando información de atribución del mapa y fuentes de datos.
+ * This hook manages a MapLibre GL JS attribution control,
+ * showing attribution for the map and its data sources.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface AttributionControlConfig {
   id: string;
@@ -27,7 +30,7 @@ export const AttributionControlHook: LiveViewHook = {
     const el = this.el as HTMLElement;
 
     try {
-      // Obtener configuración
+      // Read the configuration
       const configStr = el.dataset.config;
       if (!configStr) {
         console.error('[MaplibreX] No config found on attribution control element');
@@ -37,27 +40,27 @@ export const AttributionControlHook: LiveViewHook = {
       const config: AttributionControlConfig = JSON.parse(configStr);
       const mapId = config.mapId;
 
-      // Obtener instancia del mapa
+      // Get the map instance
       const map = MapManager.get(mapId);
       if (!map) {
         console.error(`[MaplibreX] Map "${mapId}" not found for attribution control "${config.id}"`);
         return;
       }
 
-      // Crear opciones del control
+      // Build the control options
       const controlOptions: maplibregl.AttributionControlOptions = {
         compact: config.compact
       };
 
-      // Agregar atribución personalizada si existe
+      // Add custom attribution when provided
       if (config.customAttribution) {
         controlOptions.customAttribution = config.customAttribution;
       }
 
-      // Crear control de atribución
+      // Create the attribution control
       const control = new maplibregl.AttributionControl(controlOptions);
 
-      // Agregar control al mapa en la posición especificada
+      // Add the control to the map at the given position
       map.addControl(control, config.position);
 
       // Guardar estado
@@ -66,7 +69,7 @@ export const AttributionControlHook: LiveViewHook = {
         config
       };
 
-      console.log(`[MaplibreX] Attribution control "${config.id}" mounted on map "${mapId}"`);
+      logger.debug(`[MaplibreX] Attribution control "${config.id}" mounted on map "${mapId}"`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting attribution control:', error);
@@ -80,11 +83,11 @@ export const AttributionControlHook: LiveViewHook = {
     try {
       const map = MapManager.get(state.config.mapId);
       if (map && state.control) {
-        // Remover el control del mapa
+        // Remove the control from the map
         map.removeControl(state.control);
       }
 
-      console.log(`[MaplibreX] Attribution control "${state.config.id}" destroyed`);
+      logger.debug(`[MaplibreX] Attribution control "${state.config.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying attribution control:', error);
     }

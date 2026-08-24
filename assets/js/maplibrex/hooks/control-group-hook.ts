@@ -5,9 +5,12 @@
  * Implements MapLibre's IControl interface to integrate with the map's control system.
  */
 
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 is ESM-only and no longer has a default export.
+import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, ControlGroupConfig } from '../types';
 import { MapManager } from '../core/map-manager';
+
+import { logger } from '../core/logger';
 
 interface ControlGroupHookState {
   config: ControlGroupConfig;
@@ -108,7 +111,7 @@ export const ControlGroupHook: LiveViewHook = {
         control
       };
 
-      console.log(`[MaplibreX] ControlGroup "${config.id}" added at ${position} (${orientation})`);
+      logger.debug(`[MaplibreX] ControlGroup "${config.id}" added at ${position} (${orientation})`);
 
     } catch (error) {
       console.error('[MaplibreX] Error mounting control group:', error);
@@ -118,7 +121,7 @@ export const ControlGroupHook: LiveViewHook = {
   updated(this: any) {
     // Control groups with dynamic content are already updated by LiveView
     // We don't need to recreate the control, just ensure content stays in place
-    console.log('[MaplibreX] ControlGroup updated');
+    logger.debug('[MaplibreX] ControlGroup updated');
   },
 
   destroyed(this: any) {
@@ -128,7 +131,7 @@ export const ControlGroupHook: LiveViewHook = {
     try {
       // Remove the control from the map
       state.map.removeControl(state.control);
-      console.log(`[MaplibreX] ControlGroup "${state.config.id}" removed`);
+      logger.debug(`[MaplibreX] ControlGroup "${state.config.id}" removed`);
 
     } catch (error) {
       console.error('[MaplibreX] Error destroying control group:', error);
