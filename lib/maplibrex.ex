@@ -80,7 +80,7 @@ defmodule MaplibreX do
   @doc """
   Returns every configured value for `:maplibrex`.
   """
-  @spec config() :: keyword()
+  @spec config :: keyword
   def config do
     Application.get_all_env(:maplibrex)
   end
@@ -90,7 +90,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_style}`.
   """
-  @spec default_style() :: String.t() | map()
+  @spec default_style :: String.t() | map
   def default_style do
     Application.get_env(:maplibrex, :default_style, @default_style)
   end
@@ -100,7 +100,7 @@ defmodule MaplibreX do
 
   Defaults to `#{inspect(@default_center)}`.
   """
-  @spec default_center() :: [number()]
+  @spec default_center :: [number]
   def default_center do
     Application.get_env(:maplibrex, :default_center, @default_center)
   end
@@ -110,7 +110,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_zoom}`.
   """
-  @spec default_zoom() :: number()
+  @spec default_zoom :: number
   def default_zoom do
     Application.get_env(:maplibrex, :default_zoom, @default_zoom)
   end
@@ -118,9 +118,9 @@ defmodule MaplibreX do
   @doc """
   Returns the installed MaplibreX version.
   """
-  @spec version() :: String.t()
+  @spec version :: String.t()
   def version do
-    Application.spec(:maplibrex, :vsn) |> to_string()
+    Application.spec(:maplibrex, :vsn) |> to_string
   end
 
   @doc """
@@ -128,7 +128,7 @@ defmodule MaplibreX do
 
   Defaults to #{@default_flight_duration}ms.
   """
-  def default_flight_duration() do
+  def default_flight_duration do
     Application.get_env(:maplibrex, :default_flight_duration, @default_flight_duration)
   end
 
@@ -137,7 +137,7 @@ defmodule MaplibreX do
 
   Defaults to #{@default_flight_speed}.
   """
-  def default_flight_speed() do
+  def default_flight_speed do
     Application.get_env(:maplibrex, :default_flight_speed, @default_flight_speed)
   end
 
@@ -146,7 +146,7 @@ defmodule MaplibreX do
 
   Defaults to #{@default_flight_curve}.
   """
-  def default_flight_curve() do
+  def default_flight_curve do
     Application.get_env(:maplibrex, :default_flight_curve, @default_flight_curve)
   end
 
@@ -156,7 +156,7 @@ defmodule MaplibreX do
 
   Defaults to `#{inspect(@default_fly_from_center)}`.
   """
-  def default_fly_from_center() do
+  def default_fly_from_center do
     Application.get_env(:maplibrex, :default_fly_from_center, @default_fly_from_center)
   end
 
@@ -165,7 +165,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_fly_from_zoom}`.
   """
-  def default_fly_from_zoom() do
+  def default_fly_from_zoom do
     Application.get_env(:maplibrex, :default_fly_from_zoom, @default_flight_zoom)
   end
 
@@ -174,7 +174,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_fly_from_bearing}`.
   """
-  def default_fly_from_bearing() do
+  def default_fly_from_bearing do
     Application.get_env(:maplibrex, :default_fly_from_bearing, @default_fly_from_bearing)
   end
 
@@ -183,7 +183,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_fly_from_pitch}`.
   """
-  def default_fly_from_pitch() do
+  def default_fly_from_pitch do
     Application.get_env(:maplibrex, :default_fly_from_pitch, @default_fly_from_pitch)
   end
 end

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Add support for initial `flyTo` command to mimic the old Google Earth swoop.
+
 ## [0.1.0] - 2026-08-24
 
 First public release.

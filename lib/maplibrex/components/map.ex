@@ -254,7 +254,8 @@ defmodule MaplibreX.Components.Map do
   so that the user doesn't see any glitchy map rendering.
   """
 
-  attr :color, :string, default: "#3b82f6",
+  attr :color, :string,
+    default: "#3b82f6",
     doc: "color of the pulse"
 
   def spinner_map_loader(assigns) do
@@ -293,7 +294,8 @@ defmodule MaplibreX.Components.Map do
   so that the user doesn't see any glitchy map rendering.
   """
 
-  attr :color, :string, default: "#3b82f6",
+  attr :color, :string,
+    default: "#3b82f6",
     doc: "color of the pulse"
 
   def pulse_map_loader(assigns) do
