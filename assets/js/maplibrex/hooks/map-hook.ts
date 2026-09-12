@@ -35,18 +35,62 @@ export const MapHook: LiveViewHook = {
       const config: MapConfig = JSON.parse(configStr);
       const mapId = config.id;
 
+      // This HTML element acts as a curtain to hide the map until
+      // all tiles have been loaded and rendered. By hiding the
+      // not totally rendered map, we avoid the distracting
+      // flickering as tiles are rendered and possibly re-rendered
+      // at different levels of detail.
+      const loaderElement: HTMLElement = document.getElementById(config.loaderId)!;
+
+      // The map supports an initial `flyTo` in the style of
+      // the animation for the old Google Earth programming.
+      // This is disabled by default but it can be enabled
+      // with the boolean `flyTo` config option. 
+
+      // Do we include the initial `flyTo` or do we render the map´
+      // centered on the correct position without the `flyTo`?
+      const fly: boolean = config.fly;
+
+      // Initial flight parameters
+      const flightDuration: number = config.flightDuration;
+      const flightSpeed: number = config.flightSpeed;
+      const flightCurve = config.flightCurve;
+
+      // Where do we fly to? (or where do we start if we're not flying)
+      const flyToCenter = config.center;
+      const flyToZoom = config.zoom;
+      const flyToBearing = config.bearing || 0;
+      const flyToPitch = config.pitch || 0;
+
+      // Where do we fly from? These parameters are ignored
+      // if the `flyTo` option is false.
+      const flyFromCenter = config.flyFromCenter;
+      const flyFromZoom = config.flyFromZoom;
+      const flyFromBearing = config.flyFromBearing;
+      const flyFromPitch = config.flyFromPitch;
+
+      // If there a `flyTo`? If not, the initial parameters are the ones
+      // we would fly to if the `flyTo` option existed
+      const intialCenter = fly ? flyFromCenter : flyToCenter; 
+      const initialZoom = fly ? flyFromZoom : flyToZoom;
+      const initialBearing = fly ? flyFromBearing : flyToBearing;
+      const initialPitch = fly ? flyFromPitch : flyToPitch;
+
       // Create the map instance
       const map = new maplibregl.Map({
         container: el,
-        center: config.center,
-        zoom: config.zoom,
+        // The initial position (the interpretation is different
+        // whether we are flying or not, see above)
+        center: intialCenter,
+        zoom: initialZoom,
+        bearing: initialBearing,
+        pitch: initialPitch,
+        // Other config options (which don't change based on the initial flight)
         style: config.style as any,
         minZoom: config.minZoom,
         maxZoom: config.maxZoom,
         minPitch: config.minPitch,
         maxPitch: config.maxPitch,
-        bearing: config.bearing || 0,
-        pitch: config.pitch || 0,
         bounds: config.bounds as any,
         maxBounds: config.maxBounds as any,
         interactive: config.interactive !== false,
@@ -119,8 +163,42 @@ export const MapHook: LiveViewHook = {
 
       // Report that the map is ready
       map.once('load', () => {
+        // The initial flyTo only makes sense if the projection is a globe.
+        // Insure it's set to a globe if it wasn't set before.
+        // TODO: check if this is advidable
+        if (fly) {
+          map.setProjection({ type: 'globe' });
+        }
+        
         logger.debug(`[MaplibreX] Map "${mapId}" loaded and ready`);
       });
+
+      map.once('idle', () => {
+        // Fade out and remove the loader
+        loaderElement.style.opacity = '0';
+        setTimeout(() => {
+          // Eliminate it from the DOM display when the fadeout
+          // animation has run; We can take more time than the
+          // time it takes to run the animation because as long
+          // as the opacity is 0, the loader element doesn't
+          // bother us anymore.
+          // TODO: is this required?
+          loaderElement.style.display = 'none';
+        }, 500);
+
+        if (fly) {
+          map.flyTo({
+            center: flyToCenter,
+            zoom: flyToZoom,
+            bearing: flyToBearing,
+            pitch: flyToPitch,
+            duration: flightDuration,
+            speed: flightSpeed,
+            curve: flightCurve,
+            essential: true
+          });
+        }
+      })
 
       // Handle errors
       map.on('error', (e) => {

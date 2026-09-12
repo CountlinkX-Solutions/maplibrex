@@ -45,6 +45,15 @@ export interface MapConfig extends MaplibreXConfig {
   center: [number, number];
   zoom: number;
   style: string | object;
+  fly: boolean;
+  flightDuration: number;
+  flightSpeed: number;
+  flightCurve: number;
+  flyFromCenter: [number, number];
+  flyFromZoom: number;
+  flyFromBearing: number;
+  flyFromPitch: number;
+  loaderId: string;
   minZoom?: number;
   maxZoom?: number;
   minPitch?: number;

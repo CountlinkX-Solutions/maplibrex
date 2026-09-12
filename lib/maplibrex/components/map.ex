@@ -78,10 +78,40 @@ defmodule MaplibreX.Components.Map do
     view that wants a steeper camera has to raise this
   * `bearing` - Initial bearing (rotation). Defaults to `0`
   * `pitch` - Initial pitch (tilt). Defaults to `0`
+  * `fly` - Whether to add an initial `fly_to` once the map renders.
+    When this attribute is given, the user can specify a number of
+    flight parameters which control the initial `fly_to`. If no parameters
+    are given, the `map` component has suitable defaults for all of them
+    which work reasonably well independently of the center of the map.
+  * `flight_duration` - Duration of the initial `fly_to` in milliseconds.
+    Has no effect if `fly` is `false`.
+  * `flight_speed` - Speed of the initial `fly_to`.
+    Has no effect if `fly` is `false`.
+  * `flight_curve` - Curve of the initial `fly_to`.
+    Has no effect if `fly` is `false`.
+  * `fly_from_center` - The initial map center before the `fly_to`.
+    Has no effect if `fly` is `false`.
+  * `fly_from_zoom` - The initial map zoom before the `fly_to`.
+    Has no effect if `fly` is `false`.
+  * `fly_from_bearing` - The initial map bearing before the `fly_to`.
+    Has no effect if `fly` is `false`.
+  * `fly_from_pitch` - The initial map pitch before the `fly_to`.
+    Has no effect if `fly` is `false`.
   * `bounds` - Fit map to bounds `[[west, south], [east, north]]`. Optional
   * `max_bounds` - Maximum bounds the map can be panned to. Optional
   * `interactive` - Whether the map is interactive. Defaults to `true`
   * `attribution_control` - Show attribution control. Defaults to `true`
+  * `loader_bg` - Background for the loader elemnt, which exists to hide
+    the map. This should match either the background of the page or the
+    background of the map when the projection is a globe so that it appears
+    that the globe appears all at once fully rendered.
+    Default: `"#050810"`
+  * `loader_fade_out_transition` - CSS transition for when the opacity of the loader
+    is set to `0` so that the transition is a bit more gradual and less abrupt.
+    Default: `"opacity 0.3s ease"`.
+  * `loader_fade_out_transition` - CSS transition for when the opacity of the map
+    is set to `1` so that the transition is a bit more gradual and less abrupt.
+    Default: `"opacity 0.3s ease"`.
   * `class` - CSS classes for the map container
   * `testid` - Test ID for the map element
 
@@ -109,10 +139,21 @@ defmodule MaplibreX.Components.Map do
   attr :max_pitch, :any, default: nil, doc: "number, degrees 0-85"
   attr :bearing, :any, default: 0, doc: "number, degrees"
   attr :pitch, :any, default: 0, doc: "number, degrees"
+  attr :fly, :boolean, default: false, doc: "whether to add an initial `fly_to`."
+  attr :flight_duration, :integer, default: nil, doc: "duration of the initial `fly_to`"
+  attr :flight_speed, :float, default: nil, doc: "speed of the initial `fly_to`"
+  attr :flight_curve, :float, default: nil, doc: "curve of the initial `fly_to`"
+  attr :fly_from_center, :float, default: nil, doc: "the center before the initial `fly_to`"
+  attr :fly_from_zoom, :float, default: nil, doc: "zoom before the initial `fly_to`"
+  attr :fly_from_bearing, :float, default: nil, doc: "bearing the initial `fly_to`"
+  attr :fly_from_pitch, :float, default: nil, doc: "pitch before the initial `fly_to`"
   attr :bounds, :list, default: nil
   attr :max_bounds, :list, default: nil
   attr :interactive, :boolean, default: true
   attr :attribution_control, :boolean, default: true
+  attr :loader_bg, :string, default: "#050810", doc: "background for the loader"
+  attr :loader_fade_out_transition, :string, default: "opacity 0.3s ease"
+  attr :map_fade_in_transition, :string, default: "opacity 0.3s ease"
   attr :class, :string, default: "maplibrex-map"
   attr :testid, :string, default: nil
   attr :rest, :global
@@ -120,9 +161,15 @@ defmodule MaplibreX.Components.Map do
   slot :inner_block, required: false
 
   def map(assigns) do
+    map_id = assigns[:id]
+    loader_id = assigns[:id] <> "-loader"
+    wrapper_id = assigns[:id] <> "-wrapper"
     # Set defaults from config if not provided
     assigns =
       assigns
+      |> assign(:map_id, map_id)
+      |> assign(:wrapper_id, wrapper_id)
+      |> assign(:loader_id, loader_id)
       |> assign_new(:center, fn -> MaplibreX.default_center() end)
       |> assign_new(:zoom, fn -> MaplibreX.default_zoom() end)
       |> assign_new(:style, fn -> MaplibreX.default_style() end)
@@ -130,7 +177,16 @@ defmodule MaplibreX.Components.Map do
     # Build configuration object
     config =
       %{
-        id: assigns.id,
+        id: map_id,
+        loaderId: loader_id,
+        fly: assigns[:fly],
+        flightDuration: assigns[:flight_duration] || MaplibreX.default_flight_duration(),
+        flightSpeed: assigns[:flight_speed] || MaplibreX.default_flight_speed(),
+        flightCurve: assigns[:flight_curve] || MaplibreX.default_flight_curve(),
+        flyFromCenter: assigns[:fly_from_center] || MaplibreX.default_fly_from_center(),
+        flyFromZoom: assigns[:fly_from_zoom] || MaplibreX.default_fly_from_zoom(),
+        flyFromBearing: assigns[:fly_from_bearing] || MaplibreX.default_fly_from_bearing(),
+        flyFromPitch: assigns[:fly_from_pitch] || MaplibreX.default_fly_from_pitch(),
         center: assigns.center,
         zoom: assigns.zoom,
         style: assigns.style,
@@ -160,7 +216,7 @@ defmodule MaplibreX.Components.Map do
       `data-config` keeps flowing and MapHook.updated/0 stays reactive.
     --%>
     <div
-      id={@id}
+      id={@wrapper_id}
       phx-hook="MapHook"
       phx-update="ignore"
       data-config={@config}
@@ -168,8 +224,142 @@ defmodule MaplibreX.Components.Map do
       class={@class}
       {@rest}
     >
+      <div id={@loader_id} style={[
+          "position: absolute; inset: 0; display: flex; align-items: center; ",
+          "justify-content: center; opacity: 1; z-index: 999; ",
+          "transition: ",
+          @loader_fade_out_transition,
+          "; ",
+          "background: ",
+          @loader_bg
+        ]}>
+        <div class="width: 50%; height: 50%">
+          <.pulse_map_loader/>
+        </div>
+      </div>
+
+      <!-- Map container kept in DOM flow with opacity 0 -->
+      <div id={@map_id} style={[
+          "width: 100%; height: 100%; opacity: 0; ",
+          "transition: ",
+          @map_fade_in_transition
+        ]}></div>
       <%= render_slot(@inner_block) %>
     </div>
+    """
+  end
+
+  @doc """
+  A spinner loading widget to show while the map is rendering
+  so that the user doesn't see any glitchy map rendering.
+  """
+
+  attr :color, :string, default: "#3b82f6",
+    doc: "color of the pulse"
+
+  def spinner_map_loader(assigns) do
+    ~H"""
+    <svg
+        viewBox="0 0 100 100"
+        width="100%"
+        height="100%"
+        xmlns="http://www.w3.org/2000/svg"
+        role="status"
+        aria-label="Loading">
+      <!-- Animated Arc -->
+      <circle cx="50" cy="50" r="40" fill="none" stroke={@color} stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="160, 400" stroke-dashoffset="0">
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          from="0 50 50"
+          to="360 50 50"
+          dur="1s"
+          repeatCount="indefinite"
+        />
+        <animate
+          attributeName="stroke-dashoffset"
+          values="0; -80; -240"
+          dur="1.4s"
+          repeatCount="indefinite"
+        />
+      </circle>
+    </svg>
+    """
+  end
+
+  @doc """
+  A spinner loading widget to show while the map is rendering
+  so that the user doesn't see any glitchy map rendering.
+  """
+
+  attr :color, :string, default: "#3b82f6",
+    doc: "color of the pulse"
+
+  def pulse_map_loader(assigns) do
+    ~H"""
+    <svg
+        viewBox="0 0 100 100"
+        width="100%"
+        height="100%"
+        xmlns="http://www.w3.org/2000/svg"
+        role="status"
+        aria-label="Loading">
+      <circle cx="50" cy="50" r="10" fill="none" stroke={@color} stroke-width="6" opacity="1">
+        <animate attributeName="r" values="10; 44" dur="1.2s" repeatCount="indefinite" begin="0s" />
+        <animate attributeName="opacity" values="1; 0" dur="1.2s" repeatCount="indefinite" begin="0s" />
+      </circle>
+      <circle cx="50" cy="50" r="10" fill="none" stroke={@color} stroke-width="6" opacity="1">
+        <animate attributeName="r" values="10; 44" dur="1.2s" repeatCount="indefinite" begin="0.6s" />
+        <animate attributeName="opacity" values="1; 0" dur="1.2s" repeatCount="indefinite" begin="0.6s" />
+      </circle>
+    </svg>
+    """
+  end
+
+  def orbiting_dots_loader(assigns) do
+    ~H"""
+    <svg
+        viewBox="0 0 100 100"
+        width="100%"
+        height="100%"
+        xmlns="http://www.w3.org/2000/svg"
+        role="status"
+        aria-label="Loading">
+      <g>
+        <circle cx="50" cy="12" r="8" fill="#3b82f6" opacity="1" />
+        <circle cx="88" cy="50" r="7" fill="#3b82f6" opacity="0.75" />
+        <circle cx="50" cy="88" r="6" fill="#3b82f6" opacity="0.5" />
+        <circle cx="12" cy="50" r="5" fill="#3b82f6" opacity="0.25" />
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          from="0 50 50"
+          to="360 50 50"
+          dur="0.9s"
+          repeatCount="indefinite"
+        />
+      </g>
+    </svg>
+    """
+  end
+
+  def vertical_equalizer_bars(assigns) do
+    ~H"""
+    <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="status" aria-label="Loading">
+      <rect x="15%" y="30%" width="12%" height="40%" rx="6%" fill="#3b82f6">
+        <animate attributeName="height" values="20%; 60%; 20%" dur="0.8s" repeatCount="indefinite" begin="0s" />
+        <animate attributeName="y" values="40%; 20%; 40%" dur="0.8s" repeatCount="indefinite" begin="0s" />
+      </rect>
+      <rect x="44%" y="30%" width="12%" height="40%" rx="6%" fill="#3b82f6">
+        <animate attributeName="height" values="20%; 60%; 20%" dur="0.8s" repeatCount="indefinite" begin="0.2s" />
+        <animate attributeName="y" values="40%; 20%; 40%" dur="0.8s" repeatCount="indefinite" begin="0.2s" />
+      </rect>
+      <rect x="73%" y="30%" width="12%" height="40%" rx="6%" fill="#3b82f6">
+        <animate attributeName="height" values="20%; 60%; 20%" dur="0.8s" repeatCount="indefinite" begin="0.4s" />
+        <animate attributeName="y" values="40%; 20%; 40%" dur="0.8s" repeatCount="indefinite" begin="0.4s" />
+      </rect>
+    </svg>
     """
   end
 
