@@ -154,7 +154,9 @@ defmodule MaplibreX do
   Returns the configured default starting center for the initial `fly_to`
   in the `[lon, lat]` format.
 
-  Defaults to `#{inspect(@default_fly_from_center)}`.
+  Defaults to `#{inspect(@default_fly_from_center)}`
+  (an uninhabited point on the Indian Ocean from which the landmasses
+  of South Asia and Africa can be seen on the default zoom level).
   """
   def default_fly_from_center do
     Application.get_env(:maplibrex, :default_fly_from_center, @default_fly_from_center)
