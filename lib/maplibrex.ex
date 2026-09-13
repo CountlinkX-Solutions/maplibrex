@@ -67,10 +67,20 @@ defmodule MaplibreX do
   @default_center [0, 0]
   @default_zoom 10
 
+  # Default parameters for the initial `flyTo`
+  @default_flight_duration 2800
+  @default_flight_zoom 3.2
+  @default_flight_speed 0.8
+  @default_flight_curve 1.6
+  @default_fly_from_center [80.0, -20.0]
+  @default_fly_from_zoom 0.8
+  @default_fly_from_bearing 0.0
+  @default_fly_from_pitch 0.0
+
   @doc """
   Returns every configured value for `:maplibrex`.
   """
-  @spec config() :: keyword()
+  @spec config :: keyword
   def config do
     Application.get_all_env(:maplibrex)
   end
@@ -80,7 +90,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_style}`.
   """
-  @spec default_style() :: String.t() | map()
+  @spec default_style :: String.t() | map
   def default_style do
     Application.get_env(:maplibrex, :default_style, @default_style)
   end
@@ -90,7 +100,7 @@ defmodule MaplibreX do
 
   Defaults to `#{inspect(@default_center)}`.
   """
-  @spec default_center() :: [number()]
+  @spec default_center :: [number]
   def default_center do
     Application.get_env(:maplibrex, :default_center, @default_center)
   end
@@ -100,7 +110,7 @@ defmodule MaplibreX do
 
   Defaults to `#{@default_zoom}`.
   """
-  @spec default_zoom() :: number()
+  @spec default_zoom :: number
   def default_zoom do
     Application.get_env(:maplibrex, :default_zoom, @default_zoom)
   end
@@ -108,8 +118,74 @@ defmodule MaplibreX do
   @doc """
   Returns the installed MaplibreX version.
   """
-  @spec version() :: String.t()
+  @spec version :: String.t()
   def version do
-    Application.spec(:maplibrex, :vsn) |> to_string()
+    Application.spec(:maplibrex, :vsn) |> to_string
+  end
+
+  @doc """
+  Returns the configured default duration for the initial `fly_to` in ms.
+
+  Defaults to #{@default_flight_duration}ms.
+  """
+  def default_flight_duration do
+    Application.get_env(:maplibrex, :default_flight_duration, @default_flight_duration)
+  end
+
+  @doc """
+  Returns the configured default speed for the initial `fly_to`.
+
+  Defaults to #{@default_flight_speed}.
+  """
+  def default_flight_speed do
+    Application.get_env(:maplibrex, :default_flight_speed, @default_flight_speed)
+  end
+
+  @doc """
+  Returns the configured default curve for the initial `fly_to`.
+
+  Defaults to #{@default_flight_curve}.
+  """
+  def default_flight_curve do
+    Application.get_env(:maplibrex, :default_flight_curve, @default_flight_curve)
+  end
+
+  @doc """
+  Returns the configured default starting center for the initial `fly_to`
+  in the `[lon, lat]` format.
+
+  Defaults to `#{inspect(@default_fly_from_center)}`
+  (an uninhabited point on the Indian Ocean from which the landmasses
+  of South Asia and Africa can be seen on the default zoom level).
+  """
+  def default_fly_from_center do
+    Application.get_env(:maplibrex, :default_fly_from_center, @default_fly_from_center)
+  end
+
+  @doc """
+  Returns the configured default starting zoom for the initial `fly_to`.
+
+  Defaults to `#{@default_fly_from_zoom}`.
+  """
+  def default_fly_from_zoom do
+    Application.get_env(:maplibrex, :default_fly_from_zoom, @default_flight_zoom)
+  end
+
+  @doc """
+  Returns the configured default starting bearing for the initial `fly_to`.
+
+  Defaults to `#{@default_fly_from_bearing}`.
+  """
+  def default_fly_from_bearing do
+    Application.get_env(:maplibrex, :default_fly_from_bearing, @default_fly_from_bearing)
+  end
+
+  @doc """
+  Returns the configured default starting pitch for the initial `fly_to`.
+
+  Defaults to `#{@default_fly_from_pitch}`.
+  """
+  def default_fly_from_pitch do
+    Application.get_env(:maplibrex, :default_fly_from_pitch, @default_fly_from_pitch)
   end
 end
