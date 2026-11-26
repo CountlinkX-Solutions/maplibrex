@@ -12,19 +12,83 @@ import type { MapRegistry } from '../types';
 
 import { logger, setDebug as setGlobalDebug } from './logger';
 
+/** Called with the map once it is registered; see `MapManager.whenReady`. */
+export type MapReadyCallback = (map: Map) => void;
+
+/** A pending `whenReady` request; an object so the same callback can wait twice. */
+interface MapWaiter {
+  callback: MapReadyCallback;
+}
+
 class MapManagerClass {
   private maps: MapRegistry = {};
+  /** Pending `whenReady` requests per map id, in the order they were made. */
+  private waiters = new globalThis.Map<string, Set<MapWaiter>>();
 
   /**
-   * Register a new map instance
+   * Register a new map instance, then call every `whenReady` waiter for its id
    */
   register(mapId: string, map: Map): void {
     if (this.maps[mapId]) {
       this.log('warn', `Map with id "${mapId}" already exists. Overwriting...`);
     }
-    
+
     this.maps[mapId] = map;
     this.log('info', `Map "${mapId}" registered`, { map });
+
+    const waiters = this.waiters.get(mapId);
+    if (!waiters) return;
+    this.waiters.delete(mapId);
+    // Iterated live: a waiter cancelled by an earlier one is skipped.
+    for (const waiter of waiters) {
+      waiters.delete(waiter);
+      this.callReady(mapId, waiter.callback, map);
+    }
+  }
+
+  /**
+   * Call `callback` with the map registered under `mapId`: right away
+   * (synchronously) if it is registered, otherwise once it is.
+   *
+   * A pending waiter stays pending until a map with that id is registered or
+   * the returned function cancels it; registering, unregistering or replacing
+   * other maps never calls it, and it is called at most once. `clear()`
+   * discards pending waiters without calling them. A callback that throws is
+   * logged and does not stop the others.
+   *
+   * @returns a function that cancels the waiter; a no-op once it has run
+   */
+  whenReady(mapId: string, callback: MapReadyCallback): () => void {
+    const map = this.maps[mapId];
+    if (map) {
+      this.callReady(mapId, callback, map);
+      return () => {};
+    }
+
+    const waiter: MapWaiter = { callback };
+    let waiters = this.waiters.get(mapId);
+    if (!waiters) {
+      waiters = new Set();
+      this.waiters.set(mapId, waiters);
+    }
+    waiters.add(waiter);
+    this.log('info', `Waiting for map "${mapId}" to be registered`);
+
+    const pending = waiters;
+    return () => {
+      pending.delete(waiter);
+      if (pending.size === 0 && this.waiters.get(mapId) === pending) {
+        this.waiters.delete(mapId);
+      }
+    };
+  }
+
+  private callReady(mapId: string, callback: MapReadyCallback, map: Map): void {
+    try {
+      callback(map);
+    } catch (error) {
+      this.log('error', `Error in a whenReady callback for map "${mapId}"`, error);
+    }
   }
 
   /**
@@ -96,9 +160,12 @@ class MapManagerClass {
   }
 
   /**
-   * Remove every map. Useful in tests
+   * Remove every map and discard every pending `whenReady` waiter without
+   * calling it. Useful in tests
    */
   clear(): void {
+    this.waiters.clear();
+
     const ids = this.getAllIds();
     ids.forEach(id => {
       try {
