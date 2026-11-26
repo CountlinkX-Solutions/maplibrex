@@ -186,6 +186,8 @@ export class Marker extends Emitter {
   draggable: boolean;
   removed = false;
   element = document.createElement('div');
+  map?: FakeMap;
+  private dragState: 'inactive' | 'pending' | 'active' = 'inactive';
 
   constructor(public options: Record<string, any> = {}) {
     super();
@@ -198,7 +200,39 @@ export class Marker extends Emitter {
     return this;
   });
   getLngLat = () => ({ lng: this.lngLat[0], lat: this.lngLat[1], toArray: () => [...this.lngLat] });
-  addTo = vi.fn(() => this);
+  addTo = vi.fn((map: FakeMap) => {
+    this.map = map;
+    return this;
+  });
+
+  /**
+   * Presses the pointer on the marker. As in MapLibre, a draggable marker then
+   * follows the map's `mousemove` events (the first one fires `dragstart`) and
+   * fires `dragend` from a one-time map `mouseup` listener, which `remove()`
+   * unsubscribes. Drive the drag with `map.emit('mousemove', { lngLat })` and
+   * `map.emit('mouseup')`.
+   */
+  pointerDown(): void {
+    if (!this.map || !this.draggable) return;
+    this.dragState = 'pending';
+    this.map.on('mousemove', this.onMove);
+    this.map.once('mouseup', this.onUp);
+  }
+
+  private onMove = (e: { lngLat: [number, number] }) => {
+    this.lngLat = e.lngLat;
+    if (this.dragState === 'pending') {
+      this.dragState = 'active';
+      this.emit('dragstart');
+    }
+    this.emit('drag');
+  };
+
+  private onUp = () => {
+    this.map?.off('mousemove', this.onMove);
+    if (this.dragState === 'active') this.emit('dragend');
+    this.dragState = 'inactive';
+  };
   setPopup = vi.fn((popup: Popup) => {
     this.popup = popup;
     return this;
@@ -220,8 +254,12 @@ export class Marker extends Emitter {
   setPitchAlignment = vi.fn(() => this);
   setRotationAlignment = vi.fn(() => this);
   getElement = () => this.element;
-  // Like MapLibre, removing a marker also closes its popup.
+  // Like MapLibre, removing a marker drops its map listeners (cutting short a
+  // drag in progress, without `dragend`) and closes its popup.
   remove = vi.fn(() => {
+    this.map?.off('mousemove', this.onMove);
+    this.map?.off('mouseup', this.onUp);
+    this.map = undefined;
     this.removed = true;
     this.popup?.remove();
     return this;
@@ -229,6 +267,10 @@ export class Marker extends Emitter {
 
   on(type: string, handler: Handler): this {
     this.addListener(type, handler, undefined, false);
+    return this;
+  }
+  once(type: string, handler: Handler): this {
+    this.addListener(type, handler, undefined, true);
     return this;
   }
   off(type: string, handler: Handler): this {

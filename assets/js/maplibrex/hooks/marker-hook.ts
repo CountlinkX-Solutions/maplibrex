@@ -7,19 +7,25 @@
 
 // maplibre-gl v6 is ESM-only and no longer has a default export.
 import * as maplibregl from 'maplibre-gl';
-import type { LiveViewHook, MarkerConfig } from '../types';
+import type { HookContext, LiveViewHook, MarkerConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
 import { throttle } from '../utils/debounce';
 
+type EventPusher = Pick<HookContext, 'pushEvent'>;
+
 interface MarkerHookState {
   marker: maplibregl.Marker;
+  /** Whether the user is dragging the marker right now. */
+  isDragging: () => boolean;
   /** Silences the marker's pending throttled drag tick. */
   dispose: () => void;
   map: maplibregl.Map;
   config: MarkerConfig;
   popup?: maplibregl.Popup;
+  /** A recreation requested during a drag, waiting for it to end. */
+  recreateOnDragEnd?: boolean;
 }
 
 /** `marker:dragging` is pushed at most once per this many milliseconds. */
@@ -51,12 +57,12 @@ function createPopup(popupConfig: NonNullable<MarkerConfig['popup']>): maplibreg
  * after mount.
  */
 function createMarker(
-  hook: any,
+  hook: EventPusher,
   map: maplibregl.Map,
   config: MarkerConfig,
   popup: maplibregl.Popup | undefined,
   lngLat: [number, number] = config.lngLat
-): { marker: maplibregl.Marker; dispose: () => void } {
+): Pick<MarkerHookState, 'marker' | 'isDragging' | 'dispose'> {
   const markerOptions: maplibregl.MarkerOptions = {
     color: config.color || '#3FB1CE',
     scale: config.scale || 1,
@@ -114,10 +120,33 @@ function createMarker(
 
   return {
     marker,
+    isDragging: () => dragging,
     dispose: () => {
       dragging = false;
     }
   };
+}
+
+/**
+ * Replaces the marker with one built from `config` at `lngLat`. MapLibre's
+ * remove() also closes the marker's popup, so an open one is reopened.
+ */
+function recreateMarker(
+  hook: EventPusher,
+  state: MarkerHookState,
+  config: MarkerConfig,
+  lngLat: [number, number]
+): void {
+  const popupWasOpen = state.popup?.isOpen() ?? false;
+  state.dispose();
+  state.marker.remove();
+  const next = createMarker(hook, state.map, config, state.popup, lngLat);
+  state.marker = next.marker;
+  state.isDragging = next.isDragging;
+  state.dispose = next.dispose;
+  if (popupWasOpen) {
+    state.marker.togglePopup();
+  }
 }
 
 export const MarkerHook: LiveViewHook = {
@@ -140,11 +169,12 @@ export const MarkerHook: LiveViewHook = {
       }
 
       const popup = config.popup ? createPopup(config.popup) : undefined;
-      const { marker, dispose } = createMarker(this, map, config, popup);
+      const { marker, isDragging, dispose } = createMarker(this, map, config, popup);
 
       // Save state
       (this as any)._maplibrex_marker = {
         marker,
+        isDragging,
         dispose,
         map,
         config,
@@ -169,10 +199,15 @@ export const MarkerHook: LiveViewHook = {
 
       const newConfig: MarkerConfig = JSON.parse(configStr);
       const oldConfig = state.config;
+      const dragging = state.isDragging();
 
+      // While the user drags the marker, the pointer owns its position: a
+      // position sent meanwhile is not applied (the drop is pushed with
+      // `marker:drag_end`).
       const lngLatChanged =
-        newConfig.lngLat[0] !== oldConfig.lngLat[0] ||
-        newConfig.lngLat[1] !== oldConfig.lngLat[1];
+        !dragging &&
+        (newConfig.lngLat[0] !== oldConfig.lngLat[0] ||
+          newConfig.lngLat[1] !== oldConfig.lngLat[1]);
 
       // Color, scale and anchor are construction-time options in MapLibre, so
       // a change means building a new marker. Position, popup, draggable state
@@ -182,21 +217,26 @@ export const MarkerHook: LiveViewHook = {
         newConfig.scale !== oldConfig.scale ||
         newConfig.anchor !== oldConfig.anchor;
 
-      if (needsRecreate) {
+      if (needsRecreate && !dragging) {
         const lngLat = lngLatChanged
           ? newConfig.lngLat
           : (state.marker.getLngLat().toArray() as [number, number]);
-        // MapLibre's remove() also closes the marker's popup; reopen it.
-        const popupWasOpen = state.popup?.isOpen() ?? false;
-        state.dispose();
-        state.marker.remove();
-        const next = createMarker(this, state.map, newConfig, state.popup, lngLat);
-        state.marker = next.marker;
-        state.dispose = next.dispose;
-        if (popupWasOpen) {
-          state.marker.togglePopup();
-        }
+        recreateMarker(this, state, newConfig, lngLat);
       } else {
+        // Removing the marker mid-drag would drop the map listener MapLibre
+        // fires `dragend` from: the drag would stop and `marker:drag_end`
+        // never be pushed. Recreate once the drag is over, from the config
+        // current by then. MapLibre runs `once` listeners after `on` ones,
+        // so `marker:drag_end` is pushed first.
+        if (needsRecreate && !state.recreateOnDragEnd) {
+          state.recreateOnDragEnd = true;
+          state.marker.once('dragend', () => {
+            state.recreateOnDragEnd = false;
+            const droppedAt = state.marker.getLngLat().toArray() as [number, number];
+            recreateMarker(this, state, state.config, droppedAt);
+          });
+        }
+
         if (lngLatChanged) {
           state.marker.setLngLat(newConfig.lngLat);
         }

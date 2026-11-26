@@ -68,6 +68,9 @@ defmodule MaplibreX.Components.Marker do
   Attributes are reactive: changing `color`, `scale` or `anchor` rebuilds the
   marker in place (position, popup and drag state are kept), and `draggable`,
   `offset`, `rotation`, `pitch_alignment` and `rotation_alignment` update live.
+  While the user drags the marker, a rebuild waits until the drag ends and a
+  new `lng_lat` is not applied: the drop position arrives with
+  `marker:drag_end`.
 
   ## Slots
 
