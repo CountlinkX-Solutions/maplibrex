@@ -16,16 +16,29 @@ defmodule MaplibreX.HookRegistrationTest do
     |> Enum.sort()
   end
 
-  defp registered_hooks do
-    source = File.read!(@entry)
+  defp registered_hooks, do: registered_hooks(File.read!(@entry))
 
+  defp registered_hooks(source) do
     [_, body] = Regex.run(~r/export const MapHooks = \{(.*?)\};/s, source)
+    body = String.replace(body, ~r{/\*.*?\*/|//[^\n]*}s, "")
 
     ~r/\b([A-Za-z0-9_]+Hook)\b/
     |> Regex.scan(body, capture: :all_but_first)
     |> List.flatten()
     |> Enum.uniq()
     |> Enum.sort()
+  end
+
+  test "a hook named only in a comment does not count as registered" do
+    source = """
+    export const MapHooks = {
+      RealHook, // GhostHook,
+      /* BlockGhostHook, */
+      OtherHook
+    };
+    """
+
+    assert registered_hooks(source) == ["OtherHook", "RealHook"]
   end
 
   test "components render at least one hook" do

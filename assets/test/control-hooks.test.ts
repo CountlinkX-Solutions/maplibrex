@@ -77,6 +77,61 @@ describe('custom control hooks against their component markup', () => {
     expect(button.hasAttribute('phx-hook')).toBe(false);
   });
 
+  describe('ControlButtonHook binding forwarding', () => {
+    function mountButton(attrs: Record<string, string>) {
+      registerMap('m');
+      const el = document.createElement('div');
+      el.id = 'b3';
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      el.dataset.config = JSON.stringify({ id: 'b3', mapId: 'm', position: 'top-right' });
+      el.innerHTML = '<button id="b3-button" type="button">L</button>';
+      document.body.appendChild(el);
+      const hook: any = Object.create(ControlButtonHook);
+      hook.el = el;
+      hook.mounted();
+      return { el, hook, button: el.querySelector('#b3-button') as HTMLElement };
+    }
+
+    it('forwards only event bindings and their values', () => {
+      const { button } = mountButton({
+        'phx-click': 'go',
+        'phx-value-id': '7',
+        'phx-target': '#t',
+        'phx-disable-with': '...',
+        'phx-keydown': 'k',
+        'phx-window-keyup': 'w',
+        'phx-debounce': '100',
+        'phx-throttle': '50',
+        'phx-hook': 'ControlButtonHook',
+        'phx-update': 'ignore',
+        'phx-mounted': '[]',
+        'phx-remove': '[]',
+        'phx-connected': '[]',
+        'phx-disconnected': '[]'
+      });
+
+      ['phx-click', 'phx-value-id', 'phx-target', 'phx-disable-with', 'phx-keydown',
+        'phx-window-keyup', 'phx-debounce', 'phx-throttle'].forEach((n) =>
+        expect(button.hasAttribute(n), n).toBe(true)
+      );
+      ['phx-hook', 'phx-update', 'phx-mounted', 'phx-remove', 'phx-connected', 'phx-disconnected']
+        .forEach((n) => expect(button.hasAttribute(n), n).toBe(false));
+    });
+
+    it('removes forwarded bindings that disappear from the wrapper on update', () => {
+      const { el, hook, button } = mountButton({ 'phx-click': 'go', 'phx-value-id': '7' });
+      button.setAttribute('data-keep', 'yes');
+
+      el.removeAttribute('phx-value-id');
+      el.setAttribute('phx-click', 'other');
+      hook.updated();
+
+      expect(button.getAttribute('phx-click')).toBe('other');
+      expect(button.hasAttribute('phx-value-id')).toBe(false);
+      expect(button.getAttribute('data-keep')).toBe('yes');
+    });
+  });
+
   it('ZoomRangeHook hides its content outside the range and unsubscribes on destroy', () => {
     const map = registerMap('m');
     map.zoom = 3;

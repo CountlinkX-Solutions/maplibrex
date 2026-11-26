@@ -17,6 +17,7 @@ interface ControlButtonHookState {
   map: maplibregl.Map;
   control: ButtonControl;
   buttonElement: HTMLButtonElement;
+  forwarded: Set<string>;
 }
 
 /**
@@ -70,14 +71,45 @@ class ButtonControl implements maplibregl.IControl {
  * The component puts `phx-click`, `phx-value-*` and friends on the hidden
  * wrapper (`{@rest}`), but the button is moved into the map's control
  * container, so clicks on it never bubble through the wrapper. Copy the
- * bindings onto the button so LiveView sees them where the click happens.
+ * event bindings (and the attributes that parameterise them) onto the button
+ * so LiveView sees them where the click happens. Lifecycle and patching
+ * attributes (`phx-hook`, `phx-update`, `phx-mounted`, ...) stay on the wrapper.
  */
-function forwardBindings(from: HTMLElement, to: HTMLElement): void {
+const FORWARDED_BINDINGS = new Set([
+  'phx-click',
+  'phx-click-away',
+  'phx-keydown',
+  'phx-keyup',
+  'phx-focus',
+  'phx-blur',
+  'phx-window-keydown',
+  'phx-window-keyup',
+  'phx-window-focus',
+  'phx-window-blur',
+  'phx-key',
+  'phx-debounce',
+  'phx-throttle',
+  'phx-target',
+  'phx-disable-with'
+]);
+
+function isForwarded(name: string): boolean {
+  return FORWARDED_BINDINGS.has(name) || name.startsWith('phx-value-');
+}
+
+/** Syncs bindings onto `to`, dropping ones forwarded earlier that are gone. */
+function forwardBindings(from: HTMLElement, to: HTMLElement, previous: Set<string> = new Set()): Set<string> {
+  const current = new Set<string>();
   Array.from(from.attributes).forEach((attr) => {
-    if (attr.name.startsWith('phx-') && attr.name !== 'phx-hook') {
+    if (isForwarded(attr.name)) {
       to.setAttribute(attr.name, attr.value);
+      current.add(attr.name);
     }
   });
+  previous.forEach((name) => {
+    if (!current.has(name)) to.removeAttribute(name);
+  });
+  return current;
 }
 
 export const ControlButtonHook: LiveViewHook = {
@@ -106,7 +138,7 @@ export const ControlButtonHook: LiveViewHook = {
         return;
       }
 
-      forwardBindings(el, buttonElement);
+      const forwarded = forwardBindings(el, buttonElement);
 
       // Create and add control to map
       const control = new ButtonControl(buttonElement);
@@ -124,7 +156,8 @@ export const ControlButtonHook: LiveViewHook = {
         config,
         map,
         control,
-        buttonElement
+        buttonElement,
+        forwarded
       };
 
       logger.debug(`[MaplibreX] ControlButton "${config.id}" added at ${position}`);
@@ -145,7 +178,7 @@ export const ControlButtonHook: LiveViewHook = {
 
       const newConfig: ControlButtonConfig = JSON.parse(configStr);
 
-      forwardBindings(this.el as HTMLElement, state.buttonElement);
+      state.forwarded = forwardBindings(this.el as HTMLElement, state.buttonElement, state.forwarded);
       
       // Update active state if changed
       if (newConfig.active !== state.config.active) {
