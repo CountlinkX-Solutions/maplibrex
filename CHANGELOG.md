@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-25
+
+Bugfix release. There are no breaking changes.
+
+### Fixed
+
+- `control`, `control_button`, `control_group` and `zoom_range` never became
+  map controls: their hooks (`ControlHook`, `ControlButtonHook`,
+  `ControlGroupHook`, `ZoomRangeHook`) were implemented but missing from
+  `MapHooks` and the named exports ([#2]). `control_button` also now forwards
+  `phx-click` and `phx-value-*` bindings to its button, which the map moves out
+  of the component's wrapper element.
+- `geojson_layer` left its click and hover listeners attached when destroyed, so
+  remounting a layer with the same id pushed every feature event more than once
+  ([#6]).
+- Layer feature events were inconsistent between components ([#7]). Every
+  `layer:*` event now carries both `"layer_id"` (canonical, as the other layer
+  components already sent) and `"layerId"` (kept so existing `geojson_layer`
+  handlers keep matching). The README and the `MaplibreX` moduledoc listed
+  `layer:feature_click`; the emitted event is `layer:feature_clicked`, and the
+  docs now say so.
+- `marker` attached its drag listeners only when it was draggable at mount, so
+  enabling `draggable` later produced no `marker:drag_*` events ([#8]). Updates
+  to `color`, `scale`, `anchor`, `offset`, `pitch_alignment` and
+  `rotation_alignment` are now applied (color, scale and anchor rebuild the
+  marker, keeping position, popup and drag state), `marker:dragging` is
+  throttled to one event per 50 ms, and `marker:drag_end` always carries the
+  final position.
+- Server-pushed map events (`map:fly_to`, `map:jump_to`, `map:fit_bounds`,
+  `map:set_style`, `map:set_bearing`, `map:set_pitch`, `map:reset_north`,
+  `map:zoom_in`, `map:zoom_out`) were applied by every map on the page ([#9]).
+
+### Added
+
+- Server-pushed map events accept an optional `id` in the payload. A map ignores
+  an event whose `id` is not its own; without an `id` every map reacts, as
+  before.
+
+### Development
+
+- Hook tests: vitest with a `maplibre-gl` mock, run with `npm test` in `assets/`
+  and in CI.
+
 ## [0.1.0] - 2026-08-24
 
 First public release.
@@ -116,5 +159,11 @@ First public release.
 - `maplibre-gl` and the `@deck.gl/*` packages are peer dependencies rather than
   bundled, so an application never loads two copies of MapLibre GL
 
-[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...HEAD
+[#2]: https://github.com/CountlinkX-Solutions/maplibrex/issues/2
+[#6]: https://github.com/CountlinkX-Solutions/maplibrex/issues/6
+[#7]: https://github.com/CountlinkX-Solutions/maplibrex/issues/7
+[#8]: https://github.com/CountlinkX-Solutions/maplibrex/issues/8
+[#9]: https://github.com/CountlinkX-Solutions/maplibrex/issues/9
+[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CountlinkX-Solutions/maplibrex/releases/tag/v0.1.0

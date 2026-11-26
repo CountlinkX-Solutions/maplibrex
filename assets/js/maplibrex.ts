@@ -2,7 +2,7 @@
  * MaplibreX - MapLibre GL JS Components for Phoenix LiveView
  * 
  * @module maplibrex
- * @version 0.1.0
+ * @version 0.1.1
  * 
  * Entry point for MaplibreX. This module provides Phoenix LiveView hooks
  * for integrating MapLibre GL JS maps into your LiveView applications.
