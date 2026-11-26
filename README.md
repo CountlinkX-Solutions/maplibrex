@@ -47,7 +47,7 @@ Requires Elixir 1.15+ and Phoenix LiveView 1.0+.
 ```elixir
 def deps do
   [
-    {:maplibrex, "~> 0.1.0"}
+    {:maplibrex, "~> 0.2.0"}
   ]
 end
 ```
