@@ -78,6 +78,27 @@ describe('MarkerHook (#8)', () => {
     });
   });
 
+  describe('pending throttled ticks', () => {
+    it.each([
+      ['destroyed', (m: any) => m.destroy()],
+      ['recreated', (m: any) => m.update({ ...base, draggable: true, color: '#ff0000' })]
+    ])('do not push after the marker is %s', (_n, act) => {
+      vi.useFakeTimers();
+      const m = mountHook(MarkerHook, { ...base, draggable: true });
+      const marker = Marker.instances[0];
+
+      marker.emit('dragstart');
+      marker.emit('drag');
+      marker.emit('drag'); // trailing tick is now pending
+      expect(pushed(m, 'marker:dragging')).toHaveLength(1);
+
+      act(m);
+      vi.advanceTimersByTime(200);
+
+      expect(pushed(m, 'marker:dragging')).toHaveLength(1);
+    });
+  });
+
   describe('updates', () => {
     it.each([
       ['color', { color: '#ff0000' }, 'color', '#ff0000'],
@@ -114,6 +135,21 @@ describe('MarkerHook (#8)', () => {
 
       m.destroy();
       expect(second.removed).toBe(true);
+    });
+
+    it('re-opens an open popup on the recreated marker, and leaves a closed one closed', () => {
+      const cfg = { ...base, popup: { id: 'pin-popup', text: 'hi' } };
+      const m = mountHook(MarkerHook, cfg);
+      const first = Marker.instances[0];
+
+      first.togglePopup();
+      expect(first.popup!.isOpen()).toBe(true);
+      m.update({ ...cfg, color: '#ff0000' });
+      expect(Marker.instances[1].popup!.isOpen()).toBe(true);
+
+      Marker.instances[1].togglePopup(); // close it
+      m.update({ ...cfg, color: '#00ff00' });
+      expect(Marker.instances[2].popup!.isOpen()).toBe(false);
     });
 
     it('uses the new position when it changes together with the color', () => {

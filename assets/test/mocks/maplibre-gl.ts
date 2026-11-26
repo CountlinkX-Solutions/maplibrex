@@ -113,11 +113,21 @@ export class Popup extends Emitter {
   static instances: Popup[] = [];
   text?: string;
   html?: string;
+  open = false;
 
   constructor(public options: Record<string, any> = {}) {
     super();
     Popup.instances.push(this);
   }
+  isOpen = () => this.open;
+  addTo = vi.fn(() => {
+    this.open = true;
+    return this;
+  });
+  remove = vi.fn(() => {
+    this.open = false;
+    return this;
+  });
   setText = vi.fn((text: string) => {
     this.text = text;
     return this;
@@ -153,7 +163,13 @@ export class Marker extends Emitter {
     return this;
   });
   getPopup = () => this.popup;
-  togglePopup = vi.fn(() => this);
+  togglePopup = vi.fn(() => {
+    if (this.popup) {
+      if (this.popup.isOpen()) this.popup.remove();
+      else this.popup.addTo(null);
+    }
+    return this;
+  });
   setRotation = vi.fn(() => this);
   setDraggable = vi.fn((draggable: boolean) => {
     this.draggable = draggable;
@@ -163,8 +179,10 @@ export class Marker extends Emitter {
   setPitchAlignment = vi.fn(() => this);
   setRotationAlignment = vi.fn(() => this);
   getElement = () => this.element;
+  // Like MapLibre, removing a marker also closes its popup.
   remove = vi.fn(() => {
     this.removed = true;
+    this.popup?.remove();
     return this;
   });
 
