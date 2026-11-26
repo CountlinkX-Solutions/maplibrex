@@ -11,11 +11,106 @@ import type { LiveViewHook, MarkerConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { throttle } from '../utils/debounce';
 
 interface MarkerHookState {
   marker: maplibregl.Marker;
+  map: maplibregl.Map;
   config: MarkerConfig;
   popup?: maplibregl.Popup;
+}
+
+/** `marker:dragging` is pushed at most once per this many milliseconds. */
+const DRAG_THROTTLE_MS = 50;
+
+function createPopup(popupConfig: NonNullable<MarkerConfig['popup']>): maplibregl.Popup {
+  const popup = new maplibregl.Popup({
+    closeButton: popupConfig.closeButton !== false,
+    closeOnClick: popupConfig.closeOnClick !== false,
+    maxWidth: popupConfig.maxWidth || '240px',
+    offset: popupConfig.offset
+  });
+
+  if (popupConfig.text) {
+    popup.setText(popupConfig.text);
+  } else if (popupConfig.html) {
+    popup.setHTML(popupConfig.html);
+  }
+
+  return popup;
+}
+
+/**
+ * Builds a marker from `config`, adds it to the map and wires its events.
+ *
+ * Shared by mount and by recreation: MapLibre cannot change a marker's color,
+ * scale or anchor in place. The drag listeners are always attached because
+ * MapLibre only fires them while the marker is draggable, which can change
+ * after mount.
+ */
+function createMarker(
+  hook: any,
+  map: maplibregl.Map,
+  config: MarkerConfig,
+  popup: maplibregl.Popup | undefined,
+  lngLat: [number, number] = config.lngLat
+): maplibregl.Marker {
+  const markerOptions: maplibregl.MarkerOptions = {
+    color: config.color || '#3FB1CE',
+    scale: config.scale || 1,
+    rotation: config.rotation || 0,
+    draggable: config.draggable || false,
+    pitchAlignment: config.pitchAlignment || 'auto',
+    rotationAlignment: config.rotationAlignment || 'auto'
+  };
+
+  if (config.anchor) {
+    markerOptions.anchor = config.anchor;
+  }
+
+  if (config.offset) {
+    markerOptions.offset = config.offset;
+  }
+
+  const marker = new maplibregl.Marker(markerOptions).setLngLat(lngLat).addTo(map);
+
+  if (popup) {
+    marker.setPopup(popup);
+  }
+
+  const payload = () => ({
+    markerId: config.id,
+    lngLat: marker.getLngLat().toArray()
+  });
+
+  // A throttled tick can fire after `dragend`; `dragging` guards against
+  // pushing a stale position once the drag is over.
+  let dragging = false;
+  const pushDragging = throttle(() => {
+    if (dragging) hook.pushEvent('marker:dragging', payload());
+  }, DRAG_THROTTLE_MS);
+
+  marker.on('dragstart', () => {
+    dragging = true;
+    hook.pushEvent('marker:drag_start', payload());
+  });
+
+  marker.on('drag', pushDragging);
+
+  marker.on('dragend', () => {
+    dragging = false;
+    hook.pushEvent('marker:drag_end', payload());
+  });
+
+  marker.getElement().addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (popup) {
+      marker.togglePopup();
+    }
+    hook.pushEvent('marker:clicked', payload());
+  });
+
+  return marker;
 }
 
 export const MarkerHook: LiveViewHook = {
@@ -37,87 +132,13 @@ export const MarkerHook: LiveViewHook = {
         return;
       }
 
-      // Build the marker options
-      const markerOptions: maplibregl.MarkerOptions = {
-        color: config.color || '#3FB1CE',
-        scale: config.scale || 1,
-        rotation: config.rotation || 0,
-        draggable: config.draggable || false,
-        pitchAlignment: config.pitchAlignment || 'auto',
-        rotationAlignment: config.rotationAlignment || 'auto'
-      };
+      const popup = config.popup ? createPopup(config.popup) : undefined;
+      const marker = createMarker(this, map, config, popup);
 
-      if (config.anchor) {
-        markerOptions.anchor = config.anchor;
-      }
-
-      if (config.offset) {
-        markerOptions.offset = config.offset;
-      }
-
-      // Crear marcador
-      const marker = new maplibregl.Marker(markerOptions)
-        .setLngLat(config.lngLat)
-        .addTo(map);
-
-      // Attach a popup if one was configured
-      let popup: maplibregl.Popup | undefined;
-      if (config.popup) {
-        popup = new maplibregl.Popup({
-          closeButton: config.popup.closeButton !== false,
-          closeOnClick: config.popup.closeOnClick !== false,
-          maxWidth: config.popup.maxWidth || '240px',
-          offset: config.popup.offset
-        });
-
-        if (config.popup.text) {
-          popup.setText(config.popup.text);
-        } else if (config.popup.html) {
-          popup.setHTML(config.popup.html);
-        }
-
-        marker.setPopup(popup);
-      }
-
-      // Marker events
-      if (config.draggable) {
-        marker.on('dragstart', () => {
-          this.pushEvent('marker:drag_start', {
-            markerId: config.id,
-            lngLat: marker.getLngLat().toArray()
-          });
-        });
-
-        marker.on('drag', () => {
-          this.pushEvent('marker:dragging', {
-            markerId: config.id,
-            lngLat: marker.getLngLat().toArray()
-          });
-        });
-
-        marker.on('dragend', () => {
-          this.pushEvent('marker:drag_end', {
-            markerId: config.id,
-            lngLat: marker.getLngLat().toArray()
-          });
-        });
-      }
-
-      // Click event
-      marker.getElement().addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (popup) {
-          marker.togglePopup();  // ← línea añadida
-        }
-        this.pushEvent('marker:clicked', {
-          markerId: config.id,
-          lngLat: marker.getLngLat().toArray()
-        });
-      });
-
-      // Guardar estado
+      // Save state
       (this as any)._maplibrex_marker = {
         marker,
+        map,
         config,
         popup
       };
@@ -141,22 +162,48 @@ export const MarkerHook: LiveViewHook = {
       const newConfig: MarkerConfig = JSON.parse(configStr);
       const oldConfig = state.config;
 
-      // Update the position if it changed
-      if (
+      const lngLatChanged =
         newConfig.lngLat[0] !== oldConfig.lngLat[0] ||
-        newConfig.lngLat[1] !== oldConfig.lngLat[1]
-      ) {
-        state.marker.setLngLat(newConfig.lngLat);
-      }
+        newConfig.lngLat[1] !== oldConfig.lngLat[1];
 
-      // Update the rotation if it changed
-      if (newConfig.rotation !== undefined && newConfig.rotation !== oldConfig.rotation) {
-        state.marker.setRotation(newConfig.rotation);
-      }
+      // Color, scale and anchor are construction-time options in MapLibre, so
+      // a change means building a new marker. Position, popup, draggable state
+      // and listeners carry over.
+      const needsRecreate =
+        newConfig.color !== oldConfig.color ||
+        newConfig.scale !== oldConfig.scale ||
+        newConfig.anchor !== oldConfig.anchor;
 
-      // Update draggable if it changed
-      if (newConfig.draggable !== oldConfig.draggable) {
-        state.marker.setDraggable(newConfig.draggable || false);
+      if (needsRecreate) {
+        const lngLat = lngLatChanged
+          ? newConfig.lngLat
+          : (state.marker.getLngLat().toArray() as [number, number]);
+        state.marker.remove();
+        state.marker = createMarker(this, state.map, newConfig, state.popup, lngLat);
+      } else {
+        if (lngLatChanged) {
+          state.marker.setLngLat(newConfig.lngLat);
+        }
+
+        if (newConfig.rotation !== undefined && newConfig.rotation !== oldConfig.rotation) {
+          state.marker.setRotation(newConfig.rotation);
+        }
+
+        if (newConfig.draggable !== oldConfig.draggable) {
+          state.marker.setDraggable(newConfig.draggable || false);
+        }
+
+        if (JSON.stringify(newConfig.offset) !== JSON.stringify(oldConfig.offset)) {
+          state.marker.setOffset(newConfig.offset || [0, 0]);
+        }
+
+        if (newConfig.pitchAlignment !== oldConfig.pitchAlignment) {
+          state.marker.setPitchAlignment(newConfig.pitchAlignment || 'auto');
+        }
+
+        if (newConfig.rotationAlignment !== oldConfig.rotationAlignment) {
+          state.marker.setRotationAlignment(newConfig.rotationAlignment || 'auto');
+        }
       }
 
       // Update the popup if it changed

@@ -62,8 +62,12 @@ defmodule MaplibreX.Components.Marker do
 
   * `marker:clicked` - Fired when the marker is clicked
   * `marker:drag_start` - Fired when drag starts (if draggable)
-  * `marker:dragging` - Fired while dragging
-  * `marker:drag_end` - Fired when drag ends
+  * `marker:dragging` - Fired while dragging, at most once every 50 ms
+  * `marker:drag_end` - Fired when drag ends, always with the final position
+
+  Attributes are reactive: changing `color`, `scale` or `anchor` rebuilds the
+  marker in place (position, popup and drag state are kept), and `draggable`,
+  `offset`, `rotation`, `pitch_alignment` and `rotation_alignment` update live.
 
   ## Slots
 
