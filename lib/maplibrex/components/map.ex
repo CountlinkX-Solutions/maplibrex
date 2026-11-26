@@ -54,6 +54,10 @@ defmodule MaplibreX.Components.Map do
         {:noreply, assign(socket, center: center, zoom: zoom)}
       end
 
+      # The components push every event they emit (`map:loaded`, for example);
+      # ignore the ones you do not use.
+      def handle_event(_event, _params, socket), do: {:noreply, socket}
+
   ## Nesting components
 
   Components can be nested in the map. They behave exactly as they do when
