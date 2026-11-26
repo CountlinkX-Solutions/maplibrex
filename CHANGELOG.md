@@ -92,6 +92,13 @@ mounted. See **Changed**.
   LiveView changes to is applied as before, also one the map reported
   earlier, and the JS commands and `push_event` commands move the map as
   before; each still pushes one `map:moved` where the map ends.
+- The Hex package shipped the bundle's source map,
+  `priv/static/assets/js/maplibrex.js.map` (about 300 KB, which nothing
+  loads), only because `mix assets.deploy` had left it on the publisher's
+  machine ([#50]). The package now lists the bundle,
+  `priv/static/assets/js/maplibrex.js`, by name instead of all of
+  `priv/static`, so what it contains no longer depends on the publisher's
+  working tree. The bundle is built as before.
 
 ### Documentation
 
@@ -422,6 +429,7 @@ First public release.
 [#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
 [#48]: https://github.com/CountlinkX-Solutions/maplibrex/issues/48
 [#49]: https://github.com/CountlinkX-Solutions/maplibrex/issues/49
+[#50]: https://github.com/CountlinkX-Solutions/maplibrex/issues/50
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
