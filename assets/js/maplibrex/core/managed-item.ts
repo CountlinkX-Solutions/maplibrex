@@ -62,9 +62,8 @@ export abstract class ManagedItem {
   protected destroyed = false;
   private cancelMapWait: () => void = () => {};
   private cancelStyleWait?: () => void;
-  private readonly onMapChange = () => {
-    if (this.map && !paused.has(this.map)) this.reconcile();
-  };
+  /** The listener attached for each of `mapEvents`, kept to detach it. */
+  private mapListeners: [string, (event: unknown) => void][] = [];
 
   /**
    * @param mapEvents the map events after which the item reconciles
@@ -86,12 +85,26 @@ export abstract class ManagedItem {
 
   protected attach(map: Map): void {
     this.map = map;
-    for (const type of this.mapEvents) map.on(type as never, this.onMapChange);
+    this.mapListeners = this.mapEvents.map((type) => [
+      type,
+      (event: unknown) => {
+        if (!paused.has(map) && this.reactsTo(type, event)) this.reconcile();
+      }
+    ]);
+    for (const [type, listener] of this.mapListeners) map.on(type as never, listener);
     this.reconcile();
   }
 
   /** Bring the map in line with the item's desired state. Idempotent. */
   protected abstract reconcile(): void;
+
+  /**
+   * Whether a map event of `type` (one of `mapEvents`) may call for a
+   * reconcile. Every one does, unless a subclass narrows it down.
+   */
+  protected reactsTo(_type: string, _event: unknown): boolean {
+    return true;
+  }
 
   /** Cancel the waits for the map and for its style. */
   protected cancelWaits(): void {
@@ -104,8 +117,10 @@ export abstract class ManagedItem {
   protected stopWatching(): void {
     this.cancelWaits();
     const map = this.map;
-    if (!map) return;
-    for (const type of this.mapEvents) map.off(type as never, this.onMapChange);
+    if (map) {
+      for (const [type, listener] of this.mapListeners) map.off(type as never, listener);
+    }
+    this.mapListeners = [];
   }
 
   /** Reconcile once the style of `map` accepts sources and layers; one wait at a time. */
