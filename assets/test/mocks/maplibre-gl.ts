@@ -70,6 +70,15 @@ class Emitter {
   listenerCount(type: string, layerId?: string): number {
     return this.listeners.filter((l) => l.type === type && l.layerId === layerId).length;
   }
+
+  /**
+   * Every attached listener, in the order it was attached, as its event type
+   * or `type:layerId` for a layer-scoped one: shows what a component leaves
+   * behind without naming each event it might have used.
+   */
+  listenerKeys(): string[] {
+    return this.listeners.map((l) => (l.layerId === undefined ? l.type : `${l.type}:${l.layerId}`));
+  }
 }
 
 type ControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';

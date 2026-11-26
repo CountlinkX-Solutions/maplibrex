@@ -560,6 +560,27 @@ describe('FakeMap setStyle', () => {
   });
 });
 
+describe('FakeMap listener bookkeeping', () => {
+  afterEach(resetEnvironment);
+
+  it('lists every attached listener by event type and layer id, until it is removed', () => {
+    const map = new FakeMap();
+    const onStyle = () => {};
+    const onClick = () => {};
+    expect(map.listenerKeys()).toEqual([]);
+
+    map.on('styledata', onStyle);
+    map.on('click', 'points', onClick);
+    map.once('load', () => {});
+    expect(map.listenerKeys()).toEqual(['styledata', 'click:points', 'load']);
+
+    map.off('styledata', onStyle);
+    map.off('click', 'points', onClick);
+    map.emit('load');
+    expect(map.listenerKeys()).toEqual([]);
+  });
+});
+
 describe('FakeMap sources', () => {
   afterEach(resetEnvironment);
 
