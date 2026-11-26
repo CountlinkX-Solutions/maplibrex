@@ -65,11 +65,11 @@ See **Changed**.
   it and removes it when the component is removed. Until the component adds
   the source or layer itself (after a map style change drops it, for
   example), it pushes no `source:added`/`source:removed` or
-  `layer:added`/`layer:removed` for it, and a layer taken over this way
-  pushes no `layer:feature_*` events. In 0.1.1 a source component logged
-  `Source "<id>" already exists` and left the source alone, and a layer
-  component pushed `layer:added` although MapLibre had refused the duplicate
-  layer, then reported clicks and hovers on the existing one.
+  `layer:added`/`layer:removed` for it. A layer taken over this way still
+  reports clicks and hovers with `layer:feature_*`. In 0.1.1 a source
+  component logged `Source "<id>" already exists` and left the source alone,
+  and a layer component pushed `layer:added` although MapLibre had refused
+  the duplicate layer.
 - Layer, source, `geojson_layer` and `terrain` components no longer log
   `Map "<id>" not found` when they mount before their map: they wait for it.
 - A layer whose source is not on the map yet logs one console warning (none
