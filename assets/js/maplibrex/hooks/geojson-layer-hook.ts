@@ -43,6 +43,17 @@ interface GeoJSONLayerHookState {
   map: maplibregl.Map;
   sourceId: string;
   layerId: string;
+  handlers: LayerHandlers;
+}
+
+/**
+ * Layer-scoped listeners, kept by reference: MapLibre keeps them after the
+ * layer is removed, so `destroyed()` has to `map.off` the same functions.
+ */
+interface LayerHandlers {
+  click?: (e: any) => void;
+  mouseenter?: (e: any) => void;
+  mouseleave?: (e: any) => void;
 }
 
 export const GeoJSONLayerHook: LiveViewHook = {
@@ -67,6 +78,8 @@ export const GeoJSONLayerHook: LiveViewHook = {
       const sourceId = `${config.id}-source`;
       const layerId = config.id;
 
+      const handlers: LayerHandlers = {};
+
       // Wait for map to be loaded before adding source and layer
       const addLayer = () => {
         // Add source
@@ -89,7 +102,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         }
 
         // Setup click event handler
-        map.on('click', layerId, (e: any) => {
+        handlers.click = (e: any) => {
           if (e.features && e.features.length > 0) {
             this.pushEvent('layer:feature_clicked', {
               layerId: layerId,
@@ -98,10 +111,11 @@ export const GeoJSONLayerHook: LiveViewHook = {
               point: [e.point.x, e.point.y]
             });
           }
-        });
+        };
+        map.on('click', layerId, handlers.click);
 
         // Setup mouse enter/leave handlers for cursor change
-        map.on('mouseenter', layerId, (e: any) => {
+        handlers.mouseenter = (e: any) => {
           map.getCanvas().style.cursor = 'pointer';
           
           if (e.features && e.features.length > 0) {
@@ -110,15 +124,17 @@ export const GeoJSONLayerHook: LiveViewHook = {
               feature: e.features[0]
             });
           }
-        });
+        };
+        map.on('mouseenter', layerId, handlers.mouseenter);
 
-        map.on('mouseleave', layerId, () => {
+        handlers.mouseleave = () => {
           map.getCanvas().style.cursor = '';
           
           this.pushEvent('layer:feature_mouseleave', {
             layerId: layerId
           });
-        });
+        };
+        map.on('mouseleave', layerId, handlers.mouseleave);
 
         // Emit source loaded event
         const source = map.getSource(sourceId) as maplibregl.GeoJSONSource;
@@ -173,7 +189,8 @@ export const GeoJSONLayerHook: LiveViewHook = {
         config,
         map,
         sourceId,
-        layerId
+        layerId,
+        handlers
       };
 
       logger.debug(`[MaplibreX] GeoJSON Layer "${layerId}" created`);
@@ -244,6 +261,11 @@ export const GeoJSONLayerHook: LiveViewHook = {
     if (!state) return;
 
     try {
+      const { handlers } = state;
+      if (handlers.click) state.map.off('click', state.layerId, handlers.click);
+      if (handlers.mouseenter) state.map.off('mouseenter', state.layerId, handlers.mouseenter);
+      if (handlers.mouseleave) state.map.off('mouseleave', state.layerId, handlers.mouseleave);
+
       // Remove layer
       if (state.map.getLayer(state.layerId)) {
         state.map.removeLayer(state.layerId);
