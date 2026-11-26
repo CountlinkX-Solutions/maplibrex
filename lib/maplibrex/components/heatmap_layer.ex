@@ -120,8 +120,10 @@ defmodule MaplibreX.Components.HeatmapLayer do
 
   ## Events
 
-  * `layer:added` - Fired when layer is added to map
-  * `layer:removed` - Fired when layer is removed from map
+  * `layer:added` - Fired once, the first time the layer is on the map (not
+    again when a style change puts it back)
+  * `layer:removed` - Fired when the component is removed, if `layer:added`
+    was fired
 
   Note: Individual feature events (click, hover) are not available for heatmap layers
   as they represent aggregate density rather than discrete features.

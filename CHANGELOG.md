@@ -7,6 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
+Layers, sources and terrain now stay on the map for as long as their
+components live. Component attributes, hook names, event names and payload
+keys are unchanged, but some behaviour you can notice has changed: some events
+arrive at a different moment or no longer at all, some console messages are
+gone, and content nested in `<.map>` is now rendered after the map element.
+See **Changed**.
+
+### Added
+
+- Source components apply changes after mount. New `tiles` or `url` on
+  `vector_tile_source`, `raster_tile_source` and `raster_dem_source`, a new
+  image `url` and new `coordinates` on `image_source`, and new `coordinates`
+  on `video_source` are applied to the source in place. Any other change
+  replaces the source: every layer using it, from a component, the basemap or
+  your own code, is taken off and put back at its place in the layer order.
+  If MapLibre refuses the new source, the previous one is put back, and
+  `source:error` is pushed when MapLibre threw.
+- `geojson_layer` follows every attribute: `min_zoom`, `max_zoom`,
+  `before_id`, `type` and the clustering attributes as well as `data`,
+  `paint`, `layout` and `filter`. What the server commands
+  `layer:set_paint_property`, `layer:set_layout_property`, `layer:set_filter`
+  and `layer:set_data` set now survives map style changes and re-renders that
+  leave that property alone; a re-render that changes the same property, or a
+  later command, wins.
+- `MapManager.whenReady(mapId, callback)` in the JavaScript API calls back
+  with the map as soon as it is registered (at once if it already is) and
+  returns a function that cancels the wait.
+
+### Changed
+
+- Content nested in `<.map>` is rendered right after the map element, as its
+  sibling, instead of inside it ([#15]). The map element itself is unchanged,
+  and so is a map with nothing nested in it. Visible content in the slot (a
+  legend, say) is no longer inside the map container: it is laid out after
+  the map instead of over it, and it is not part of the map in fullscreen. To
+  show your own content on the map, use `control`, `control_button` or
+  `control_group`, or position it in a wrapper of your own; the
+  `MaplibreX.Components.Map` docs show both.
+- `layer:added`, `source:added` and `terrain:enabled` are pushed once, when
+  the layer, source or terrain is actually on the map for the first time.
+  That can be well after the component mounts (once its map, its style or its
+  source is there), and they are not pushed again when a style change or an
+  update puts the item back. In 0.1.1 `layer:added` was also pushed when
+  MapLibre had refused the layer.
+- `source:removed` is pushed only once the source is really gone ([#18]). A
+  source component removed while layers still use the source now leaves the
+  source on the map until the last of those layers is removed, then removes
+  it and pushes `source:removed`. In 0.1.1 MapLibre refused the removal while
+  `source:removed` was pushed anyway.
+- `layer:removed` and `source:removed` are also pushed when the component's
+  map was removed before the component; 0.1.1 skipped them then.
+- A source or layer component whose id is already on the map (from the map
+  style or from your own code) takes it over: it applies its own updates to
+  it and removes it when the component is removed. Until the component adds
+  the source or layer itself (after a map style change drops it, for
+  example), it pushes no `source:added`/`source:removed` or
+  `layer:added`/`layer:removed` for it, and a layer taken over this way
+  pushes no `layer:feature_*` events. In 0.1.1 a source component logged
+  `Source "<id>" already exists` and left the source alone, and a layer
+  component pushed `layer:added` although MapLibre had refused the duplicate
+  layer, then reported clicks and hovers on the existing one.
+- Layer, source, `geojson_layer` and `terrain` components no longer log
+  `Map "<id>" not found` when they mount before their map: they wait for it.
+- A layer whose source is not on the map yet logs one console warning (none
+  when a source component with that id is about to add it) and is added once
+  the source appears. A `before_id` naming a layer that is not on the map logs
+  one warning; the layer is added on top and moves under that layer once it
+  appears. In 0.1.1 both layers stayed off the map.
+- `terrain` no longer logs an error and pushes `terrain:error` when its
+  `raster_dem_source` is not on the map yet: it logs one warning (none when a
+  source component is about to add the source) and turns the terrain on once
+  the source appears. `terrain:error` now means MapLibre failed to set the
+  terrain. `terrain:disabled` is pushed only when the component turns its own
+  terrain off; a terrain set since by something else is left on.
+- Fewer `map:error` events and `[MaplibreX] Map error` console messages: the
+  components no longer make MapLibre refuse a layer whose id is already on
+  the map, a `before_id` naming a missing layer, or the removal of a source
+  that layers still use.
+
+### Fixed
+
+- Layer and source components ignored assign changes after mount ([#3], for
+  layers and sources). The nine layer components now apply new `paint`,
+  `layout`, `filter`, `min_zoom`, `max_zoom` and `before_id` in place; a
+  paint or layout property or a filter removed from the assigns goes back to
+  its default, and a new `source_id` or `source_layer`, or a zoom bound that
+  is no longer set, re-adds the layer. Sources: see **Added**. `terrain` now
+  applies a new `source_id` or `exaggeration` at any time; it dropped them
+  while tiles were loading. Controls still ignore assign changes ([#3] stays
+  open for them), and so does the map for `bounds`, `max_bounds`, the zoom
+  and pitch limits, `interactive` and `attribution_control` ([#26]).
+- Changing the map style removed every source, layer and terrain added by
+  components ([#4]). Layer, source, `geojson_layer` and `terrain` components
+  now put their content back after any style change, as currently
+  configured. After a basemap switch a component layer with no `before_id`
+  is on top again, one with a `before_id` is under that layer, and component
+  layers keep the order they were first added in.
+- A layer mounted before its source was never added ([#5]); a `terrain`
+  mounted before its DEM source reported an error and stayed off. Both now
+  wait for the source, however late it comes.
+- Layers, sources and terrain mounted after the map's first load while tiles
+  were still loading could be skipped: they waited for a `load` event that
+  had already fired ([#12]). They are now added as soon as the style accepts
+  them.
+- Components nested in `<.map>` were never patched: they kept their first
+  assigns, and nested components behind `:if` or `:for` never mounted or
+  unmounted ([#15]). They now behave like components rendered next to the
+  map.
+- A map given a style object (an Elixir map rather than a URL) as its `style`
+  called `setStyle` again on every change to any other map assign, and
+  MapLibre's style diff dropped every source and layer the components had
+  added ([#16]). The style is now compared by value and applied only when it
+  really changes.
+- Layer, source, `geojson_layer` and `terrain` components mounted before their
+  map gave up for good ([#17]). They now attach once the map is registered,
+  whatever the template order. Markers, popups and controls still need their
+  map to be rendered first.
+- A source removed while a layer still used it stayed on the map but reported
+  `source:removed` ([#18]); see **Changed**.
+- `geojson_layer` often never sent `layer:source_loaded`: its one-time
+  `sourcedata` listener was taken by whichever source reported first, and it
+  outlived the hook ([#20]). It is now pushed once, when the layer's own
+  source has loaded, from a listener removed with the hook.
+
 ## [0.1.1] - 2026-11-25
 
 Bugfix release. There are no breaking changes.
@@ -170,10 +296,21 @@ First public release.
   bundled, so an application never loads two copies of MapLibre GL
 
 [#2]: https://github.com/CountlinkX-Solutions/maplibrex/issues/2
+[#3]: https://github.com/CountlinkX-Solutions/maplibrex/issues/3
+[#4]: https://github.com/CountlinkX-Solutions/maplibrex/issues/4
+[#5]: https://github.com/CountlinkX-Solutions/maplibrex/issues/5
 [#6]: https://github.com/CountlinkX-Solutions/maplibrex/issues/6
 [#7]: https://github.com/CountlinkX-Solutions/maplibrex/issues/7
 [#8]: https://github.com/CountlinkX-Solutions/maplibrex/issues/8
 [#9]: https://github.com/CountlinkX-Solutions/maplibrex/issues/9
-[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...HEAD
+[#12]: https://github.com/CountlinkX-Solutions/maplibrex/issues/12
+[#15]: https://github.com/CountlinkX-Solutions/maplibrex/issues/15
+[#16]: https://github.com/CountlinkX-Solutions/maplibrex/issues/16
+[#17]: https://github.com/CountlinkX-Solutions/maplibrex/issues/17
+[#18]: https://github.com/CountlinkX-Solutions/maplibrex/issues/18
+[#20]: https://github.com/CountlinkX-Solutions/maplibrex/issues/20
+[#26]: https://github.com/CountlinkX-Solutions/maplibrex/issues/26
+[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CountlinkX-Solutions/maplibrex/releases/tag/v0.1.0

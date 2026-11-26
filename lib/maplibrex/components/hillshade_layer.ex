@@ -94,8 +94,10 @@ defmodule MaplibreX.Components.HillshadeLayer do
 
   ## Events
 
-  * `layer:added` - Fired when layer is added to map
-  * `layer:removed` - Fired when layer is removed from map
+  * `layer:added` - Fired once, the first time the layer is on the map (not
+    again when a style change puts it back)
+  * `layer:removed` - Fired when the component is removed, if `layer:added`
+    was fired
 
   Note: Hillshade layers do not support feature interaction events as they
   render continuous terrain data rather than discrete features.

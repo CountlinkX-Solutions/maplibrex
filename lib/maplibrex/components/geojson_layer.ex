@@ -142,13 +142,30 @@ defmodule MaplibreX.Components.GeoJSONLayer do
   * `layer:feature_clicked` - Fired when a feature is clicked
   * `layer:feature_mouseenter` - Fired when mouse enters a feature
   * `layer:feature_mouseleave` - Fired when mouse leaves a feature
-  * `layer:source_loaded` - Fired when the source data is loaded
+  * `layer:source_loaded` - Fired once, with `sourceId`, the first time the
+    layer's own source has loaded
 
   Every event identifies the layer with `"layer_id"`, the same key the other
   layer components use. `"layerId"` carries the same value and is kept for
   compatibility with code written against 0.1.0.
 
+  ## Updates
+
+  The component owns a GeoJSON source, `"<id>-source"`, and the layer drawing
+  it. Both follow every attribute. New `data`, turning `cluster` on, and new
+  `cluster_radius` or `cluster_max_zoom` values are applied to the source in
+  place; any other source change replaces the source under the layer. A
+  paint or layout property, or the filter, removed from the attributes goes
+  back to its default. The source and the layer come back after a map style
+  change.
+
   ## JavaScript Commands
+
+  What the `layer:set_paint_property`, `layer:set_layout_property`,
+  `layer:set_filter` and `layer:set_data` commands set is kept on top of the
+  rendered attributes, so it survives style changes and re-renders that leave
+  that property alone; a re-render that changes the same property, or a later
+  command, wins.
 
   You can control layers from LiveView using:
 
