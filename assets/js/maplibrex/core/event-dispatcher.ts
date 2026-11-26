@@ -21,6 +21,16 @@ import { type PushOutcome, push, settle } from './push';
 /** The map event names MapLibre accepts. */
 type MapEventName = keyof MapEventType;
 
+/**
+ * The options that were actually sent. MapLibre treats a key that is present
+ * as set, so `{ bearing: undefined }` would rotate the map to NaN.
+ */
+function given<T extends Record<string, unknown>>(options: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(options).filter(([, value]) => value !== undefined && value !== null)
+  ) as Partial<T>;
+}
+
 export class EventDispatcher {
   private hook: HookContext;
   private map: MapLibreMap;
@@ -122,11 +132,8 @@ export class EventDispatcher {
       const { center, zoom, duration, bearing, pitch } = payload;
       
       this.map.flyTo({
-        center: center as [number, number],
-        zoom: zoom,
+        ...given({ center, zoom, bearing, pitch }),
         duration: duration || 1000,
-        bearing: bearing,
-        pitch: pitch,
         essential: true
       });
     });
@@ -135,12 +142,7 @@ export class EventDispatcher {
     this.onMapCommand('map:jump_to', (payload: any) => {
       const { center, zoom, bearing, pitch } = payload;
       
-      this.map.jumpTo({
-        center: center as [number, number],
-        zoom: zoom,
-        bearing: bearing,
-        pitch: pitch
-      });
+      this.map.jumpTo(given({ center, zoom, bearing, pitch }));
     });
 
     // Fit the map to bounds
@@ -148,8 +150,8 @@ export class EventDispatcher {
       const { bounds, padding, maxZoom, duration } = payload;
       
       this.map.fitBounds(bounds, {
+        ...given({ maxZoom }),
         padding: padding || 50,
-        maxZoom: maxZoom,
         duration: duration || 1000
       });
     });

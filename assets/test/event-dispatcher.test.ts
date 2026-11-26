@@ -58,3 +58,36 @@ describe('server-pushed map events honour an optional id (#9)', () => {
     expect(map.flyTo.mock.calls[0][0]).not.toHaveProperty('id');
   });
 });
+
+// MapLibre treats a key that is present as set: `{ bearing: undefined }` becomes
+// NaN in flyTo/jumpTo, and `{ maxZoom: undefined }` in fitBounds.
+describe('server-pushed camera commands pass only the options they were given', () => {
+  it.each([
+    ['map:fly_to', (m: FakeMap) => m.flyTo, 0, ['bearing', 'pitch']],
+    ['map:jump_to', (m: FakeMap) => m.jumpTo, 0, ['bearing', 'pitch']]
+  ] as const)('%s without bearing or pitch leaves them alone', (event, spy, arg, keys) => {
+    const { map, send } = setup();
+    send(event, { center: [1, 2], zoom: 3 });
+    const options = (spy(map) as any).mock.calls[0][arg];
+    for (const key of keys) expect(options, key).not.toHaveProperty(key);
+    expect(options).toMatchObject({ center: [1, 2], zoom: 3 });
+  });
+
+  it('map:jump_to without a zoom or centre passes neither', () => {
+    const { map, send } = setup();
+    send('map:jump_to', { bearing: 45 });
+    expect(map.jumpTo.mock.calls[0][0]).toEqual({ bearing: 45 });
+  });
+
+  it('map:fly_to and map:jump_to still pass a bearing and pitch of 0', () => {
+    const { map, send } = setup();
+    send('map:fly_to', { center: [1, 2], zoom: 3, bearing: 0, pitch: 0 });
+    expect(map.flyTo.mock.calls[0][0]).toMatchObject({ bearing: 0, pitch: 0 });
+  });
+
+  it('map:fit_bounds without maxZoom leaves it out', () => {
+    const { map, send } = setup();
+    send('map:fit_bounds', { bounds: [[0, 0], [1, 1]] });
+    expect(map.fitBounds.mock.calls[0][1]).not.toHaveProperty('maxZoom');
+  });
+});

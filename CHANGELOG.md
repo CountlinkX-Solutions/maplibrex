@@ -99,6 +99,11 @@ mounted. See **Changed**.
   `priv/static/assets/js/maplibrex.js`, by name instead of all of
   `priv/static`, so what it contains no longer depends on the publisher's
   working tree. The bundle is built as before.
+- `push_event(socket, "map:fly_to", ...)`, `"map:jump_to"` and
+  `"map:fit_bounds"` passed `bearing`, `pitch` and `maxZoom` to MapLibre even
+  when the payload did not have them. MapLibre reads a key that is present as
+  set, so a command without them could rotate, tilt or zoom the map to an
+  invalid value. Only the options that were sent are passed now.
 
 ### Documentation
 
