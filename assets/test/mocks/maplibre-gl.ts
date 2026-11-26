@@ -592,6 +592,20 @@ export class FakeMap extends Emitter {
 
   getContainer = () => this.container;
 
+  /**
+   * MapLibre's `Map.remove()`: the style goes (`setStyle(null)`, which fires
+   * no source or style events) and `remove` fires last. Unlike MapLibre,
+   * whose style methods then throw for want of a style, the mock keeps
+   * answering with an empty style; tests that need the throw stub it.
+   */
+  remove = vi.fn(() => {
+    this.sources.clear();
+    this.layers.clear();
+    this.layerOrder = [];
+    this.terrain = null;
+    this.emit('remove', { type: 'remove' });
+  });
+
   // As in MapLibre: the element returned by `onAdd` goes into the corner for
   // `position` (prepended at the bottom), and removal is left to `onRemove`.
   addControl = vi.fn((control: Control, position?: ControlPosition) => {

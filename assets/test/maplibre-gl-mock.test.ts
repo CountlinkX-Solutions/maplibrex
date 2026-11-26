@@ -581,6 +581,24 @@ describe('FakeMap listener bookkeeping', () => {
   });
 });
 
+describe('FakeMap removal', () => {
+  afterEach(resetEnvironment);
+
+  it('drops its sources and layers and fires remove when the map is removed', () => {
+    const map = new FakeMap();
+    map.addSource('s', { type: 'geojson', data: null });
+    map.addLayer({ id: 'l', type: 'circle', source: 's' });
+    const fired: string[] = [];
+    map.on('remove', () => fired.push(`remove with ${map.getLayersOrder().length} layers`));
+
+    map.remove();
+
+    expect(fired).toEqual(['remove with 0 layers']);
+    expect(map.getSource('s')).toBeUndefined();
+    expect(map.getLayer('l')).toBeUndefined();
+  });
+});
+
 describe('FakeMap sources', () => {
   afterEach(resetEnvironment);
 
