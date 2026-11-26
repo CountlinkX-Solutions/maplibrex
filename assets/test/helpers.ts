@@ -3,7 +3,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 import { MapManager } from '../js/maplibrex/core/map-manager';
 import { MapHooks } from '../js/maplibrex';
-import { FakeMap, resetMocks } from './mocks/maplibre-gl';
+import { FakeMap, type FakeMapOptions, resetMocks } from './mocks/maplibre-gl';
 
 type HookEventHandler = (payload: any) => void;
 
@@ -22,15 +22,16 @@ export interface MountedHook {
 
 /**
  * Register a fresh FakeMap under `id` and return it. Its container is
- * `container`, or a new element with that id in the document.
+ * `container`, or a new element with that id in the document. Pass
+ * `{ loaded: false }` for a map whose style is still loading.
  */
-export function registerMap(id = 'map', container?: HTMLElement): FakeMap {
+export function registerMap(id = 'map', container?: HTMLElement, options?: FakeMapOptions): FakeMap {
   if (!container) {
     container = document.createElement('div');
     container.id = id;
     document.body.appendChild(container);
   }
-  const map = new FakeMap(container);
+  const map = new FakeMap(container, options);
   MapManager.register(id, map as never);
   return map;
 }
