@@ -66,6 +66,20 @@ class ButtonControl implements maplibregl.IControl {
   }
 }
 
+/**
+ * The component puts `phx-click`, `phx-value-*` and friends on the hidden
+ * wrapper (`{@rest}`), but the button is moved into the map's control
+ * container, so clicks on it never bubble through the wrapper. Copy the
+ * bindings onto the button so LiveView sees them where the click happens.
+ */
+function forwardBindings(from: HTMLElement, to: HTMLElement): void {
+  Array.from(from.attributes).forEach((attr) => {
+    if (attr.name.startsWith('phx-') && attr.name !== 'phx-hook') {
+      to.setAttribute(attr.name, attr.value);
+    }
+  });
+}
+
 export const ControlButtonHook: LiveViewHook = {
   mounted(this: any) {
     const el = this.el as HTMLElement;
@@ -91,6 +105,8 @@ export const ControlButtonHook: LiveViewHook = {
         console.error(`[MaplibreX] Button element not found for control button "${config.id}"`);
         return;
       }
+
+      forwardBindings(el, buttonElement);
 
       // Create and add control to map
       const control = new ButtonControl(buttonElement);
@@ -128,6 +144,8 @@ export const ControlButtonHook: LiveViewHook = {
       if (!configStr) return;
 
       const newConfig: ControlButtonConfig = JSON.parse(configStr);
+
+      forwardBindings(this.el as HTMLElement, state.buttonElement);
       
       // Update active state if changed
       if (newConfig.active !== state.config.active) {

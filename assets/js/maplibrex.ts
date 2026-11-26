@@ -48,7 +48,11 @@ import {
   TerrainControlHook,
   SkyHook,
   DeckGlLayerHook,
-  CustomLayerHook
+  CustomLayerHook,
+  ControlHook,
+  ControlButtonHook,
+  ControlGroupHook,
+  ZoomRangeHook
 } from './maplibrex/hooks';
 
 /**
@@ -83,7 +87,11 @@ export const MapHooks = {
   TerrainControlHook,
   SkyHook,
   DeckGlLayerHook,
-  CustomLayerHook
+  CustomLayerHook,
+  ControlHook,
+  ControlButtonHook,
+  ControlGroupHook,
+  ZoomRangeHook
 };
 
 // Export individual hooks for advanced usage
@@ -115,7 +123,11 @@ export {
   TerrainControlHook,
   SkyHook,
   DeckGlLayerHook,
-  CustomLayerHook
+  CustomLayerHook,
+  ControlHook,
+  ControlButtonHook,
+  ControlGroupHook,
+  ZoomRangeHook
 } from './maplibrex/hooks';
 
 // Export core utilities
