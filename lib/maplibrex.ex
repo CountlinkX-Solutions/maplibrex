@@ -19,7 +19,7 @@ defmodule MaplibreX do
 
         def render(assigns) do
           ~H\"\"\"
-          <.map id="my-map" center={@center} zoom={@zoom} class="h-96 w-full" />
+          <.map id="my-map" center={@center} zoom={@zoom} class="h-96 w-full" events={["map:moved"]} />
           <.navigation_control id="nav" map_id="my-map" position="top-left" />
           \"\"\"
         end
@@ -49,6 +49,11 @@ defmodule MaplibreX do
     * `map:error` - MapLibre reported an error
     * `marker:clicked`, `marker:drag_start`, `marker:dragging`, `marker:drag_end`
     * `layer:feature_clicked`, `layer:feature_mouseenter`, `layer:feature_mouseleave`
+
+  A component given an `events` list, such as `events={["map:moved"]}` above,
+  pushes only the events named in it. Without one it pushes every event it
+  emits, and a LiveView needs a `handle_event/3` clause for each, or a
+  catch-all one.
 
   Every `layer:*` event names its layer with `"layer_id"` (the canonical key).
   The same value is also sent as `"layerId"`, kept for compatibility.

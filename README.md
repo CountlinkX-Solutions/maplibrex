@@ -25,7 +25,8 @@ def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
   {:noreply, assign(socket, center: center, zoom: zoom)}
 end
 
-# The components push every event they emit; ignore the ones you do not use.
+# Components given no `events` list push every event they emit; ignore the
+# ones you do not use.
 def handle_event(_event, _params, socket), do: {:noreply, socket}
 ```
 
@@ -52,7 +53,7 @@ JavaScript with esbuild and its CSS with Tailwind.
 ```elixir
 def deps do
   [
-    {:maplibrex, "~> 0.2.0"}
+    {:maplibrex, "~> 0.2.1"}
   ]
 end
 ```
@@ -123,16 +124,11 @@ The bare `"maplibrex"` import resolves through `NODE_PATH`, which the generated
 esbuild profile points at `deps/`, the same way Phoenix resolves `phoenix` and
 `phoenix_live_view`. The MaplibreX bundle found there imports `maplibre-gl`,
 which npm installed in `assets/node_modules`, and esbuild does not look in that
-directory for code that lives under `deps/`. Add it to `NODE_PATH` in the
-esbuild profile in `config/config.exs`:
+directory for code that lives under `deps/`. In `config/config.exs`, add it to
+the `NODE_PATH` list of the esbuild profile, after the two entries already
+there:
 
 ```elixir
-config :esbuild,
-  version: "0.25.4",
-  my_app: [
-    args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=. --external:@deck.gl/*),
-    cd: Path.expand("../assets", __DIR__),
     env: %{
       "NODE_PATH" => [
         Path.expand("../deps", __DIR__),
@@ -140,19 +136,25 @@ config :esbuild,
         Path.expand("../assets/node_modules", __DIR__)
       ]
     }
-  ]
 ```
 
-Two things differ from the generated profile:
+Without it the build stops with `Could not resolve "maplibre-gl"`. A list in
+`env` needs version 0.10 or later of the `esbuild` package, which Phoenix 1.8
+generates. Only the esbuild profile changes; the tailwind profile below it has
+the same `NODE_PATH` line and keeps it.
 
-- The `assets/node_modules` entry. Without it the build stops with
-  `Could not resolve "maplibre-gl"`. A list in `env` needs version 0.10 or
-  later of the `esbuild` package, which Phoenix 1.8 generates.
-- `--external:@deck.gl/*`, only if you did not install the deck.gl packages.
-  MaplibreX imports deck.gl when a `<.deckgl_layer>` mounts, and esbuild
-  resolves that import at build time: with neither the packages nor this flag
-  the build stops with `Could not resolve "@deck.gl/core"`. With the packages
-  installed, leave the flag out; esbuild then includes deck.gl in `app.js`.
+If you did not install the deck.gl packages, also add `--external:@deck.gl/*`
+at the end of the profile's `args`:
+
+```elixir
+    args:
+      ~w(js/app.js --bundle ... --alias:@=. --external:@deck.gl/*),
+```
+
+MaplibreX imports deck.gl when a `<.deckgl_layer>` mounts, and esbuild
+resolves that import at build time: with neither the packages nor this flag
+the build stops with `Could not resolve "@deck.gl/core"`. With the packages
+installed, leave the flag out; esbuild then includes deck.gl in `app.js`.
 
 With a `path:` dependency there is no `deps/maplibrex` for `NODE_PATH` to find.
 Import the bundle by its path instead, relative to `assets/js/app.js`. For
@@ -177,31 +179,24 @@ builds, MapLibre cannot tell where they are. Without this step the map shows
 only its background and no tile data; recent 6.x releases also log
 `Worker failed to load`.
 
-Copy the files next to `app.js` whenever the assets are built. In `mix.exs`:
+MaplibreX's `mix maplibrex.copy_worker` copies the files next to `app.js`. Add
+it to the asset aliases in `mix.exs`, after esbuild:
 
 ```elixir
-defp aliases do
-  [
-    # ...
-    "assets.build": ["compile", "tailwind my_app", "esbuild my_app", &copy_maplibre_worker/1],
-    "assets.deploy": [
-      "tailwind my_app --minify",
-      "esbuild my_app --minify",
-      &copy_maplibre_worker/1,
-      "phx.digest"
-    ]
-  ]
-end
-
-defp copy_maplibre_worker(_args) do
-  dest = "priv/static/assets/js"
-  File.mkdir_p!(dest)
-
-  for file <- ~w(maplibre-gl-worker.mjs maplibre-gl-shared.mjs) do
-    File.cp!(Path.join("assets/node_modules/maplibre-gl/dist", file), Path.join(dest, file))
-  end
-end
+      "assets.build": ["compile", "tailwind my_app", "esbuild my_app", "maplibrex.copy_worker"],
+      "assets.deploy": [
+        "tailwind my_app --minify",
+        "esbuild my_app --minify",
+        "maplibrex.copy_worker",
+        "phx.digest"
+      ],
 ```
+
+It copies `maplibre-gl-worker.mjs`, and `maplibre-gl-shared.mjs` when the
+installed release has it, from `assets/node_modules/maplibre-gl/dist` to
+`priv/static/assets/js` (`--from` and `--to` change those). With maplibre-gl
+v5 it copies nothing and says so, so the aliases can keep it whichever version
+you install.
 
 Then point MapLibre at the copy, near the top of `assets/js/app.js`:
 
@@ -249,10 +244,25 @@ defmodule MyAppWeb.MapLive do
 end
 ```
 
-The components push the events listed under [Events](#events) to your
-LiveView whether or not it handles them, and a LiveView without a matching
-`handle_event/3` clause crashes on the first one. Handle the events you need
-and keep a catch-all clause like the one above as the last `handle_event/3`.
+Unless told otherwise, a component that emits events pushes every one of
+them (see [Events](#events)) to your LiveView, whether or not the LiveView
+handles them, and a LiveView without a matching `handle_event/3` clause
+crashes on the first one. Either keep a catch-all clause like the one above as the last
+`handle_event/3`, or give each component that emits events the list of events
+you handle; it then pushes only those:
+
+```heex
+<.map id="map" center={@center} zoom={@zoom} class="h-96 w-full" events={["map:moved"]} />
+```
+
+```elixir
+def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
+  {:noreply, assign(socket, center: center, zoom: zoom)}
+end
+```
+
+A component without `events` still pushes everything, so a LiveView that
+renders one keeps the catch-all clause.
 
 ## Configuration
 
@@ -324,6 +334,14 @@ Map events arrive in your LiveView as ordinary `handle_event/3` calls:
 
 `map:moved` is debounced by 150 ms so continuous panning does not flood the
 socket.
+
+Every component that emits events takes an optional `events` list. Given one,
+it pushes only the events named in it, and the others cost no round trip:
+`<.map id="map" events={["map:moved", "map:clicked"]} />` pushes those two,
+and `events={[]}` pushes none. Without it, the component pushes every event it
+emits, so keep a catch-all `handle_event/3` clause (see
+[Import the components](#6-import-the-components)). Each component's docs list
+the events it emits.
 
 Every `layer:*` event identifies its layer with `"layer_id"`. The same value is
 also sent as `"layerId"`, kept for compatibility with code written against
