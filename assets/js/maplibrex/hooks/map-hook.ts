@@ -10,6 +10,7 @@ import * as maplibregl from 'maplibre-gl';
 import type { LiveViewHook, MapConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 import { createEventDispatcher } from '../core/event-dispatcher';
+import { isEqual } from '../core/managed-item';
 
 import { logger } from '../core/logger';
 
@@ -167,8 +168,11 @@ export const MapHook: LiveViewHook = {
         state.map.setPitch(newConfig.pitch);
       }
 
-      // Update the style if it changed
-      if (newConfig.style !== oldConfig.style) {
+      // Update the style if it changed. Both configs come from JSON.parse, so
+      // a style object is a new object on every update: compare by value, or
+      // every update re-applies it and the style diff drops what components
+      // added (#16).
+      if (!isEqual(newConfig.style, oldConfig.style)) {
         state.map.setStyle(newConfig.style as any);
       }
 
