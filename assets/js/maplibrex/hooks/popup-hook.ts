@@ -11,6 +11,7 @@ import type { LiveViewHook, PopupConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface PopupHookState {
   popup: maplibregl.Popup;
@@ -79,14 +80,14 @@ export const PopupHook: LiveViewHook = {
 
       // Setup event listeners
       popup.on('open', () => {
-        this.pushEvent('popup:opened', {
+        push(this, 'popup:opened', {
           popupId: config.id,
           lngLat: popup.getLngLat()?.toArray()
         });
       });
 
       popup.on('close', () => {
-        this.pushEvent('popup:closed', {
+        push(this, 'popup:closed', {
           popupId: config.id
         });
       });

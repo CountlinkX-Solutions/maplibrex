@@ -15,6 +15,7 @@ import type {
   EventHandler
 } from '../types';
 import { debounce } from '../utils/debounce';
+import { push, settle } from './push';
 
 /** The map event names MapLibre accepts. */
 type MapEventName = keyof MapEventType;
@@ -218,17 +219,24 @@ export class EventDispatcher {
   }
 
   /**
-   * Push an event to LiveView
+   * Push an event to LiveView, through `push` (core/push.ts): only if the
+   * map's `events` list, when it has one, names it, and dropped quietly if it
+   * cannot be delivered. With `callback` it is a request, always sent.
    */
   pushToLiveView(event: string, payload: any, callback?: () => void): void {
-    this.hook.pushEvent(event, payload, callback);
+    push(this.hook, event, payload, callback);
   }
 
   /**
-   * Push an event to a specific target selector in LiveView
+   * Push an event to a specific target selector in LiveView; dropped quietly
+   * if it cannot be delivered.
    */
   pushToLiveViewTarget(selector: string, event: string, payload: any, callback?: () => void): void {
-    this.hook.pushEventTo(selector, event, payload, callback);
+    try {
+      settle(this.hook.pushEventTo(selector, event, payload, callback), event);
+    } catch {
+      // The view is gone: there is nobody left to tell.
+    }
   }
 
   /**

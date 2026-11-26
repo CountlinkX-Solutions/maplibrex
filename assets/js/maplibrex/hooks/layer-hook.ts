@@ -14,7 +14,9 @@
  * spec keys its component does not have, and whether and how it reports
  * clicks and hovers.
  *
- * Events pushed to the server, all with both `layer_id` and `layerId`:
+ * Events pushed to the server, all with both `layer_id` and `layerId`
+ * (through `push`, core/push.ts: only those the component's `events` list
+ * names, when it has one):
  * - `layer:added`, once, the first time the layer is on the map (not again
  *   when a style change puts it back);
  * - `layer:removed`, from `destroyed()`, if `layer:added` was pushed;
@@ -24,6 +26,7 @@
 
 import type { HookContext, LiveViewHook } from '../types';
 import { type DesiredLayer, type LayerListener, type LayerSpec, ManagedLayer } from '../core/managed-layer';
+import { push } from '../core/push';
 
 /** The `data-config` of a layer component; keys whose assign is nil are left out. */
 export interface LayerConfig {
@@ -97,18 +100,18 @@ export function createLayerHook(definition: LayerHookDefinition): LiveViewHook {
     return {
       click: (e) => {
         if (e.features && e.features.length > 0) {
-          hook.pushEvent('layer:feature_clicked', { ...ids, ...featurePayload(e) });
+          push(hook, 'layer:feature_clicked', { ...ids, ...featurePayload(e) });
         }
       },
       mouseenter: (e, map) => {
         if (e.features && e.features.length > 0) {
           map.getCanvas().style.cursor = 'pointer';
-          hook.pushEvent('layer:feature_mouseenter', { ...ids, ...featurePayload(e) });
+          push(hook, 'layer:feature_mouseenter', { ...ids, ...featurePayload(e) });
         }
       },
       mouseleave: (_e, map) => {
         map.getCanvas().style.cursor = '';
-        hook.pushEvent('layer:feature_mouseleave', ids);
+        push(hook, 'layer:feature_mouseleave', ids);
       }
     };
   }
@@ -124,7 +127,7 @@ export function createLayerHook(definition: LayerHookDefinition): LiveViewHook {
 
         this._maplibrex_layer = new ManagedLayer(config.mapId, config.id, desiredLayer(config), {
           label: `${definition.name} "${config.id}"`,
-          onFirstAdd: () => this.pushEvent('layer:added', { layer_id: config.id, layerId: config.id }),
+          onFirstAdd: () => push(this, 'layer:added', { layer_id: config.id, layerId: config.id }),
           listeners: featureListeners(this, config.id)
         });
       } catch (error) {
@@ -155,7 +158,7 @@ export function createLayerHook(definition: LayerHookDefinition): LiveViewHook {
         console.error(`[MaplibreX] Error destroying ${definition.name}:`, error);
       }
       if (layer.added) {
-        this.pushEvent('layer:removed', { layer_id: layer.id, layerId: layer.id });
+        push(this, 'layer:removed', { layer_id: layer.id, layerId: layer.id });
       }
     }
   };

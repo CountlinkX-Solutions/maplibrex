@@ -14,6 +14,7 @@ import type { DeckGLLayerConfig } from '../types/deckgl';
 import { loadDeckGL } from '../utils/deckgl-lazy-loader';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface DeckGlLayerHookState {
   config: DeckGLLayerConfig;
@@ -56,11 +57,11 @@ export const DeckGlLayerHook: LiveViewHook = {
         deckglManager
       };
       
-      this.pushEvent('deckgl:layer_loaded', { layerId: config.id });
+      push(this, 'deckgl:layer_loaded', { layerId: config.id });
       
     } catch (error) {
       console.error('[MaplibreX] Error mounting DeckGL layer:', error);
-      this.pushEvent('deckgl:error', { 
+      push(this, 'deckgl:error', { 
         error: error instanceof Error ? error.message : String(error) 
       });
     }
@@ -86,7 +87,7 @@ export const DeckGlLayerHook: LiveViewHook = {
       
     } catch (error) {
       console.error('[MaplibreX] Error updating DeckGL layer:', error);
-      this.pushEvent('deckgl:error', { 
+      push(this, 'deckgl:error', { 
         error: error instanceof Error ? error.message : String(error) 
       });
     }

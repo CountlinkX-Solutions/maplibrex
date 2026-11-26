@@ -9,7 +9,9 @@
  * `updated()`; it comes back after a style change; and `destroyed()` turns it
  * off if it is still this component's terrain.
  *
- * Events pushed to the server:
+ * Events pushed to the server
+ * (through `push`, core/push.ts: only those the component's `events` list
+ * names, when it has one):
  * - `terrain:enabled`, with `source_id` and `exaggeration`, once, the first
  *   time the terrain is on (not again when a style change or an update sets it
  *   again);
@@ -21,6 +23,7 @@
 
 import type { HookContext, LiveViewHook } from '../types';
 import { type DesiredTerrain, ManagedTerrain } from '../core/managed-terrain';
+import { push } from '../core/push';
 
 /** The `data-config` of the terrain component. */
 interface TerrainConfig {
@@ -53,9 +56,9 @@ export const TerrainHook: LiveViewHook = {
 
       this._maplibrex_terrain = new ManagedTerrain(config.mapId, desiredTerrain(config), {
         onFirstEnable: (terrain) =>
-          this.pushEvent('terrain:enabled', { source_id: terrain.source, exaggeration: terrain.exaggeration }),
+          push(this, 'terrain:enabled', { source_id: terrain.source, exaggeration: terrain.exaggeration }),
         onError: (error) =>
-          this.pushEvent('terrain:error', { error: error instanceof Error ? error.message : 'Unknown error' })
+          push(this, 'terrain:error', { error: error instanceof Error ? error.message : 'Unknown error' })
       });
     } catch (error) {
       console.error('[MaplibreX] Error mounting terrain:', error);
@@ -80,7 +83,7 @@ export const TerrainHook: LiveViewHook = {
     this._maplibrex_terrain = undefined;
 
     try {
-      if (terrain.destroy()) this.pushEvent('terrain:disabled', {});
+      if (terrain.destroy()) push(this, 'terrain:disabled', {});
     } catch (error) {
       console.warn('[MaplibreX] Could not disable terrain:', error);
     }

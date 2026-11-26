@@ -61,6 +61,7 @@ defmodule MaplibreX.Components.Popup do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -79,6 +80,9 @@ defmodule MaplibreX.Components.Popup do
   * `offset` - Pixel offset as `[x, y]` or single number for all sides
   * `class_name` - CSS class name for the popup container
   * `open` - Whether the popup should be open. Defaults to `true` when `lng_lat` is provided
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["popup:closed"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Slots
 
@@ -119,6 +123,7 @@ defmodule MaplibreX.Components.Popup do
   attr :class_name, :string, default: nil
   attr :open, :boolean, default: nil
   attr :rest, :global
+  attr :events, :list, default: nil
 
   slot :inner_block, required: true
 
@@ -149,7 +154,7 @@ defmodule MaplibreX.Components.Popup do
 
     assigns =
       assigns
-      |> assign(:config, Jason.encode!(config))
+      |> assign(:config, Jason.encode!(Events.put(config, assigns.events)))
       |> assign(:open, open)
 
     ~H"""

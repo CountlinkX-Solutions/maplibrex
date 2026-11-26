@@ -9,6 +9,7 @@ import type { LiveViewHook, PaintPropertyName } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface SkyConfig {
   mapId: string;
@@ -60,7 +61,7 @@ export const SkyHook: LiveViewHook = {
           };
 
           // Emitir evento
-          this.pushEvent('sky:added', {});
+          push(this, 'sky:added', {});
 
           logger.debug(`[MaplibreX] Sky layer added to map "${mapId}"`);
 
@@ -126,7 +127,7 @@ export const SkyHook: LiveViewHook = {
         // Remove the sky layer
         try {
           map.removeLayer('sky');
-          this.pushEvent('sky:removed', {});
+          push(this, 'sky:removed', {});
           logger.debug(`[MaplibreX] Sky layer removed`);
         } catch (e) {
           console.warn(`[MaplibreX] Could not remove sky layer: ${e}`);

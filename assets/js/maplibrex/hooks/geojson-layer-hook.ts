@@ -21,7 +21,9 @@
  * whichever changed last wins. A `null` value resets the property to its
  * default.
  *
- * Events pushed to the server, all with both `layer_id` and `layerId`:
+ * Events pushed to the server, all with both `layer_id` and `layerId`
+ * (through `push`, core/push.ts: only those the component's `events` list
+ * names, when it has one):
  * - `layer:feature_clicked`, `layer:feature_mouseenter`,
  *   `layer:feature_mouseleave`;
  * - `layer:source_loaded` (also with `sourceId`), once, the first time the
@@ -33,6 +35,7 @@ import { type DesiredLayer, type LayerListener, type LayerSpec, ManagedLayer } f
 import { type InPlaceUpdate, type InPlaceUpdates, ManagedSource, type SourceSpec } from '../core/managed-source';
 import { isEqual } from '../core/managed-item';
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface GeoJSONLayerConfig {
   id: string;
@@ -152,7 +155,7 @@ function featureListeners(hook: HookContext, layerId: string): Record<string, La
   return {
     click: (e) => {
       if (e.features && e.features.length > 0) {
-        hook.pushEvent('layer:feature_clicked', {
+        push(hook, 'layer:feature_clicked', {
           ...ids,
           feature: e.features[0],
           lngLat: e.lngLat.toArray(),
@@ -163,12 +166,12 @@ function featureListeners(hook: HookContext, layerId: string): Record<string, La
     mouseenter: (e, map) => {
       map.getCanvas().style.cursor = 'pointer';
       if (e.features && e.features.length > 0) {
-        hook.pushEvent('layer:feature_mouseenter', { ...ids, feature: e.features[0] });
+        push(hook, 'layer:feature_mouseenter', { ...ids, feature: e.features[0] });
       }
     },
     mouseleave: (_e, map) => {
       map.getCanvas().style.cursor = '';
-      hook.pushEvent('layer:feature_mouseleave', ids);
+      push(hook, 'layer:feature_mouseleave', ids);
     }
   };
 }
@@ -196,7 +199,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
             // The `sourcedata` of a removal carries the source id too.
             if (sourceLoaded || !e.isSourceLoaded || !map.getSource(sourceId)) return;
             sourceLoaded = true;
-            this.pushEvent('layer:source_loaded', { layer_id: layerId, layerId, sourceId });
+            push(this, 'layer:source_loaded', { layer_id: layerId, layerId, sourceId });
           }
         }
       });

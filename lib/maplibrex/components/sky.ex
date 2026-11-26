@@ -67,6 +67,7 @@ defmodule MaplibreX.Components.Sky do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a sky layer component.
@@ -82,6 +83,15 @@ defmodule MaplibreX.Components.Sky do
   * `gradient_center` - Gradient center [azimuth, polar] (default: [0, 0])
   * `gradient_radius` - Gradient radius in degrees (default: 90)
   * `gradient` - Array of gradient colors (default: ["#87CEEB", "#E0F6FF", "#98D3E8"])
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["sky:added"]`. Optional: without it, every event listed under Events
+    is pushed
+
+  ## Events
+
+  * `sky:added` - Fired when the component adds its sky layer
+  * `sky:removed` - Fired when the component is removed and removes its sky
+    layer
 
   ## Sky Types
 
@@ -115,6 +125,7 @@ defmodule MaplibreX.Components.Sky do
   attr :gradient_center, :list, default: [0, 0]
   attr :gradient_radius, :integer, default: 90
   attr :gradient, :list, default: ["#87CEEB", "#E0F6FF", "#98D3E8"]
+  attr :events, :list, default: nil
 
   def sky(assigns) do
     # Validate sky type
@@ -151,7 +162,7 @@ defmodule MaplibreX.Components.Sky do
       paint: paint
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

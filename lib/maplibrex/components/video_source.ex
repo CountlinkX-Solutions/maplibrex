@@ -35,18 +35,19 @@ defmodule MaplibreX.Components.VideoSource do
 
   The video source can emit the following events to LiveView:
 
-      def handle_event("video:loaded", %{"source_id" => source_id}, socket) do
-        IO.inspect(source_id, label: "Video loaded")
+      def handle_event("source:added", %{"source_id" => source_id}, socket) do
+        IO.inspect(source_id, label: "Video source added")
         {:noreply, socket}
       end
 
-      def handle_event("video:error", %{"source_id" => source_id, "error" => error}, socket) do
+      def handle_event("source:error", %{"source_id" => source_id, "error" => error}, socket) do
         IO.inspect({source_id, error}, label: "Video error")
         {:noreply, socket}
       end
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a video source component.
@@ -58,6 +59,9 @@ defmodule MaplibreX.Components.VideoSource do
   * `urls` (required) - Array of video URLs (provide multiple formats for browser compatibility)
   * `coordinates` (required) - Array of 4 coordinates [lng, lat] defining the corners
     in clockwise order: [top-left, top-right, bottom-right, bottom-left]
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["source:error"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Video Formats
 
@@ -86,8 +90,12 @@ defmodule MaplibreX.Components.VideoSource do
 
   ## Events
 
-  * `video:loaded` - Fired when the video is loaded
-  * `video:error` - Fired when there's an error loading the video
+  * `source:added` - Fired once, with `source_id`, the first time the source
+    is on the map (not again when a style change puts it back)
+  * `source:removed` - Fired, with `source_id`, once the source is gone after
+    the component is removed, if `source:added` was fired
+  * `source:error` - Fired, with `source_id` and `error`, when MapLibre fails
+    to add or replace the source
 
   ## Notes
 
@@ -100,6 +108,7 @@ defmodule MaplibreX.Components.VideoSource do
   attr :map_id, :string, required: true
   attr :urls, :list, required: true
   attr :coordinates, :list, required: true
+  attr :events, :list, default: nil
 
   def video_source(assigns) do
     # Validate coordinates
@@ -121,7 +130,7 @@ defmodule MaplibreX.Components.VideoSource do
       coordinates: assigns.coordinates
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

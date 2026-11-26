@@ -8,6 +8,7 @@ import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface TerrainControlConfig {
   id: string;
@@ -163,7 +164,9 @@ export const TerrainControlHook: LiveViewHook = {
       }
 
       // Create the control instance
-      const control = new TerrainControl(config, this.pushEvent.bind(this));
+      const control = new TerrainControl(config, (event: string, payload: Record<string, unknown>) =>
+        push(this, event, payload)
+      );
 
       // Agregar control al mapa
       map.addControl(control as any, config.position as any);
