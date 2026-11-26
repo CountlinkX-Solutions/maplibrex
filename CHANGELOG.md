@@ -132,6 +132,10 @@ See **Changed**.
   `sourcedata` listener was taken by whichever source reported first, and it
   outlived the hook ([#20]). It is now pushed once, when the layer's own
   source has loaded, from a listener removed with the hook.
+- The README's installation steps did not work in an application generated
+  by `mix phx.new` ([#41], [#42]). They now add `assets/node_modules` to
+  esbuild's `NODE_PATH`, mark deck.gl as external when it is not installed,
+  serve maplibre-gl v6's worker files, and cover `path:` dependencies.
 
 ## [0.1.1] - 2026-11-25
 
@@ -310,6 +314,8 @@ First public release.
 [#18]: https://github.com/CountlinkX-Solutions/maplibrex/issues/18
 [#20]: https://github.com/CountlinkX-Solutions/maplibrex/issues/20
 [#26]: https://github.com/CountlinkX-Solutions/maplibrex/issues/26
+[#41]: https://github.com/CountlinkX-Solutions/maplibrex/issues/41
+[#42]: https://github.com/CountlinkX-Solutions/maplibrex/issues/42
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1
