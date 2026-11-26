@@ -14,6 +14,12 @@
  *   it (#4);
  * - `destroy()` removes the layer, every listener and every pending wait.
  *
+ * The waiting and the map listeners come from ManagedItem
+ * (core/managed-item.ts), shared with ManagedSource. A layer tells
+ * ManagedSource when it leaves the map, so a source removal waiting for it
+ * goes ahead at once (#18), and does not warn about a missing source that a
+ * source component is about to add.
+ *
  * Style changes are detected through `styledata`, which every way of changing
  * the style fires (maplibre-gl 5.0.0 fires no `style.load` after a diff), and a
  * missing source through `sourcedata` as well. MapLibre fires `styledata` on
@@ -26,8 +32,11 @@ import type { AddLayerObject, FilterSpecification, Map } from 'maplibre-gl';
 import type { LayoutPropertyName, PaintPropertyName } from '../types';
 
 import { logger } from './logger';
-import { MapManager } from './map-manager';
-import { isStyleReady, whenStyleReady } from './style-ready';
+import { ManagedItem, isEqual } from './managed-item';
+import { ManagedSource } from './managed-source';
+import { isStyleReady } from './style-ready';
+
+export { isEqual };
 
 /** A layer specification without its id: what `addLayer` takes, minus `id`. */
 export interface LayerSpec {
@@ -116,31 +125,11 @@ export function diffLayer(previous: DesiredLayer, next: DesiredLayer): LayerChan
   return changes;
 }
 
-/**
- * Deep equality of JSON values, regardless of object key order. A key whose
- * value is `undefined` counts as absent, as it would in JSON.
- */
-export function isEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  if (Array.isArray(a) && a.length !== (b as unknown[]).length) return false;
-
-  const left = a as Record<string, unknown>;
-  const right = b as Record<string, unknown>;
-  for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) {
-    if (!isEqual(left[key], right[key])) return false;
-  }
-  return true;
-}
-
-export class ManagedLayer {
+export class ManagedLayer extends ManagedItem {
   private desired: DesiredLayer;
-  private map?: Map;
   private readonly label: string;
   /** `onFirstAdd` has run (and the layer listeners are attached). */
   private wasAdded = false;
-  private destroyed = false;
   /**
    * MapLibre refused the last add (an invalid paint value, a source of the
    * wrong type, ...) and fired an error event saying why. Retrying on every
@@ -155,9 +144,6 @@ export class ManagedLayer {
   private warnedBeforeId?: string;
   /** The layer listeners as attached at the first add, kept for `destroy()` to detach. */
   private attachedListeners: [string, (event: any) => void][] = [];
-  private cancelMapWait: () => void = () => {};
-  private cancelStyleWait?: () => void;
-  private readonly onMapChange = () => this.reconcile();
 
   /**
    * Start keeping layer `id` on map `mapId`: it is added as soon as the map is
@@ -165,14 +151,15 @@ export class ManagedLayer {
    * is on the map.
    */
   constructor(
-    readonly mapId: string,
-    readonly id: string,
+    mapId: string,
+    id: string,
     desired: DesiredLayer,
     private readonly options: ManagedLayerOptions = {}
   ) {
+    super(mapId, id, ['styledata', 'sourcedata']);
     this.desired = desired;
     this.label = options.label ?? `layer "${id}"`;
-    this.cancelMapWait = MapManager.whenReady(mapId, (map) => this.attach(map));
+    this.start();
   }
 
   /** Whether the layer has been on the map at least once (`onFirstAdd` has run). */
@@ -203,6 +190,8 @@ export class ManagedLayer {
       if (changes === null) {
         map.removeLayer(this.id);
         this.reconcile();
+        // Back on the map, or moved to another source: a removal waiting for the old one may go ahead.
+        ManagedSource.layerRemoved(this.mapId);
       } else {
         this.apply(map, changes);
       }
@@ -218,33 +207,23 @@ export class ManagedLayer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.cancelMapWait();
-    this.cancelStyleWait?.();
-    this.cancelStyleWait = undefined;
+    this.stopWatching();
 
     const map = this.map;
     if (!map) return;
-    map.off('styledata', this.onMapChange);
-    map.off('sourcedata', this.onMapChange);
     for (const [type, listener] of this.attachedListeners) {
       map.off(type as never, this.id, listener);
     }
     // A map removed by its own hook first has no style left to remove from.
     if (this.isRegistered(map) && map.getLayer(this.id)) {
       map.removeLayer(this.id);
+      ManagedSource.layerRemoved(this.mapId);
     }
     logger.debug(`[MaplibreX] ${this.label} destroyed`);
   }
 
-  private attach(map: Map): void {
-    this.map = map;
-    map.on('styledata', this.onMapChange);
-    map.on('sourcedata', this.onMapChange);
-    this.reconcile();
-  }
-
   /** Bring the map in line with the desired state: add the layer if it is missing and can be added. */
-  private reconcile(): void {
+  protected reconcile(): void {
     const map = this.map;
     if (!map || this.destroyed) return;
 
@@ -260,7 +239,7 @@ export class ManagedLayer {
       }
       const source = this.desired.spec.source;
       if (source !== undefined && !map.getSource(source)) {
-        this.warnMissingSource(source);
+        this.warnMissingSource(map, source);
         return;
       }
       this.add(map);
@@ -343,26 +322,12 @@ export class ManagedLayer {
     map.moveLayer(this.id, beforeId);
   }
 
-  private waitForStyle(map: Map): void {
-    if (this.cancelStyleWait) return;
-    let ran = false;
-    const cancel = whenStyleReady(map, () => {
-      ran = true;
-      this.cancelStyleWait = undefined;
-      this.reconcile();
-    });
-    if (!ran) this.cancelStyleWait = cancel;
-  }
-
-  private warnMissingSource(source: string): void {
-    if (this.warnedSource === source) return;
+  /** One warning per missing source, unless a source component is about to add it. */
+  private warnMissingSource(map: Map, source: string): void {
+    if (this.warnedSource === source || ManagedSource.isManaged(map, this.mapId, source)) return;
     this.warnedSource = source;
     console.warn(
       `[MaplibreX] Source "${source}" not found for ${this.label}. Layer will be added when source is available.`
     );
-  }
-
-  private isRegistered(map: Map): boolean {
-    return MapManager.has(this.mapId) && MapManager.get(this.mapId) === map;
   }
 }
