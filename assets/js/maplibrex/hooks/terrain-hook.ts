@@ -1,157 +1,88 @@
 /**
  * TerrainHook - Hook for the Terrain component
- * 
- * This hook enables 3D terrain rendering in MapLibre GL JS
- * using a RasterDEMSource for elevation data.
+ *
+ * Turns on MapLibre's 3D terrain, from a raster-dem source, and keeps it on
+ * for as long as the component lives. The terrain is kept by a
+ * `ManagedTerrain` (core/managed-terrain.ts), the same machinery as the layer
+ * and source components: it is enabled once the map is registered, its style
+ * accepts it and the DEM source is there, in any template order; it follows
+ * `updated()`; it comes back after a style change; and `destroyed()` turns it
+ * off if it is still this component's terrain.
+ *
+ * Events pushed to the server:
+ * - `terrain:enabled`, with `source_id` and `exaggeration`, once, the first
+ *   time the terrain is on (not again when a style change or an update sets it
+ *   again);
+ * - `terrain:disabled`, from `destroyed()`, when it turned the terrain off;
+ * - `terrain:error`, with `error`, when MapLibre throws while the terrain is
+ *   set. A source that is not there yet is not an error: the terrain waits for
+ *   it.
  */
 
-import type { LiveViewHook } from '../types';
-import { MapManager } from '../core/map-manager';
+import type { HookContext, LiveViewHook } from '../types';
+import { type DesiredTerrain, ManagedTerrain } from '../core/managed-terrain';
 
-import { logger } from '../core/logger';
-
+/** The `data-config` of the terrain component. */
 interface TerrainConfig {
   mapId: string;
   sourceId: string;
   exaggeration: number;
 }
 
-interface TerrainHookState {
-  config: TerrainConfig;
+interface TerrainHookContext extends HookContext {
+  _maplibrex_terrain?: ManagedTerrain;
+}
+
+function readConfig(el: HTMLElement): TerrainConfig | undefined {
+  const config = el.dataset.config;
+  return config ? JSON.parse(config) : undefined;
+}
+
+function desiredTerrain(config: TerrainConfig): DesiredTerrain {
+  return { source: config.sourceId, exaggeration: config.exaggeration };
 }
 
 export const TerrainHook: LiveViewHook = {
-  mounted(this: any) {
-    const el = this.el as HTMLElement;
-
+  mounted(this: TerrainHookContext) {
     try {
-      // Read the configuration
-      const configStr = el.dataset.config;
-      if (!configStr) {
+      const config = readConfig(this.el);
+      if (!config) {
         console.error('[MaplibreX] No config found on terrain element');
         return;
       }
 
-      const config: TerrainConfig = JSON.parse(configStr);
-      const mapId = config.mapId;
-
-      // Get the map instance
-      const map = MapManager.get(mapId);
-      if (!map) {
-        console.error(`[MaplibreX] Map "${mapId}" not found for terrain`);
-        return;
-      }
-
-      // Wait until the map is fully loaded
-      const enableTerrain = () => {
-        try {
-          // Make sure the source exists
-          const source = map.getSource(config.sourceId);
-          if (!source) {
-            console.error(`[MaplibreX] Source "${config.sourceId}" not found for terrain`);
-            this.pushEvent('terrain:error', {
-              error: `Source "${config.sourceId}" not found`
-            });
-            return;
-          }
-
-          // Enable terrain with the given source
-          map.setTerrain({
-            source: config.sourceId,
-            exaggeration: config.exaggeration
-          });
-
-          // Guardar estado
-          (this as any)._maplibrex_terrain = {
-            config
-          };
-
-          // Emitir evento de terreno habilitado
-          this.pushEvent('terrain:enabled', {
-            source_id: config.sourceId,
-            exaggeration: config.exaggeration
-          });
-
-          logger.debug(`[MaplibreX] Terrain enabled with source "${config.sourceId}" and exaggeration ${config.exaggeration}`);
-
-        } catch (error) {
-          console.error(`[MaplibreX] Error enabling terrain:`, error);
-          this.pushEvent('terrain:error', {
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      };
-
-      // If the map has already loaded, enable terrain immediately
-      if (map.isStyleLoaded()) {
-        enableTerrain();
-      } else {
-        // Wait for the style to load
-        map.once('load', enableTerrain);
-      }
-
+      this._maplibrex_terrain = new ManagedTerrain(config.mapId, desiredTerrain(config), {
+        onFirstEnable: (terrain) =>
+          this.pushEvent('terrain:enabled', { source_id: terrain.source, exaggeration: terrain.exaggeration }),
+        onError: (error) =>
+          this.pushEvent('terrain:error', { error: error instanceof Error ? error.message : 'Unknown error' })
+      });
     } catch (error) {
       console.error('[MaplibreX] Error mounting terrain:', error);
     }
   },
 
-  updated(this: any) {
-    const el = this.el as HTMLElement;
+  updated(this: TerrainHookContext) {
+    const terrain = this._maplibrex_terrain;
+    if (!terrain) return;
 
     try {
-      const configStr = el.dataset.config;
-      if (!configStr) return;
-
-      const newConfig: TerrainConfig = JSON.parse(configStr);
-      const state: TerrainHookState | undefined = (this as any)._maplibrex_terrain;
-      
-      if (!state) return;
-
-      // Update the terrain when the configuration changed
-      if (
-        newConfig.sourceId !== state.config.sourceId ||
-        newConfig.exaggeration !== state.config.exaggeration
-      ) {
-        const map = MapManager.get(newConfig.mapId);
-        if (map && map.isStyleLoaded()) {
-          try {
-            map.setTerrain({
-              source: newConfig.sourceId,
-              exaggeration: newConfig.exaggeration
-            });
-
-            // Actualizar estado
-            state.config = newConfig;
-
-            logger.debug(`[MaplibreX] Terrain updated: source="${newConfig.sourceId}", exaggeration=${newConfig.exaggeration}`);
-          } catch (error) {
-            console.error('[MaplibreX] Error updating terrain:', error);
-          }
-        }
-      }
+      const config = readConfig(this.el);
+      if (config) terrain.update(desiredTerrain(config));
     } catch (error) {
-      console.error('[MaplibreX] Error in terrain updated:', error);
+      console.error('[MaplibreX] Error updating terrain:', error);
     }
   },
 
-  destroyed(this: any) {
-    const state: TerrainHookState | undefined = (this as any)._maplibrex_terrain;
-    if (!state) return;
+  destroyed(this: TerrainHookContext) {
+    const terrain = this._maplibrex_terrain;
+    if (!terrain) return;
+    this._maplibrex_terrain = undefined;
 
     try {
-      const map = MapManager.get(state.config.mapId);
-      if (map) {
-        // Deshabilitar terreno
-        try {
-          map.setTerrain(null);
-          this.pushEvent('terrain:disabled', {});
-          logger.debug(`[MaplibreX] Terrain disabled`);
-        } catch (e) {
-          console.warn(`[MaplibreX] Could not disable terrain: ${e}`);
-        }
-      }
+      if (terrain.destroy()) this.pushEvent('terrain:disabled', {});
     } catch (error) {
-      console.error('[MaplibreX] Error destroying terrain:', error);
+      console.warn('[MaplibreX] Could not disable terrain:', error);
     }
   }
 };

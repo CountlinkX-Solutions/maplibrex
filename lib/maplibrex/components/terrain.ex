@@ -3,7 +3,13 @@ defmodule MaplibreX.Components.Terrain do
   Terrain component for enabling 3D terrain visualization in MapLibre maps.
 
   This component enables 3D terrain rendering using a RasterDEMSource.
-  It requires a RasterDEMSource to be configured on the map first.
+
+  The terrain is turned on as soon as the map exists, its style can take it
+  and the DEM source is on the map, whatever the order of the components in
+  the template: a terrain rendered before its map or its source waits for
+  them, however late the source comes. It follows changes to `source_id` and
+  `exaggeration`, is turned back on after the map style changes, and is turned
+  off when the component is removed.
 
   ## Examples
 
@@ -54,7 +60,9 @@ defmodule MaplibreX.Components.Terrain do
 
   ## Notes
 
-  - Requires a RasterDEMSource to be configured first
+  - Needs a RasterDEMSource with the id given as `source_id`; until it is on
+    the map the terrain waits for it, with one console warning (none when a
+    source component is about to add it) and no `terrain:error`
   - Exaggeration values typically range from 0.5 to 3.0
   - Higher exaggeration makes terrain more dramatic
   - Terrain rendering requires WebGL support
@@ -78,14 +86,19 @@ defmodule MaplibreX.Components.Terrain do
 
   ## Events
 
-  * `terrain:enabled` - Fired when terrain is successfully enabled
-  * `terrain:disabled` - Fired when terrain is disabled
-  * `terrain:error` - Fired when there's an error enabling terrain
+  * `terrain:enabled` - Fired once, the first time the terrain is on, with
+    `source_id` and `exaggeration`. Not fired again when a style change or a
+    new assign turns it on again
+  * `terrain:disabled` - Fired when the component is removed and turns the
+    terrain off. A terrain that is no longer the component's own (another one
+    was set since) is left on, and the event is not fired
+  * `terrain:error` - Fired, with `error`, when MapLibre fails to enable the
+    terrain. A source that is not on the map yet is not an error
 
   ## Requirements
 
-  - A RasterDEMSource must be added to the map before enabling terrain
-  - The source_id must match an existing RasterDEMSource
+  - The source_id must name a RasterDEMSource, rendered before or after this
+    component
   - The map must support WebGL
 
   ## Camera Settings
