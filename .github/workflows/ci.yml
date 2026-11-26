@@ -97,8 +97,10 @@ jobs:
         run: npx tsc --noEmit
         working-directory: assets
 
-      # Hook tests run against a hand-written maplibre-gl mock (assets/test).
+      # Hook tests run against a hand-written maplibre-gl mock (assets/test),
+      # so the pinned version makes no difference: run them once.
       - name: Hook tests
+        if: matrix.maplibre == '6'
         run: npm test
         working-directory: assets
 
