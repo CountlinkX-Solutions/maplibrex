@@ -215,6 +215,24 @@ alias MaplibreX.Components.Map
 Available: `fly_to/4`, `jump_to/4`, `fit_bounds/3`, `set_style/2`, `zoom_in/1`,
 `zoom_out/1`, `reset_north/1`.
 
+### Commands pushed from the server
+
+The same commands can be sent from the LiveView process with `push_event/3`:
+`map:fly_to`, `map:jump_to`, `map:fit_bounds`, `map:set_style`,
+`map:set_bearing`, `map:set_pitch`, `map:reset_north`, `map:zoom_in` and
+`map:zoom_out`.
+
+Without further information every `<.map>` on the page reacts. Add the map's
+component id as `id` to the payload to address a single map; maps with a
+different id ignore the event:
+
+```elixir
+# Only the map rendered with id="detail" flies.
+push_event(socket, "map:fly_to", %{id: "detail", center: [-3.7, 40.4], zoom: 12})
+```
+
+`id` is optional, so payloads without it behave exactly as before.
+
 ## Demo
 
 A full Phoenix application exercising every component:

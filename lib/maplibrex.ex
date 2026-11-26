@@ -64,6 +64,13 @@ defmodule MaplibreX do
       <button phx-click={Map.zoom_in("my-map")}>Zoom in</button>
 
   See `MaplibreX.Components.Map` for the full command set.
+
+  The same commands can be pushed from the server (`map:fly_to`, `map:jump_to`,
+  `map:fit_bounds`, `map:set_style`, `map:set_bearing`, `map:set_pitch`,
+  `map:reset_north`, `map:zoom_in`, `map:zoom_out`). Every map reacts unless the
+  payload carries the optional `id` of one map; the others then ignore it:
+
+      push_event(socket, "map:fly_to", %{id: "detail", center: [-3.7, 40.4], zoom: 12})
   """
 
   @default_style "https://demotiles.maplibre.org/style.json"
