@@ -43,4 +43,18 @@ describe('GeoJSONLayerHook', () => {
     expect(clicks).toHaveLength(1);
     expect(map.listenerCount('click', 'points')).toBe(1);
   });
+
+  it('does not add anything when destroyed before the style has loaded', () => {
+    const map = registerMap('map');
+    map.isStyleLoaded = () => false;
+    const m = mountHook(GeoJSONLayerHook, config);
+
+    m.destroy();
+    map.emit('load');
+
+    expect(map.addSource).not.toHaveBeenCalled();
+    expect(map.addLayer).not.toHaveBeenCalled();
+    expect(map.listenerCount('click', 'points')).toBe(0);
+    expect(map.listenerCount('load')).toBe(0);
+  });
 });

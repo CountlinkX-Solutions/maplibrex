@@ -44,6 +44,8 @@ interface GeoJSONLayerHookState {
   sourceId: string;
   layerId: string;
   handlers: LayerHandlers;
+  /** Set while the layer is waiting for the map's `load` event. */
+  deferredAdd?: () => void;
 }
 
 /**
@@ -154,9 +156,11 @@ export const GeoJSONLayerHook: LiveViewHook = {
         }
       };
 
+      let deferredAdd: (() => void) | undefined;
       if (map.isStyleLoaded()) {
         addLayer();
       } else {
+        deferredAdd = addLayer;
         map.once('load', addLayer);
       }
 
@@ -194,7 +198,8 @@ export const GeoJSONLayerHook: LiveViewHook = {
         map,
         sourceId,
         layerId,
-        handlers
+        handlers,
+        deferredAdd
       };
 
       logger.debug(`[MaplibreX] GeoJSON Layer "${layerId}" created`);
@@ -265,6 +270,9 @@ export const GeoJSONLayerHook: LiveViewHook = {
     if (!state) return;
 
     try {
+      // Never let a pending deferred add run after teardown.
+      if (state.deferredAdd) state.map.off('load', state.deferredAdd);
+
       const { handlers } = state;
       if (handlers.click) state.map.off('click', state.layerId, handlers.click);
       if (handlers.mouseenter) state.map.off('mouseenter', state.layerId, handlers.mouseenter);
