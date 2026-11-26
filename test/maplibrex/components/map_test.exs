@@ -68,6 +68,55 @@ defmodule MaplibreX.Components.MapTest do
       assert html =~ ~s(phx-update="ignore")
     end
 
+    test "renders nested components right after the map element, not inside it (#15)" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id="test-map">
+          <MaplibreX.Components.Marker.marker id="pin" map_id="test-map" lng_lat={[-3.7, 40.4]} />
+          <MaplibreX.Components.CircleLayer.circle_layer
+            id="points"
+            map_id="test-map"
+            source_id="places"
+          />
+        </.map>
+        """)
+
+      # LiveView never patches inside a phx-update="ignore" element, so a
+      # component rendered there would never follow its assigns, mount or
+      # unmount. The slot is the map element's next sibling, with no wrapper.
+      assert html =~
+               ~r{\A<div id="test-map"[^>]*phx-update="ignore"[^>]*></div>\s*<div id="pin"[^>]*phx-hook="MarkerHook"}
+
+      assert html =~ ~r{<div id="points"[^>]*phx-hook="CircleLayerHook"[^>]*></div>\s*\z}
+    end
+
+    test "renders other slot content after the map element too" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id="test-map" class="relative h-96">
+          <div id="legend">Legend</div>
+        </.map>
+        """)
+
+      assert html =~
+               ~r{\A<div id="test-map"[^>]*class="relative h-96"[^>]*></div>\s*<div id="legend">Legend</div>\s*\z}
+    end
+
+    test "renders only the map element when the slot is empty" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.map id="test-map" />
+        """)
+
+      assert html =~ ~r{\A<div id="test-map"[^>]*phx-hook="MapHook"[^>]*>\s*</div>\z}
+    end
+
     test "includes correct configuration in data-config" do
       assigns = %{
         id: "test-map",
