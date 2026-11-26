@@ -696,6 +696,117 @@ describe('click and hover events', () => {
   });
 });
 
+describe('a layer with its id already on the map (#46)', () => {
+  const takeOverWarning = expect.stringContaining(`Layer "${ID}" was already on map "map"`);
+
+  /** A registered map that already has the case's source and a layer with its id, from the style or other code. */
+  function mapWithLayer(c: LayerCase): FakeMap {
+    const map = mapFor(c);
+    map.addLayer(specFor(c) as never);
+    map.addLayer.mockClear();
+    return register(map);
+  }
+
+  it.each(LAYERS)('%s takes it over for updates, with one warning, and leaves it on the map when destroyed', (_name, c) => {
+    const map = mapWithLayer(c);
+    const layer = map.getLayer(ID);
+
+    const m = mountHook(c.hook, configFor(c));
+    map.emit('styledata', STYLEDATA);
+    m.update(configFor(c, { paint: c.repaint }));
+
+    expect(map.addLayer).not.toHaveBeenCalled();
+    expect(map.getLayer(ID)).toBe(layer);
+    expect(map.getLayer(ID)).toMatchObject(specFor(c, c.repaint));
+    expect(warn.mock.calls).toEqual([[takeOverWarning]]);
+
+    m.destroy();
+
+    expect(map.getLayer(ID)).toBe(layer);
+    expect(map.removeLayer).not.toHaveBeenCalled();
+    expect(map.listenerKeys()).toEqual([]);
+    expect(pushed(m)).toEqual([]);
+  });
+
+  it.each(LAYERS)('%s does not replace a layer it took over for a change that takes a re-add, and says so', (_name, c) => {
+    const map = mapWithLayer(c);
+    const layer = map.getLayer(ID);
+    const m = mountHook(c.hook, configFor(c, { minZoom: 2 }));
+
+    // A zoom bound that is no longer set takes a re-add: setLayerZoomRange cannot clear one.
+    m.update(configFor(c));
+
+    expect(map.removeLayer).not.toHaveBeenCalled();
+    expect(map.getLayer(ID)).toBe(layer);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls[1][0]).toContain('is not applied');
+
+    m.destroy();
+    expect(map.getLayer(ID)).toBe(layer);
+    expect(pushed(m)).toEqual([]);
+  });
+
+  it.each(LAYERS)('%s adds the layer itself once a style change drops the one it took over, and removes it as its own', (_name, c) => {
+    const map = mapWithLayer(c);
+    const m = mountHook(c.hook, configFor(c));
+
+    map.setStyle(styleFor(c));
+
+    expect(map.getLayer(ID)).toMatchObject(specFor(c));
+    expect(map.addLayer).toHaveBeenCalledTimes(1);
+    expect(pushed(m)).toEqual(['layer:added']);
+
+    m.destroy();
+
+    expect(map.getLayer(ID)).toBeUndefined();
+    expect(pushed(m)).toEqual(['layer:added', 'layer:removed']);
+  });
+
+  it.each(LAYERS)('%s leaves on the map the layer with its id that a full style rebuild brings in place of its own', (_name, c) => {
+    const map = register(mapFor(c));
+    const m = mountHook(c.hook, configFor(c));
+    const styleLayer = { ...specFor(c), paint: c.repaint };
+
+    map.setStyle(styleFor(c, [styleLayer]), { diff: false });
+    map.finishStyleLoad();
+    expect(warn.mock.calls).toEqual([[takeOverWarning]]);
+
+    m.destroy();
+
+    expect(map.getLayer(ID)).toMatchObject(styleLayer);
+    // Its own layer is gone all the same.
+    expect(pushed(m)).toEqual(['layer:added', 'layer:removed']);
+  });
+
+  it('a layer leaves on the map the layer with its id that a style diff adds in place of its own', () => {
+    const c = LAYERS[0][1];
+    const map = register(mapFor(c));
+    const m = mountHook(c.hook, configFor(c));
+    // Another type: the diff removes the layer and adds the style's.
+    const styleLayer = { id: ID, type: 'background' };
+
+    map.setStyle(styleFor(c, [styleLayer]));
+    m.destroy();
+
+    expect(map.getLayer(ID)).toMatchObject(styleLayer);
+    expect(warn.mock.calls).toEqual([[takeOverWarning]]);
+  });
+
+  it.each(LAYERS)('%s keeps as its own, and removes, its layer when a style diff only restyles it in place', (_name, c) => {
+    const map = register(mapFor(c));
+    const m = mountHook(c.hook, configFor(c));
+
+    // MapLibre changes the layer it holds; the layer is still the one the component added.
+    map.setStyle(styleFor(c, [specFor(c, c.repaint)]));
+    expect(warn).not.toHaveBeenCalled();
+
+    m.destroy();
+
+    expect(map.getLayer(ID)).toBeUndefined();
+    expect(pushed(m)).toEqual(['layer:added', 'layer:removed']);
+  });
+});
+
 describe('destroyed()', () => {
   it.each(LAYERS)('%s removes the layer and every listener, and pushes layer:removed', (_name, c) => {
     const map = register(mapFor(c));

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A layer or source component whose id is already on the map when it mounts,
+  from the map style, your own code or another component, no longer removes
+  that layer or source when the component is removed ([#46]). In 0.2.0 it
+  did, so a component sharing an id with a basemap layer deleted that part of
+  the basemap when it went away. The component still takes the layer or
+  source over: it applies the changes MapLibre can make in place (paint,
+  layout, filter, zoom range and `before_id` for layers; new tiles, URL, image
+  or coordinates for sources) and logs one console warning saying that the id
+  was already in use. It pushes no `layer:added`/`layer:removed` or
+  `source:added`/`source:removed` for it, and a change that would mean
+  removing it (a new `source_id` or `source_layer`, a zoom bound that is no
+  longer set, a source change MapLibre cannot make in place) is not applied,
+  with a console warning. This covers the source and layer of
+  `geojson_layer` too.
+- What a component removes now follows what it added. Once a map style
+  change drops a layer or source the component took over and the component
+  adds it itself, it is the component's own: `layer:added` or `source:added`
+  is pushed then, and the component removes it, and pushes `layer:removed` or
+  `source:removed`, when it goes. The other way round, when a style change
+  puts a layer or source with the same id in place of the component's own,
+  the component leaves the style's on the map; it still pushes
+  `layer:removed` or `source:removed` for its own. `terrain` likewise turns
+  off only the terrain it set, not one with the same settings that a style
+  change loaded.
+
 ## [0.2.0] - 2026-11-26
 
 Layers, sources and terrain now stay on the map for as long as their
@@ -316,6 +343,7 @@ First public release.
 [#26]: https://github.com/CountlinkX-Solutions/maplibrex/issues/26
 [#41]: https://github.com/CountlinkX-Solutions/maplibrex/issues/41
 [#42]: https://github.com/CountlinkX-Solutions/maplibrex/issues/42
+[#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1

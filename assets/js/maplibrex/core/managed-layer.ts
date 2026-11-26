@@ -12,7 +12,12 @@
  *   removes and re-adds the layer where it cannot (#3);
  * - it puts the layer back, as currently desired, after a style change drops
  *   it (#4);
- * - `destroy()` removes the layer, every listener and every pending wait.
+ * - `destroy()` removes the layer, if it added it, every listener and every
+ *   pending wait.
+ *
+ * A layer with its id that is already on the map, from the map style or other
+ * code, is taken over (#46; see ManagedItem): `update()` changes it in place
+ * but does not re-add it, and `destroy()` leaves it on the map.
  *
  * The waiting and the map listeners come from ManagedItem
  * (core/managed-item.ts), shared with ManagedSource. A layer tells
@@ -190,8 +195,9 @@ export class ManagedLayer extends ManagedItem {
 
   /**
    * Make `desired` the layer's desired state. If the layer is on the map it is
-   * changed now, in place where MapLibre allows it; otherwise the next add
-   * uses it.
+   * changed now, in place where MapLibre allows it, otherwise removed and
+   * added again, unless this class did not add it; if it is not on the map,
+   * the next add uses it.
    */
   update(desired: DesiredLayer): void {
     if (this.destroyed) return;
@@ -201,7 +207,8 @@ export class ManagedLayer extends ManagedItem {
     this.refused = false;
 
     const map = this.map;
-    if (!map || !map.getLayer(this.id)) {
+    const layer = map?.getLayer(this.id);
+    if (!map || !layer) {
       this.reconcile();
       return;
     }
@@ -209,6 +216,11 @@ export class ManagedLayer extends ManagedItem {
     try {
       const changes = diffLayer(previous, desired);
       if (changes === null) {
+        // A re-add would remove a layer the component did not add (#46).
+        if (!this.owns(layer)) {
+          this.skipReplacement('Layer', this.label);
+          return;
+        }
         map.removeLayer(this.id);
         this.reconcile();
         // Back on the map, or moved to another source: a removal waiting for the old one may go ahead.
@@ -223,7 +235,8 @@ export class ManagedLayer extends ManagedItem {
 
   /**
    * Stop keeping the layer: cancel every pending wait, detach every listener
-   * and remove the layer if it is on the map. Idempotent.
+   * and remove the layer if it is on the map and this class added it.
+   * Idempotent.
    */
   destroy(): void {
     if (this.destroyed) return;
@@ -237,8 +250,9 @@ export class ManagedLayer extends ManagedItem {
     }
     const stack = stacks.get(map);
     if (stack?.includes(this)) stack.splice(stack.indexOf(this), 1);
-    // A map removed by its own hook first has no style left to remove from.
-    if (this.isRegistered(map) && map.getLayer(this.id)) {
+    // A map removed by its own hook first has no style left to remove from,
+    // and a layer the component did not add stays (#46).
+    if (this.isRegistered(map) && this.owns(map.getLayer(this.id))) {
       map.removeLayer(this.id);
       ManagedSource.layerRemoved(this.mapId);
     }
@@ -251,8 +265,10 @@ export class ManagedLayer extends ManagedItem {
     if (!map || this.destroyed) return;
 
     try {
-      if (map.getLayer(this.id)) {
-        // A layer that was on the map before this component is taken over; it still needs its listeners.
+      const layer = map.getLayer(this.id);
+      if (layer) {
+        // A layer the component did not add is taken over (#46); it still needs its listeners.
+        if (!this.owns(layer)) this.tookOver('Layer', this.label);
         this.attachListeners(map);
         this.moveUnderAwaitedLayer(map);
         return;
@@ -283,10 +299,12 @@ export class ManagedLayer extends ManagedItem {
 
   private add(map: Map): void {
     map.addLayer({ id: this.id, ...this.desired.spec } as AddLayerObject, this.placeBefore(map));
-    if (!map.getLayer(this.id)) {
+    const layer = map.getLayer(this.id);
+    if (!layer) {
       this.refused = true;
       return;
     }
+    this.claim(layer);
     logger.debug(`[MaplibreX] ${this.label} added to map "${this.mapId}"`);
 
     if (!this.wasAdded) {

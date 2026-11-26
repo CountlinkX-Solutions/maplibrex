@@ -13,8 +13,8 @@
  * - it puts the source back, as currently desired, after a style change
  *   drops it (#4), which `styledata` reports; in the common case (the source
  *   is on the map) that costs one `getSource` lookup;
- * - `destroy()` removes the source, or, while layers still use it, waits
- *   until none does (#18).
+ * - `destroy()` removes the source it added, or, while layers still use it,
+ *   waits until none does (#18).
  *
  * Replacing a source. MapLibre refuses to remove a source that a layer uses,
  * so a change no method can apply takes every layer using the source off the
@@ -39,13 +39,19 @@
  * the previous owner stops without removing anything, and the new one brings
  * the source on the map to its own specification and inherits whether
  * `onFirstAdd` already ran, so `source:added` and `source:removed` stay
- * paired.
+ * paired, and whether the source on the map is its own to remove.
+ *
+ * A source with its id that is already on the map, from the map style or
+ * other code, is taken over (#46; see ManagedItem): `update()` changes it in
+ * place but does not replace it, and `destroy()` leaves it on the map. The
+ * same goes for a source with its id that a style change puts in place of
+ * this class's own, even while its removal waits for layers.
  */
 
 import type { Map, SourceSpecification } from 'maplibre-gl';
 
 import { logger } from './logger';
-import { ManagedItem, isEqual, whilePaused } from './managed-item';
+import { ManagedItem, adderOf, isEqual, recordAdd, whilePaused } from './managed-item';
 import { isStyleReady } from './style-ready';
 
 /** A source specification: what `addSource` takes. */
@@ -106,6 +112,8 @@ export function diffSource(previous: SourceSpec, next: SourceSpec, inPlace: InPl
 
 /** What an owner hands over to the ManagedSource that takes its source over. */
 interface Handover {
+  /** The owner itself: the source on the map is the new owner's to remove if this one added it. */
+  from: ManagedSource;
   /** The map it was on, if it had one yet. */
   map?: Map;
   /** The specification the source on that map has. */
@@ -188,7 +196,8 @@ export class ManagedSource extends ManagedItem {
 
   /**
    * Make `spec` the source's desired specification. If the source is on the
-   * map it is changed now, in place where MapLibre allows it; otherwise the
+   * map it is changed now, in place where MapLibre allows it, otherwise
+   * replaced, unless this class did not add it; if it is not on the map, the
    * next add uses it.
    */
   update(spec: SourceSpec): void {
@@ -212,8 +221,8 @@ export class ManagedSource extends ManagedItem {
 
   /**
    * Stop keeping the source: cancel every pending wait, detach the
-   * component's listeners and remove the source, now if no layer uses it,
-   * otherwise once none does. Idempotent.
+   * component's listeners and remove the source if this class added it, now
+   * if no layer uses it, otherwise once none does. Idempotent.
    */
   destroy(): void {
     if (this.destroyed) return;
@@ -259,7 +268,11 @@ export class ManagedSource extends ManagedItem {
     }
 
     try {
-      if (map.getSource(this.id)) return;
+      const source = map.getSource(this.id);
+      if (source) {
+        if (!this.owns(source)) this.tookOver('Source', this.label);
+        return;
+      }
       if (this.refused) return;
       if (!isStyleReady(map)) {
         this.waitForStyle(map);
@@ -274,10 +287,12 @@ export class ManagedSource extends ManagedItem {
 
   private add(map: Map): void {
     map.addSource(this.id, this.desired as SourceSpecification);
-    if (!map.getSource(this.id)) {
+    const source = map.getSource(this.id);
+    if (!source) {
       this.refused = true;
       return;
     }
+    this.claim(source);
     logger.debug(`[MaplibreX] ${this.label} added to map "${this.mapId}"`);
 
     if (!this.wasAdded) {
@@ -292,7 +307,12 @@ export class ManagedSource extends ManagedItem {
     const updates = diffSource(previous, this.desired, this.options.inPlace);
     // A method missing from this MapLibre version means a replacement too.
     if (updates === null || updates.some(({ method }) => typeof source[method] !== 'function')) {
-      this.replace(map);
+      // A replacement would remove a source the component did not add (#46).
+      if (this.owns(source)) {
+        this.replace(map);
+      } else {
+        this.skipReplacement('Source', this.label);
+      }
       return;
     }
     for (const { method, args } of updates) {
@@ -306,6 +326,8 @@ export class ManagedSource extends ManagedItem {
     const order = map.getLayersOrder();
     const current = style?.sources?.[this.id];
     const users = (style?.layers ?? []).filter((layer) => 'source' in layer && layer.source === this.id);
+    // The layers come back as new objects: each stays owned by the item that added it.
+    const adders = users.map((layer) => adderOf(map.getLayer(layer.id)));
     let failure: unknown;
 
     whilePaused(map, () => {
@@ -320,7 +342,12 @@ export class ManagedSource extends ManagedItem {
         this.refused = true;
         if (current) map.addSource(this.id, current);
       }
-      for (const layer of users) map.addLayer(layer, nextLayerOnMap(map, order, layer.id));
+      // The new source, or the previous one put back: this class's own either way.
+      this.claim(map.getSource(this.id));
+      users.forEach((layer, index) => {
+        map.addLayer(layer, nextLayerOnMap(map, order, layer.id));
+        recordAdd(map.getLayer(layer.id), adders[index]);
+      });
     });
 
     if (failure !== undefined) throw failure;
@@ -331,7 +358,9 @@ export class ManagedSource extends ManagedItem {
   private takeOver(map: Map, inherited: Handover): void {
     this.wasAdded = inherited.added;
     try {
-      if (!map.getSource(this.id) || isEqual(inherited.spec, this.desired)) return;
+      const source = map.getSource(this.id);
+      if (adderOf(source) === inherited.from) this.claim(source);
+      if (!source || isEqual(inherited.spec, this.desired)) return;
       this.change(map, inherited.spec);
     } catch (error) {
       this.fail('updating', error);
@@ -340,7 +369,7 @@ export class ManagedSource extends ManagedItem {
 
   /** Stop for good because another ManagedSource took the source over, and say what it takes over. */
   private release(): Handover {
-    const handed: Handover = { map: this.map, spec: this.desired, added: this.wasAdded };
+    const handed: Handover = { from: this, map: this.map, spec: this.desired, added: this.wasAdded };
     this.released = true;
     this.wasAdded = false;
     this.removalPending = false;
@@ -350,13 +379,16 @@ export class ManagedSource extends ManagedItem {
     return handed;
   }
 
-  /** If a removal waits for the source's layers, remove the source once none uses it. */
+  /**
+   * If a removal waits for the source's layers, remove the source once none
+   * uses it. A source on the map that this class did not add is left there.
+   */
   private retryRemoval(): void {
     const map = this.map;
     if (!this.removalPending || !map) return;
 
     try {
-      if (map.getSource(this.id)) {
+      if (this.owns(map.getSource(this.id))) {
         if (this.isUsed(map)) return;
         map.removeSource(this.id);
         if (map.getSource(this.id)) return;

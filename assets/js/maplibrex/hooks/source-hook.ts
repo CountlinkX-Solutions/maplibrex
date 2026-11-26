@@ -8,7 +8,9 @@
  * source on the map: it is added once the map and its style are ready,
  * follows `updated()` (in place where MapLibre allows it, otherwise by
  * replacing the source under its layers), comes back after a style change,
- * and is removed by `destroyed()`, or once the last layer using it is gone.
+ * and is removed by `destroyed()`, or once the last layer using it is gone. A
+ * source with its id that was already on the map is taken over and left
+ * there (#46).
  *
  * Each component's hook only declares what is its own: the source type, the
  * config keys that go into the specification, the changes MapLibre applies in

@@ -565,24 +565,128 @@ describe('destroyed() (#18)', () => {
   });
 });
 
-describe('a source with its id already on the map', () => {
-  it.each(SOURCES)('%s takes it over: no add, no source:added, updated in place, removed on destroy', (_name, c) => {
+describe('a source with its id already on the map (#46)', () => {
+  const takeOverWarning = expect.stringContaining(`Source "${ID}" was already on map "map"`);
+
+  /** A registered map that already has a source with the case's id and specification, from the style or other code. */
+  function mapWithSource(c: SourceCase): FakeMap {
     const map = register();
     map.addSource(ID, specFor(c));
     map.addSource.mockClear();
+    return map;
+  }
+
+  it.each(SOURCES)('%s takes it over for updates, with one warning, and leaves it on the map when destroyed', (_name, c) => {
+    const map = mapWithSource(c);
+    const source = map.getSource(ID);
 
     const m = mountHook(c.hook, configFor(c));
-    expect(map.addSource).not.toHaveBeenCalled();
-    expect(warn).not.toHaveBeenCalled();
-
+    map.emit('styledata', STYLEDATA);
     const { change, method } = c.inPlace[0];
     m.update(configFor(c, change));
-    expect(map.getSource(ID)[method]).toHaveBeenCalledTimes(1);
+
+    expect(map.addSource).not.toHaveBeenCalled();
+    expect(source[method]).toHaveBeenCalledTimes(1);
     expect(onMap(map)).toEqual(specFor(c, change));
+    expect(warn.mock.calls).toEqual([[takeOverWarning]]);
 
     m.destroy();
-    expect(map.getSource(ID)).toBeUndefined();
+
+    expect(map.getSource(ID)).toBe(source);
+    expect(map.removeSource).not.toHaveBeenCalled();
+    expect(map.listenerKeys()).toEqual([]);
     expect(lifecycle(m)).toEqual([]);
+  });
+
+  it.each(RE_ADDED)('%s does not replace a source it took over for a change that takes a new source, and says so', (_name, c) => {
+    const map = mapWithSource(c);
+    const source = map.getSource(ID);
+    const m = mountHook(c.hook, configFor(c));
+
+    m.update(configFor(c, c.reAdd));
+
+    expect(map.getSource(ID)).toBe(source);
+    expect(onMap(map)).toEqual(specFor(c));
+    expect(map.removeSource).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls[1][0]).toContain('is not applied');
+    expect(m.hook.pushEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(SOURCES)('%s adds the source itself once a style change drops the one it took over, and removes it as its own', (_name, c) => {
+    const map = mapWithSource(c);
+    const m = mountHook(c.hook, configFor(c));
+
+    map.setStyle({ version: 8, sources: {}, layers: [] });
+
+    expect(onMap(map)).toEqual(specFor(c));
+    expect(map.addSource).toHaveBeenCalledTimes(1);
+    expect(lifecycle(m)).toEqual([ADDED]);
+
+    m.destroy();
+
+    expect(map.getSource(ID)).toBeUndefined();
+    expect(lifecycle(m)).toEqual([ADDED, REMOVED]);
+  });
+
+  it.each(SOURCES)('%s leaves on the map the source with its id that a style change brings in place of its own', (_name, c) => {
+    const map = register();
+    const m = mountHook(c.hook, configFor(c));
+    const basemap = { ...specFor(c), attribution: 'basemap' };
+
+    map.setStyle({ version: 8, sources: { [ID]: basemap }, layers: [] });
+    expect(warn.mock.calls).toEqual([[takeOverWarning]]);
+
+    m.destroy();
+
+    expect(onMap(map)).toEqual(basemap);
+    expect(map.removeSource).not.toHaveBeenCalled();
+    // Its own source is gone all the same.
+    expect(lifecycle(m)).toEqual([ADDED, REMOVED]);
+  });
+
+  it.each(SOURCES)('%s waiting for its layers leaves alone the source with its id that a style change brings', (_name, c) => {
+    const map = register();
+    const m = mountHook(c.hook, configFor(c));
+    addUnmanagedLayer(map, c);
+    m.destroy();
+    const basemap = { ...specFor(c), attribution: 'basemap' };
+
+    map.setStyle({ version: 8, sources: { [ID]: basemap }, layers: [{ id: 'user', type: c.layer.type, source: ID }] });
+
+    expect(onMap(map)).toEqual(basemap);
+    expect(map.getLayer('user')).toBeDefined();
+    expect(map.removeSource).not.toHaveBeenCalled();
+    expect(lifecycle(m)).toEqual([ADDED, REMOVED]);
+    expect(map.listenerKeys()).toEqual([]);
+  });
+
+  it.each(SOURCES)('%s mounted again while the one that took the source over is mounted leaves it on the map too', (_name, c) => {
+    const map = mapWithSource(c);
+    const source = map.getSource(ID);
+    const first = mountHook(c.hook, configFor(c));
+
+    const second = mountHook(c.hook, configFor(c));
+    first.destroy();
+    second.destroy();
+
+    expect(map.getSource(ID)).toBe(source);
+    expect(map.removeSource).not.toHaveBeenCalled();
+    expect(lifecycle(first)).toEqual([]);
+    expect(lifecycle(second)).toEqual([]);
+  });
+
+  it.each(RE_ADDED)('%s replaced under a layer component leaves the layer that component\'s own', (_name, c) => {
+    const map = register();
+    const m = mountHook(c.hook, configFor(c));
+    const layer = mountLayer(c);
+    m.update(configFor(c, c.reAdd));
+
+    layer.destroy();
+
+    expect(map.getLayer('lyr')).toBeUndefined();
+    expect(layer.hook.pushEvent.mock.calls.map(([name]: [string]) => name)).toEqual(['layer:added', 'layer:removed']);
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 
