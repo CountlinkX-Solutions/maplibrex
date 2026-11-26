@@ -4,7 +4,7 @@ defmodule MaplibreXTest do
 
   describe "MaplibreX module" do
     test "exports correct version" do
-      assert MaplibreX.version() == "0.2.0"
+      assert MaplibreX.version() == "0.2.1"
     end
   end
 end
