@@ -433,12 +433,18 @@ describe('FakeMap setStyle', () => {
     ]
   };
 
-  /** A map showing `basemap`, plus a source, a layer and terrain added at runtime. */
+  /** A map showing `basemap`, plus a source and a layer added at runtime. */
   function mapWithRuntimeContent(): FakeMap {
     const map = new FakeMap(undefined, { loaded: false });
     map.finishStyleLoad(basemap);
     map.addSource('points', { type: 'geojson', data: null });
     map.addLayer({ id: 'points', type: 'circle', source: 'points' });
+    return map;
+  }
+
+  /** `mapWithRuntimeContent()` with terrain on a runtime DEM source too. */
+  function mapWithRuntimeTerrain(): FakeMap {
+    const map = mapWithRuntimeContent();
     map.addSource('dem', { type: 'raster-dem', url: 'dem.json' });
     map.setTerrain({ source: 'dem' });
     return map;
@@ -453,7 +459,7 @@ describe('FakeMap setStyle', () => {
     expect(map.getLayersOrder()).toEqual(['water', 'roads']);
   });
 
-  it('diffs by default: drops sources, layers and terrain the new style lacks, and fires styledata', () => {
+  it('diffs by default: drops sources and layers the new style lacks, and fires styledata', () => {
     const map = mapWithRuntimeContent();
     const fired = recordEvents(map, ['styledataloading', 'styledata', 'style.load', 'load']);
     const next = {
@@ -468,7 +474,6 @@ describe('FakeMap setStyle', () => {
     expect(map.getSource('points')).toBeUndefined();
     expect(map.getLayer('points')).toBeUndefined();
     expect(map.getLayer('roads')).toBeUndefined();
-    expect(map.getTerrain()).toBeNull();
     expect(fired).toEqual(['styledata']);
     // The style document stays loaded on this path.
     expect(map.isStyleLoaded()).toBe(true);
@@ -502,8 +507,31 @@ describe('FakeMap setStyle', () => {
     expect(map.getStyle()).toEqual({ version: 8, sources: {}, layers: [] });
   });
 
+  // maplibre-gl 5.24.0 and 6.5.0 in a browser: the diff's setTerrain
+  // operation calls Map.setTerrain on the Style, which throws, and the map
+  // rebuilds the style from scratch instead.
+  it('rebuilds from scratch when the diff would change the terrain, as MapLibre does', () => {
+    const map = mapWithRuntimeTerrain();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fired = recordEvents(map, ['styledataloading', 'styledata', 'terrain']);
+
+    map.setStyle(basemap);
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unable to perform style diff'));
+    expect(fired).toEqual(['styledataloading']);
+    expect(map.getStyle()).toBeUndefined();
+    expect(map.getTerrain()).toEqual({ source: 'dem' });
+
+    map.finishStyleLoad();
+
+    expect(fired).toEqual(['styledataloading', 'terrain', 'styledata']);
+    expect(map.getTerrain()).toBeNull();
+    expect(map.getStyle()).toEqual(basemap);
+    warn.mockRestore();
+  });
+
   it('rebuilds from scratch with { diff: false }: style changes throw until the new style has loaded', () => {
-    const map = mapWithRuntimeContent();
+    const map = mapWithRuntimeTerrain();
     const fired = recordEvents(map, ['styledataloading', 'styledata', 'style.load', 'load']);
     const next = { version: 8, sources: { dem: { type: 'raster-dem', url: 'dem.json' } }, layers: [], terrain: { source: 'dem' } };
 

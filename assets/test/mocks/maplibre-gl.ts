@@ -466,16 +466,26 @@ export class FakeMap extends Emitter {
    * abandons the diff for a full rebuild. Custom layers, which the diff never
    * sees, stay where they are in the layer order.
    *
-   * Simplifications: terrain is applied after the other operations, and
-   * removing a sprite fires no `styledata` (MapLibre's `_unloadSprite` does).
+   * A diff that would change the terrain always throws: maplibre-gl 5.24.0 and
+   * 6.5.0 run its `setTerrain` operation as `map.setTerrain.apply(style)`,
+   * which fails on `this.style._checkLoaded()` (seen in a browser), so any
+   * style change while terrain is on rebuilds the style from scratch.
+   *
+   * Simplification: removing a sprite fires no `styledata` (MapLibre's
+   * `_unloadSprite` does).
    */
   private diffStyle(next: StyleSpec): void {
     const before = this.serializeStyle();
     const target = clone(next);
     const { sources: nextSources = {}, layers: nextLayers = [], terrain, ...rest } = target;
-    const { sources: beforeSources = {}, layers: beforeLayers = [], terrain: _terrain, ...beforeRest } = before;
+    const { sources: beforeSources = {}, layers: beforeLayers = [], terrain: beforeTerrain, ...beforeRest } = before;
     const operations: (() => void)[] = [];
     const added: string[] = [];
+
+    if (!deepEqual(beforeTerrain, terrain)) {
+      this.abandonDiff(next, new TypeError("Cannot read properties of undefined (reading '_checkLoaded')"));
+      return;
+    }
 
     // 1. Top-level fields.
     for (const key of new Set([...Object.keys(beforeRest), ...Object.keys(rest)])) {
@@ -521,24 +531,23 @@ export class FakeMap extends Emitter {
     // 4. Layers.
     this.diffLayers(keptLayers, nextLayers, operations);
 
-    const terrainChanged = !deepEqual(this.terrain ?? undefined, terrain);
-    if (operations.length === 0 && !terrainChanged) return;
-
+    if (operations.length === 0) return;
     try {
       operations.forEach((operation) => operation());
     } catch (error) {
-      console.warn(`Unable to perform style diff: ${(error as Error).message}.  Rebuilding the style from scratch.`);
-      this.rebuildStyle(next);
+      this.abandonDiff(next, error);
       return;
     }
 
     this.stylesheet = { version: 8, ...rest };
-    if (terrainChanged) {
-      this.terrain = terrain ?? null;
-      this.emit('terrain', { type: 'terrain', terrain: this.terrain });
-    }
     this.emit('styledata', { type: 'styledata', dataType: 'style' });
     this.emitSourceDataFor(added);
+  }
+
+  /** MapLibre's `_updateDiff` catching a failed diff: a warning, then a full rebuild. */
+  private abandonDiff(next: StyleSpec, error: unknown): void {
+    console.warn(`Unable to perform style diff: ${(error as Error).message}.  Rebuilding the style from scratch.`);
+    this.rebuildStyle(next);
   }
 
   /** A source the diff adds; its `sourcedata` comes after the diff, as MapLibre's arrives asynchronously. */
@@ -729,14 +738,15 @@ export class FakeMap extends Emitter {
 
   /**
    * By default MapLibre diffs the new style against the current one, and the
-   * result matches the new style: sources, layers and terrain added at
-   * runtime are dropped unless the new style has them too. The diff runs one
-   * operation at a time (see `diffStyle`), firing `sourcedata` for each source
-   * it removes. `styledata` fires when something changed (MapLibre fires it on
-   * the next frame; 6.5.0 also fires `style.load` on this path, 5.0.0 does not,
-   * so the mock leaves it out).
+   * result matches the new style: sources and layers added at runtime are
+   * dropped unless the new style has them too. The diff runs one operation at
+   * a time (see `diffStyle`), firing `sourcedata` for each source it removes.
+   * `styledata` fires when something changed (MapLibre fires it on the next
+   * frame; 6.5.0 and 5.24.0 also fire `style.load` on this path, 5.0.0 does
+   * not, so the mock leaves it out).
    *
-   * `{ diff: false }`, or a style document that has not loaded yet, takes the
+   * `{ diff: false }`, a style document that has not loaded yet, or a diff
+   * that fails (one that would change the terrain always does) takes the
    * full-rebuild path instead: sources and layers are gone and style changes
    * throw until `finishStyleLoad()` loads the new style.
    *
