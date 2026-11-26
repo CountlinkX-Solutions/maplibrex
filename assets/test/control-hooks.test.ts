@@ -94,7 +94,7 @@ describe('custom control hooks against their component markup', () => {
         'phx-target': '#t',
         'phx-disable-with': '...',
         'phx-keydown': 'k',
-        'phx-window-keyup': 'w',
+        'phx-key': 'Enter',
         'phx-debounce': '100',
         'phx-throttle': '50',
         'phx-hook': 'ControlButtonHook',
@@ -106,10 +106,26 @@ describe('custom control hooks against their component markup', () => {
       });
 
       ['phx-click', 'phx-value-id', 'phx-target', 'phx-disable-with', 'phx-keydown',
-        'phx-window-keyup', 'phx-debounce', 'phx-throttle'].forEach((n) =>
+        'phx-key', 'phx-debounce', 'phx-throttle'].forEach((n) =>
         expect(button.hasAttribute(n), n).toBe(true)
       );
       ['phx-hook', 'phx-update', 'phx-mounted', 'phx-remove', 'phx-connected', 'phx-disconnected']
+        .forEach((n) => expect(button.hasAttribute(n), n).toBe(false));
+    });
+
+    // LiveView runs a window binding for every element in the document that
+    // carries it, hidden or not: on both the wrapper and the button, each
+    // window event would be pushed twice.
+    it('leaves window bindings on the wrapper only', () => {
+      const { button } = mountButton({
+        'phx-window-keydown': 'k',
+        'phx-window-keyup': 'k',
+        'phx-window-focus': 'f',
+        'phx-window-blur': 'b'
+      });
+
+      expect(document.querySelectorAll('[phx-window-keydown]')).toHaveLength(1);
+      ['phx-window-keydown', 'phx-window-keyup', 'phx-window-focus', 'phx-window-blur']
         .forEach((n) => expect(button.hasAttribute(n), n).toBe(false));
     });
 
