@@ -79,7 +79,9 @@ class ButtonControl implements maplibregl.IControl {
  * container, so clicks on it never bubble through the wrapper. Copy the
  * event bindings (and the attributes that parameterise them) onto the button
  * so LiveView sees them where the click happens. Lifecycle and patching
- * attributes (`phx-hook`, `phx-update`, `phx-mounted`, ...) stay on the wrapper.
+ * attributes (`phx-hook`, `phx-update`, `phx-mounted`, ...) stay on the wrapper,
+ * and so do `phx-window-*` bindings: LiveView runs those for every element
+ * carrying them, hidden or not, so a copy would push each event twice.
  */
 const FORWARDED_BINDINGS = new Set([
   'phx-click',
@@ -88,10 +90,6 @@ const FORWARDED_BINDINGS = new Set([
   'phx-keyup',
   'phx-focus',
   'phx-blur',
-  'phx-window-keydown',
-  'phx-window-keyup',
-  'phx-window-focus',
-  'phx-window-blur',
   'phx-key',
   'phx-debounce',
   'phx-throttle',

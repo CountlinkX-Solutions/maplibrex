@@ -17,8 +17,11 @@ Bugfix release. There are no breaking changes.
   and `zoom_range` never reacted to the zoom: their hooks (`ControlHook`,
   `ControlButtonHook`, `ControlGroupHook`, `ZoomRangeHook`) were implemented but
   missing from `MapHooks` and the named exports ([#2]). `control_button` also
-  now forwards `phx-click` and `phx-value-*` bindings to its button, which the
-  map moves out of the component's wrapper element.
+  now forwards its `phx-click`, `phx-click-away`, `phx-keydown`, `phx-keyup`,
+  `phx-focus` and `phx-blur` bindings, with `phx-value-*`, `phx-key`,
+  `phx-target`, `phx-debounce`, `phx-throttle` and `phx-disable-with`, to its
+  button, which the map moves out of the component's wrapper element.
+  `phx-window-*` bindings stay on the wrapper, where they already work.
 - Controls survive LiveView re-renders: a re-render of `control`,
   `control_button` or `control_group` put the control's content back into the
   component's hidden wrapper, leaving an empty box on the map. The content now
