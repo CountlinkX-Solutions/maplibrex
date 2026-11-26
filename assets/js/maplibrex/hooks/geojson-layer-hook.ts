@@ -1,15 +1,36 @@
 /**
  * GeoJSONLayerHook - Hook for the GeoJSONLayer component
- * 
- * Manages GeoJSON layers with support for multiple layer types,
- * clustering, feature click events, and dynamic data updates.
+ *
+ * The component owns a GeoJSON source, `<id>-source`, and a layer `<id>`
+ * drawing it. The source is kept by a ManagedSource and the layer by a
+ * ManagedLayer, the same machinery as the source and layer components: both
+ * wait for the map and its style (#17, #12), follow `updated()` (#3), come
+ * back after a style change (#4) and are removed by `destroyed()`, the source
+ * once no other layer uses it (#18).
+ *
+ * New data goes to the source with `setData` and new cluster radius or max
+ * zoom with `setClusterOptions`; any other source change (turning clustering
+ * off, cluster properties, `generateId`) replaces the source under the layer.
+ *
+ * Server commands. `layer:set_paint_property`, `layer:set_layout_property`,
+ * `layer:set_filter` and `layer:set_data` change the layer's desired state on
+ * top of the rendered config, so what they set survives style changes and
+ * re-renders. A commanded value holds until the rendered value of the same
+ * property (the same paint or layout property, the filter, the data) changes:
+ * whichever changed last wins. A `null` value resets the property to its
+ * default.
+ *
+ * Events pushed to the server, all with both `layer_id` and `layerId`:
+ * - `layer:feature_clicked`, `layer:feature_mouseenter`,
+ *   `layer:feature_mouseleave`;
+ * - `layer:source_loaded` (also with `sourceId`), once, the first time the
+ *   layer's own source reports that it has loaded (#20).
  */
 
-// maplibre-gl v6 is ESM-only and no longer has a default export.
-import * as maplibregl from 'maplibre-gl';
-import type { PaintPropertyName, LayoutPropertyName, LiveViewHook } from '../types';
-import { MapManager } from '../core/map-manager';
-
+import type { HookContext, LiveViewHook } from '../types';
+import { type DesiredLayer, type LayerListener, type LayerSpec, ManagedLayer } from '../core/managed-layer';
+import { type InPlaceUpdate, type InPlaceUpdates, ManagedSource, type SourceSpec } from '../core/managed-source';
+import { isEqual } from '../core/managed-item';
 import { logger } from '../core/logger';
 
 interface GeoJSONLayerConfig {
@@ -17,282 +38,231 @@ interface GeoJSONLayerConfig {
   mapId: string;
   source: {
     type: 'geojson';
-    data: GeoJSON.GeoJSON;
+    data: unknown;
     generateId?: boolean;
     cluster?: boolean;
     clusterMaxZoom?: number;
     clusterRadius?: number;
-    clusterProperties?: Record<string, any>;
+    clusterProperties?: Record<string, unknown>;
   };
   layer: {
     id: string;
-    type: 'fill' | 'line' | 'circle' | 'symbol' | 'heatmap' | 'fill-extrusion';
+    type: string;
     source: string;
-    paint?: Record<string, any>;
-    layout?: Record<string, any>;
-    filter?: any[];
+    paint?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+    filter?: unknown;
     minzoom?: number;
     maxzoom?: number;
     'source-layer'?: string;
   };
-  beforeId?: string;
+  beforeId?: string | null;
+}
+
+/** What server commands set, over the rendered config. A command for the filter or data is kept as `{ value }`. */
+interface Commanded {
+  paint: Record<string, unknown>;
+  layout: Record<string, unknown>;
+  filter?: { value: unknown };
+  data?: { value: unknown };
 }
 
 interface GeoJSONLayerHookState {
   config: GeoJSONLayerConfig;
-  map: maplibregl.Map;
-  sourceId: string;
-  layerId: string;
-  handlers: LayerHandlers;
-  /**
-   * The `load` listener, when the layer had to wait for the style; kept for
-   * `destroyed()` to unsubscribe (a no-op once it has run).
-   */
-  deferredAdd?: () => void;
+  commanded: Commanded;
+  source: ManagedSource;
+  layer: ManagedLayer;
 }
 
-/**
- * Layer-scoped listeners, kept by reference: MapLibre keeps them after the
- * layer is removed, so `destroyed()` has to `map.off` the same functions.
- */
-interface LayerHandlers {
-  click?: (e: any) => void;
-  mouseenter?: (e: any) => void;
-  mouseleave?: (e: any) => void;
+interface GeoJSONLayerHookContext extends HookContext {
+  _maplibrex_geojson_layer?: GeoJSONLayerHookState;
+}
+
+const CLUSTER_OPTIONS: InPlaceUpdate = {
+  method: 'setClusterOptions',
+  args: (spec) => [{ cluster: spec.cluster, clusterMaxZoom: spec.clusterMaxZoom, clusterRadius: spec.clusterRadius }]
+};
+
+const GEOJSON_UPDATES: InPlaceUpdates = {
+  data: { method: 'setData', args: (spec) => [spec.data] },
+  cluster: CLUSTER_OPTIONS,
+  clusterMaxZoom: CLUSTER_OPTIONS,
+  clusterRadius: CLUSTER_OPTIONS
+};
+
+const sourceIdOf = (config: GeoJSONLayerConfig) => `${config.id}-source`;
+
+/** `rendered` with the commanded properties on top; a commanded `null` removes the property. */
+function withCommanded(rendered: Record<string, unknown> | undefined, commanded: Record<string, unknown>) {
+  const properties = { ...rendered };
+  for (const [name, value] of Object.entries(commanded)) {
+    if (value == null) {
+      delete properties[name];
+    } else {
+      properties[name] = value;
+    }
+  }
+  return properties;
+}
+
+function desiredSource(config: GeoJSONLayerConfig, commanded: Commanded): SourceSpec {
+  const spec: SourceSpec = { ...config.source };
+  if (commanded.data) spec.data = commanded.data.value;
+  return spec;
+}
+
+function desiredLayer(config: GeoJSONLayerConfig, commanded: Commanded): DesiredLayer {
+  const { id: _id, ...layer } = config.layer;
+  const spec: LayerSpec = {
+    ...layer,
+    source: sourceIdOf(config),
+    paint: withCommanded(layer.paint, commanded.paint),
+    layout: withCommanded(layer.layout, commanded.layout)
+  };
+  if (commanded.filter) {
+    if (commanded.filter.value == null) {
+      delete spec.filter;
+    } else {
+      spec.filter = commanded.filter.value;
+    }
+  }
+  return { spec, beforeId: config.beforeId ?? undefined };
+}
+
+/** Drop the commands whose property the new config renders differently: the re-render is newer. */
+function dropOutdated(commanded: Commanded, previous: GeoJSONLayerConfig, next: GeoJSONLayerConfig): void {
+  for (const kind of ['paint', 'layout'] as const) {
+    for (const name of Object.keys(commanded[kind])) {
+      if (!isEqual(previous.layer[kind]?.[name], next.layer[kind]?.[name])) delete commanded[kind][name];
+    }
+  }
+  if (!isEqual(previous.layer.filter, next.layer.filter)) commanded.filter = undefined;
+  if (!isEqual(previous.source.data, next.source.data)) commanded.data = undefined;
+}
+
+function readConfig(el: HTMLElement): GeoJSONLayerConfig | undefined {
+  const config = el.dataset.config;
+  return config ? JSON.parse(config) : undefined;
+}
+
+function featureListeners(hook: HookContext, layerId: string): Record<string, LayerListener> {
+  const ids = { layer_id: layerId, layerId };
+
+  return {
+    click: (e) => {
+      if (e.features && e.features.length > 0) {
+        hook.pushEvent('layer:feature_clicked', {
+          ...ids,
+          feature: e.features[0],
+          lngLat: e.lngLat.toArray(),
+          point: [e.point.x, e.point.y]
+        });
+      }
+    },
+    mouseenter: (e, map) => {
+      map.getCanvas().style.cursor = 'pointer';
+      if (e.features && e.features.length > 0) {
+        hook.pushEvent('layer:feature_mouseenter', { ...ids, feature: e.features[0] });
+      }
+    },
+    mouseleave: (_e, map) => {
+      map.getCanvas().style.cursor = '';
+      hook.pushEvent('layer:feature_mouseleave', ids);
+    }
+  };
 }
 
 export const GeoJSONLayerHook: LiveViewHook = {
-  mounted(this: any) {
-    const el = this.el as HTMLElement;
-    
+  mounted(this: GeoJSONLayerHookContext) {
     try {
-      const configStr = el.dataset.config;
-      if (!configStr) {
+      const config = readConfig(this.el);
+      if (!config) {
         console.error('[MaplibreX] No config found on GeoJSON layer element');
         return;
       }
 
-      const config: GeoJSONLayerConfig = JSON.parse(configStr);
-      const map = MapManager.get(config.mapId || 'default');
-
-      if (!map) {
-        console.error(`[MaplibreX] Map "${config.mapId}" not found for layer "${config.id}"`);
-        return;
-      }
-
-      const sourceId = `${config.id}-source`;
+      const mapId = config.mapId || 'default';
       const layerId = config.id;
+      const sourceId = sourceIdOf(config);
+      const commanded: Commanded = { paint: {}, layout: {} };
+      let sourceLoaded = false;
 
-      const handlers: LayerHandlers = {};
-
-      // Wait for map to be loaded before adding source and layer
-      const addLayer = () => {
-        // Add source
-        if (!map.getSource(sourceId)) {
-          map.addSource(sourceId, config.source as any);
-        }
-
-        // Add layer
-        if (!map.getLayer(layerId)) {
-          const layerSpec: any = {
-            ...config.layer,
-            source: sourceId
-          };
-
-          if (config.beforeId) {
-            map.addLayer(layerSpec, config.beforeId);
-          } else {
-            map.addLayer(layerSpec);
-          }
-        }
-
-        // Setup click event handler
-        handlers.click = (e: any) => {
-          if (e.features && e.features.length > 0) {
-            this.pushEvent('layer:feature_clicked', {
-              layer_id: layerId,
-              layerId: layerId,
-              feature: e.features[0],
-              lngLat: e.lngLat.toArray(),
-              point: [e.point.x, e.point.y]
-            });
-          }
-        };
-        map.on('click', layerId, handlers.click);
-
-        // Setup mouse enter/leave handlers for cursor change
-        handlers.mouseenter = (e: any) => {
-          map.getCanvas().style.cursor = 'pointer';
-          
-          if (e.features && e.features.length > 0) {
-            this.pushEvent('layer:feature_mouseenter', {
-              layer_id: layerId,
-              layerId: layerId,
-              feature: e.features[0]
-            });
-          }
-        };
-        map.on('mouseenter', layerId, handlers.mouseenter);
-
-        handlers.mouseleave = () => {
-          map.getCanvas().style.cursor = '';
-          
-          this.pushEvent('layer:feature_mouseleave', {
-            layer_id: layerId,
-            layerId: layerId
-          });
-        };
-        map.on('mouseleave', layerId, handlers.mouseleave);
-
-        // Emit source loaded event
-        const source = map.getSource(sourceId) as maplibregl.GeoJSONSource;
-        if (source) {
-          map.once('sourcedata', (e: any) => {
-            if (e.sourceId === sourceId && e.isSourceLoaded) {
-              this.pushEvent('layer:source_loaded', {
-                layer_id: layerId,
-                layerId: layerId,
-                sourceId: sourceId
-              });
-            }
-          });
-        }
-      };
-
-      let deferredAdd: (() => void) | undefined;
-      if (map.isStyleLoaded()) {
-        addLayer();
-      } else {
-        deferredAdd = addLayer;
-        map.once('load', addLayer);
-      }
-
-      // Handle commands from LiveView
-      this.handleEvent('layer:set_paint_property', (payload: any) => {
-        if (payload.layer_id === layerId) {
-          map.setPaintProperty(layerId, payload.property, payload.value);
-        }
-      });
-
-      this.handleEvent('layer:set_layout_property', (payload: any) => {
-        if (payload.layer_id === layerId) {
-          map.setLayoutProperty(layerId, payload.property, payload.value);
-        }
-      });
-
-      this.handleEvent('layer:set_filter', (payload: any) => {
-        if (payload.layer_id === layerId) {
-          map.setFilter(layerId, payload.filter);
-        }
-      });
-
-      this.handleEvent('layer:set_data', (payload: any) => {
-        if (payload.layer_id === layerId) {
-          const source = map.getSource(sourceId) as maplibregl.GeoJSONSource;
-          if (source) {
-            source.setData(payload.data);
+      const source = new ManagedSource(mapId, sourceId, desiredSource(config, commanded), {
+        label: `GeoJSON source "${sourceId}"`,
+        inPlace: GEOJSON_UPDATES,
+        listeners: {
+          sourcedata: (e, map) => {
+            // The `sourcedata` of a removal carries the source id too.
+            if (sourceLoaded || !e.isSourceLoaded || !map.getSource(sourceId)) return;
+            sourceLoaded = true;
+            this.pushEvent('layer:source_loaded', { layer_id: layerId, layerId, sourceId });
           }
         }
       });
+      const layer = new ManagedLayer(mapId, layerId, desiredLayer(config, commanded), {
+        label: `GeoJSON layer "${layerId}"`,
+        listeners: featureListeners(this, layerId)
+      });
+      const state: GeoJSONLayerHookState = { config, commanded, source, layer };
+      this._maplibrex_geojson_layer = state;
 
-      // Save state
-      (this as any)._maplibrex_geojson_layer = {
-        config,
-        map,
-        sourceId,
-        layerId,
-        handlers,
-        deferredAdd
-      };
+      const command = (event: string, apply: (payload: any) => void) =>
+        this.handleEvent(event, (payload: any) => {
+          if (payload.layer_id !== layerId || this._maplibrex_geojson_layer !== state) return;
+          apply(payload);
+        });
+      const updateLayer = () => layer.update(desiredLayer(state.config, commanded));
+
+      command('layer:set_paint_property', (payload) => {
+        commanded.paint[payload.property] = payload.value;
+        updateLayer();
+      });
+      command('layer:set_layout_property', (payload) => {
+        commanded.layout[payload.property] = payload.value;
+        updateLayer();
+      });
+      command('layer:set_filter', (payload) => {
+        commanded.filter = { value: payload.filter };
+        updateLayer();
+      });
+      command('layer:set_data', (payload) => {
+        commanded.data = { value: payload.data };
+        source.update(desiredSource(state.config, commanded));
+      });
 
       logger.debug(`[MaplibreX] GeoJSON Layer "${layerId}" created`);
-
     } catch (error) {
       console.error('[MaplibreX] Error mounting GeoJSON layer:', error);
     }
   },
 
-  updated(this: any) {
-    const state: GeoJSONLayerHookState | undefined = (this as any)._maplibrex_geojson_layer;
+  updated(this: GeoJSONLayerHookContext) {
+    const state = this._maplibrex_geojson_layer;
     if (!state) return;
 
     try {
-      const el = this.el as HTMLElement;
-      const configStr = el.dataset.config;
-      if (!configStr) return;
+      const config = readConfig(this.el);
+      if (!config) return;
 
-      const newConfig: GeoJSONLayerConfig = JSON.parse(configStr);
-      
-      // Update source data if it changed
-      const source = state.map.getSource(state.sourceId) as maplibregl.GeoJSONSource;
-      if (source && newConfig.source.data) {
-        // Check if data actually changed (simple comparison)
-        const oldData = JSON.stringify(state.config.source.data);
-        const newData = JSON.stringify(newConfig.source.data);
-        
-        if (oldData !== newData) {
-          source.setData(newConfig.source.data);
-        }
-      }
-
-      // Update paint properties if they changed
-      if (newConfig.layer.paint) {
-        Object.entries(newConfig.layer.paint).forEach(([key, value]) => {
-          const oldValue = state.config.layer.paint?.[key];
-          if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-            state.map.setPaintProperty(state.layerId, key as PaintPropertyName, value);
-          }
-        });
-      }
-
-      // Update layout properties if they changed
-      if (newConfig.layer.layout) {
-        Object.entries(newConfig.layer.layout).forEach(([key, value]) => {
-          const oldValue = state.config.layer.layout?.[key];
-          if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-            state.map.setLayoutProperty(state.layerId, key as LayoutPropertyName, value);
-          }
-        });
-      }
-
-      // Update filter if it changed
-      if (JSON.stringify(newConfig.layer.filter) !== JSON.stringify(state.config.layer.filter)) {
-        state.map.setFilter(state.layerId, (newConfig.layer.filter || null) as any);
-      }
-
-      // Update configuration
-      state.config = newConfig;
-
+      dropOutdated(state.commanded, state.config, config);
+      state.config = config;
+      state.source.update(desiredSource(config, state.commanded));
+      state.layer.update(desiredLayer(config, state.commanded));
     } catch (error) {
       console.error('[MaplibreX] Error updating GeoJSON layer:', error);
     }
   },
 
-  destroyed(this: any) {
-    const state: GeoJSONLayerHookState | undefined = (this as any)._maplibrex_geojson_layer;
+  destroyed(this: GeoJSONLayerHookContext) {
+    const state = this._maplibrex_geojson_layer;
     if (!state) return;
+    this._maplibrex_geojson_layer = undefined;
 
     try {
-      // Never let a pending deferred add run after teardown.
-      if (state.deferredAdd) state.map.off('load', state.deferredAdd);
-
-      const { handlers } = state;
-      if (handlers.click) state.map.off('click', state.layerId, handlers.click);
-      if (handlers.mouseenter) state.map.off('mouseenter', state.layerId, handlers.mouseenter);
-      if (handlers.mouseleave) state.map.off('mouseleave', state.layerId, handlers.mouseleave);
-
-      // Remove layer
-      if (state.map.getLayer(state.layerId)) {
-        state.map.removeLayer(state.layerId);
-      }
-
-      // Remove source
-      if (state.map.getSource(state.sourceId)) {
-        state.map.removeSource(state.sourceId);
-      }
-
-      logger.debug(`[MaplibreX] GeoJSON Layer "${state.layerId}" destroyed`);
-
+      // The layer first: its source cannot go while it uses it.
+      state.layer.destroy();
+      state.source.destroy();
+      logger.debug(`[MaplibreX] GeoJSON Layer "${state.layer.id}" destroyed`);
     } catch (error) {
       console.error('[MaplibreX] Error destroying GeoJSON layer:', error);
     }
