@@ -1,137 +1,18 @@
 /**
  * HeatmapLayerHook - Hook for the HeatmapLayer component
- * 
+ *
  * This hook manages a heatmap layer in MapLibre GL JS,
  * visualising the density and concentration of data points.
+ * A heatmap layer has no layout and reports no clicks or hovers.
+ *
+ * When the layer is added, updated, put back after a style change and
+ * removed is common to every layer hook: see `createLayerHook`.
  */
 
-import type { LiveViewHook } from '../types';
-import { MapManager } from '../core/map-manager';
+import { createLayerHook } from './layer-hook';
 
-import { logger } from '../core/logger';
-
-interface HeatmapLayerConfig {
-  id: string;
-  mapId: string;
-  sourceId: string;
-  sourceLayer?: string;
-  paint: any;
-  filter?: any;
-  minZoom?: number;
-  maxZoom?: number;
-  beforeId?: string;
-}
-
-interface HeatmapLayerHookState {
-  config: HeatmapLayerConfig;
-}
-
-export const HeatmapLayerHook: LiveViewHook = {
-  mounted(this: any) {
-    const el = this.el as HTMLElement;
-
-    try {
-      // Read the configuration
-      const configStr = el.dataset.config;
-      if (!configStr) {
-        console.error('[MaplibreX] No config found on heatmap layer element');
-        return;
-      }
-
-      const config: HeatmapLayerConfig = JSON.parse(configStr);
-      const mapId = config.mapId;
-
-      // Get the map instance
-      const map = MapManager.get(mapId);
-      if (!map) {
-        console.error(`[MaplibreX] Map "${mapId}" not found for heatmap layer "${config.id}"`);
-        return;
-      }
-
-      // Wait until the map is fully loaded
-      const addLayer = () => {
-        try {
-          // Make sure the source exists
-          if (!map.getSource(config.sourceId)) {
-            console.warn(`[MaplibreX] Source "${config.sourceId}" not found for heatmap layer "${config.id}". Layer will be added when source is available.`);
-            return;
-          }
-
-          // Build the layer specification
-          const layerSpec: any = {
-            id: config.id,
-            type: 'heatmap',
-            source: config.sourceId,
-            paint: config.paint || {}
-          };
-
-          // Agregar propiedades opcionales
-          if (config.sourceLayer) {
-            layerSpec['source-layer'] = config.sourceLayer;
-          }
-
-          if (config.filter) {
-            layerSpec.filter = config.filter;
-          }
-
-          if (config.minZoom !== undefined) {
-            layerSpec.minzoom = config.minZoom;
-          }
-
-          if (config.maxZoom !== undefined) {
-            layerSpec.maxzoom = config.maxZoom;
-          }
-
-          // Add the layer to the map
-          map.addLayer(layerSpec, config.beforeId);
-
-          // Guardar estado
-          (this as any)._maplibrex_heatmap_layer = {
-            config
-          };
-
-          // Emitir evento de capa agregada
-          this.pushEvent('layer:added', { layer_id: config.id, layerId: config.id });
-
-          logger.debug(`[MaplibreX] Heatmap layer "${config.id}" mounted on map "${mapId}"`);
-
-        } catch (error) {
-          console.error(`[MaplibreX] Error adding heatmap layer "${config.id}":`, error);
-        }
-      };
-
-      // If the map has already loaded, add the layer immediately
-      if (map.isStyleLoaded()) {
-        addLayer();
-      } else {
-        // Wait for the style to load
-        map.once('load', addLayer);
-      }
-
-    } catch (error) {
-      console.error('[MaplibreX] Error mounting heatmap layer:', error);
-    }
-  },
-
-  destroyed(this: any) {
-    const state: HeatmapLayerHookState | undefined = (this as any)._maplibrex_heatmap_layer;
-    if (!state) return;
-
-    try {
-      const map = MapManager.get(state.config.mapId);
-      if (map) {
-        // Remove the layer if present
-        if (map.getLayer(state.config.id)) {
-          map.removeLayer(state.config.id);
-        }
-
-        // Emitir evento de capa removida
-        this.pushEvent('layer:removed', { layer_id: state.config.id, layerId: state.config.id });
-      }
-
-      logger.debug(`[MaplibreX] Heatmap layer "${state.config.id}" destroyed`);
-    } catch (error) {
-      console.error('[MaplibreX] Error destroying heatmap layer:', error);
-    }
-  }
-};
+export const HeatmapLayerHook = createLayerHook({
+  type: 'heatmap',
+  name: 'heatmap layer',
+  without: ['layout']
+});

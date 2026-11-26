@@ -39,6 +39,8 @@ export function registerMap(id = 'map', container?: HTMLElement, options?: FakeM
 export interface LiveViewHarness {
   /** Apply a server re-render: LiveView patches the view to `html`. */
   render(html: string): void;
+  /** Every event a hook pushed to the server (`pushEvent`), in order, as [event, payload]. */
+  pushes: [string, unknown][];
 }
 
 /**
@@ -49,7 +51,9 @@ export interface LiveViewHarness {
  * view is a single dynamic, so every render patches all of it.
  *
  * `MapHook` is replaced by a stub that registers a FakeMap on its element,
- * the way the real hook creates a MapLibre map in it.
+ * the way the real hook creates a MapLibre map in it. A hook's `pushEvent`
+ * is recorded in `pushes` instead of going to a server (an unconnected view
+ * would reject it).
  */
 export function renderLiveView(html: string): LiveViewHarness {
   const root = document.createElement('div');
@@ -67,12 +71,18 @@ export function renderLiveView(html: string): LiveViewHarness {
   // What joining over the socket would do: create the root view, then apply
   // the server's first render.
   const view = (liveSocket as any).newRootView(root);
+  const pushes: [string, unknown][] = [];
+  view.pushHookEvent = (_el: unknown, _target: unknown, event: string, payload: unknown) => {
+    pushes.push([event, payload]);
+    return Promise.resolve({ reply: undefined, ref: 0 });
+  };
   view.onJoin({ rendered: { s: ['', ''], 0: html }, liveview_version: liveSocket.version() });
 
   return {
     render(next) {
       view.update({ 0: next }, []);
-    }
+    },
+    pushes
   };
 }
 
