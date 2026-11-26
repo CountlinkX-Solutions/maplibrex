@@ -660,6 +660,30 @@ describe('FakeMap setStyle', () => {
       expect(map.getSource('streets')).toBeDefined();
     });
 
+    it('restyles a layer in place, keeping the map’s layer object, and re-creates one whose source changes', () => {
+      const map = new FakeMap(undefined, { loaded: false });
+      map.finishStyleLoad(streets);
+      const land = map.getLayer('land');
+      const building = map.getLayer('building');
+      const next = {
+        ...streets,
+        sources: { ...streets.sources, other: { type: 'vector', url: 'other.json' } },
+        layers: [
+          { ...streets.layers[0], paint: { 'fill-color': '#000' } },
+          { ...streets.layers[1], source: 'other' },
+          streets.layers[2]
+        ]
+      };
+
+      map.setStyle(next);
+
+      // MapLibre's setPaintProperty and the other style setters change its
+      // StyleLayer object; a layer on another source is removed and added again.
+      expect(map.getLayer('land')).toBe(land);
+      expect(map.getLayer('building')).not.toBe(building);
+      expect(map.getStyle()).toEqual(next);
+    });
+
     it('updates a GeoJSON source in place when only its data changed', () => {
       const style = { version: 8, sources: { points: { type: 'geojson', data: null } }, layers: [{ id: 'points', type: 'circle', source: 'points' }] };
       const map = new FakeMap(undefined, { loaded: false });
