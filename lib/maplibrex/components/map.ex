@@ -54,8 +54,9 @@ defmodule MaplibreX.Components.Map do
         {:noreply, assign(socket, center: center, zoom: zoom)}
       end
 
-      # The components push every event they emit (`map:loaded`, for example);
-      # ignore the ones you do not use.
+      # Without an `events` list, the components push every event they emit
+      # (`map:loaded`, for example); ignore the ones you do not use, or pass
+      # `events={["map:moved", "map:clicked"]}` to push only those.
       def handle_event(_event, _params, socket), do: {:noreply, socket}
 
   ## Nesting components

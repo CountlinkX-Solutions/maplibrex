@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `terrain_control`, `terrain`, `sky`, `deckgl_layer`, `geojson_layer`, the
   layer components and the source components. [#45] stays open for 1.0,
   when components will push only the events asked for.
+- `mix maplibrex.copy_worker`, which copies maplibre-gl 6's worker files
+  (`maplibre-gl-worker.mjs`, and `maplibre-gl-shared.mjs` when the installed
+  release has it) from `assets/node_modules/maplibre-gl/dist` to
+  `priv/static/assets/js` ([#48]); `--from` and `--to` change those. With
+  maplibre-gl 5, or without maplibre-gl, it copies nothing, says why and
+  succeeds, so it is safe in the `assets.build` and `assets.deploy` aliases
+  of any application. It replaces the `copy_maplibre_worker/1` function the
+  README had applications paste into their `mix.exs`; an application that
+  has it can keep it or switch to the task.
 
 ### Changed
 
@@ -60,6 +69,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vector_tile_source`, `raster_tile_source`, `raster_dem_source` and `sky`
   left out events they do push ([#28], in part). Each component's docs now
   list the events it pushes, the names the `events` attribute takes.
+
+### Documentation
+
+- The README's installation steps 3 and 4 are shorter ([#48]). Step 3 shows
+  only what to add to the esbuild profile Phoenix generates (the
+  `assets/node_modules` entry in `NODE_PATH`, and `--external:@deck.gl/*`
+  without deck.gl) instead of a whole profile to paste over it, which also
+  changed the application's esbuild version and flags. Step 4 adds
+  `mix maplibrex.copy_worker` to the asset aliases and keeps the
+  `setWorkerUrl` line. Both were checked in an application freshly generated
+  by `mix phx.new` (Phoenix 1.8.8), with maplibre-gl 5.24.1 and 6.19.0.
+- The README and the `MaplibreX` and `map` docs show the `events` attribute
+  where they introduce events. The catch-all `handle_event/3` clause stays the
+  advice for LiveViews with components that are not given `events`.
 
 ## [0.2.0] - 2026-11-26
 
@@ -374,6 +397,7 @@ First public release.
 [#42]: https://github.com/CountlinkX-Solutions/maplibrex/issues/42
 [#45]: https://github.com/CountlinkX-Solutions/maplibrex/issues/45
 [#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
+[#48]: https://github.com/CountlinkX-Solutions/maplibrex/issues/48
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1
