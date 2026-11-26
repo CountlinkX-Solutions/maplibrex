@@ -24,6 +24,9 @@ end
 def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
   {:noreply, assign(socket, center: center, zoom: zoom)}
 end
+
+# The components push every event they emit; ignore the ones you do not use.
+def handle_event(_event, _params, socket), do: {:noreply, socket}
 ```
 
 ## Why
