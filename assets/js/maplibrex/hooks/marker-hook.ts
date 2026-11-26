@@ -15,6 +15,8 @@ import { throttle } from '../utils/debounce';
 
 interface MarkerHookState {
   marker: maplibregl.Marker;
+  /** Silences the marker's pending throttled drag tick. */
+  dispose: () => void;
   map: maplibregl.Map;
   config: MarkerConfig;
   popup?: maplibregl.Popup;
@@ -54,7 +56,7 @@ function createMarker(
   config: MarkerConfig,
   popup: maplibregl.Popup | undefined,
   lngLat: [number, number] = config.lngLat
-): maplibregl.Marker {
+): { marker: maplibregl.Marker; dispose: () => void } {
   const markerOptions: maplibregl.MarkerOptions = {
     color: config.color || '#3FB1CE',
     scale: config.scale || 1,
@@ -110,7 +112,12 @@ function createMarker(
     hook.pushEvent('marker:clicked', payload());
   });
 
-  return marker;
+  return {
+    marker,
+    dispose: () => {
+      dragging = false;
+    }
+  };
 }
 
 export const MarkerHook: LiveViewHook = {
@@ -133,11 +140,12 @@ export const MarkerHook: LiveViewHook = {
       }
 
       const popup = config.popup ? createPopup(config.popup) : undefined;
-      const marker = createMarker(this, map, config, popup);
+      const { marker, dispose } = createMarker(this, map, config, popup);
 
       // Save state
       (this as any)._maplibrex_marker = {
         marker,
+        dispose,
         map,
         config,
         popup
@@ -178,8 +186,16 @@ export const MarkerHook: LiveViewHook = {
         const lngLat = lngLatChanged
           ? newConfig.lngLat
           : (state.marker.getLngLat().toArray() as [number, number]);
+        // MapLibre's remove() also closes the marker's popup; reopen it.
+        const popupWasOpen = state.popup?.isOpen() ?? false;
+        state.dispose();
         state.marker.remove();
-        state.marker = createMarker(this, state.map, newConfig, state.popup, lngLat);
+        const next = createMarker(this, state.map, newConfig, state.popup, lngLat);
+        state.marker = next.marker;
+        state.dispose = next.dispose;
+        if (popupWasOpen) {
+          state.marker.togglePopup();
+        }
       } else {
         if (lngLatChanged) {
           state.marker.setLngLat(newConfig.lngLat);
@@ -229,6 +245,7 @@ export const MarkerHook: LiveViewHook = {
 
     try {
       // Remove the marker
+      state.dispose();
       state.marker.remove();
       logger.debug(`[MaplibreX] Marker "${state.config.id}" destroyed`);
 
