@@ -44,7 +44,10 @@ interface GeoJSONLayerHookState {
   sourceId: string;
   layerId: string;
   handlers: LayerHandlers;
-  /** Set while the layer is waiting for the map's `load` event. */
+  /**
+   * The `load` listener, when the layer had to wait for the style; kept for
+   * `destroyed()` to unsubscribe (a no-op once it has run).
+   */
   deferredAdd?: () => void;
 }
 
