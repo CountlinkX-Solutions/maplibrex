@@ -21,11 +21,28 @@
  * source component is about to add.
  *
  * Style changes are detected through `styledata`, which every way of changing
- * the style fires (maplibre-gl 5.0.0 fires no `style.load` after a diff), and a
- * missing source through `sourcedata` as well. MapLibre fires `styledata` on
- * the frame after any style change, this layer's own `addLayer` included, and
- * `sourcedata` for every tile, so reconciling is idempotent and, in its common
- * case (the layer is on the map), costs one `getLayer` lookup.
+ * the style fires (maplibre-gl 5.0.0 fires no `style.load` after a diff), and
+ * the arrival of the layer's source through that source's `sourcedata`.
+ * MapLibre fires `styledata` on the frame after any style change, this layer's
+ * own `addLayer` included, and `sourcedata` for every tile, so reconciling is
+ * idempotent and, in its common case (the layer is on the map), costs one
+ * `getLayer` lookup.
+ *
+ * Only the `sourcedata` of the layer's own source counts. A diffing `setStyle`
+ * applies its operations one at a time: it removes the layer (its source is
+ * going), then the sources the new style lacks, each removal firing
+ * `sourcedata` synchronously, and only then adds the new style's layers, from
+ * the top down. A layer put back on the `sourcedata` of another source, while
+ * its own was still there, would end up under the whole new basemap (and make
+ * the removal of its source fail). Its own source's `sourcedata` cannot do
+ * that: when the diff removes the source it is already gone, and a source the
+ * diff adds reports its metadata after the diff.
+ *
+ * Layer order. A layer goes under its `beforeId` layer, or on top. Among the
+ * layers kept by ManagedLayers on the same map, those with the same `beforeId`
+ * stay in the order they were first added in: a layer put back (after a style
+ * change, or re-added by `update()`) goes under the first of them added after
+ * it that is in place, whatever order they come back in.
  */
 
 import type { AddLayerObject, FilterSpecification, Map } from 'maplibre-gl';
@@ -125,6 +142,9 @@ export function diffLayer(previous: DesiredLayer, next: DesiredLayer): LayerChan
   return changes;
 }
 
+/** The ManagedLayers that have added their layer to each map, in the order they first did. */
+const stacks = new WeakMap<Map, ManagedLayer[]>();
+
 export class ManagedLayer extends ManagedItem {
   private desired: DesiredLayer;
   private readonly label: string;
@@ -214,6 +234,8 @@ export class ManagedLayer extends ManagedItem {
     for (const [type, listener] of this.attachedListeners) {
       map.off(type as never, this.id, listener);
     }
+    const stack = stacks.get(map);
+    if (stack?.includes(this)) stack.splice(stack.indexOf(this), 1);
     // A map removed by its own hook first has no style left to remove from.
     if (this.isRegistered(map) && map.getLayer(this.id)) {
       map.removeLayer(this.id);
@@ -249,8 +271,15 @@ export class ManagedLayer extends ManagedItem {
     }
   }
 
+  /** Only the `sourcedata` of the layer's own source can let it be added; see the module comment. */
+  protected reactsTo(type: string, event: unknown): boolean {
+    if (type !== 'sourcedata') return true;
+    const source = this.desired.spec.source;
+    return source !== undefined && (event as { sourceId?: unknown } | undefined)?.sourceId === source;
+  }
+
   private add(map: Map): void {
-    map.addLayer({ id: this.id, ...this.desired.spec } as AddLayerObject, this.resolveBeforeId(map));
+    map.addLayer({ id: this.id, ...this.desired.spec } as AddLayerObject, this.placeBefore(map));
     if (!map.getLayer(this.id)) {
       this.refused = true;
       return;
@@ -259,6 +288,9 @@ export class ManagedLayer extends ManagedItem {
 
     if (!this.wasAdded) {
       this.wasAdded = true;
+      const stack = stacks.get(map) ?? [];
+      stacks.set(map, stack);
+      stack.push(this);
       this.attachedListeners = Object.entries(this.options.listeners ?? {}).map(([type, listener]) => [
         type,
         (event: any) => listener(event, map)
@@ -287,10 +319,34 @@ export class ManagedLayer extends ManagedItem {
           map.setLayerZoomRange(this.id, change.minzoom as number, change.maxzoom as number);
           break;
         case 'move':
-          map.moveLayer(this.id, this.resolveBeforeId(map));
+          map.moveLayer(this.id, this.placeBefore(map));
           break;
       }
     }
+  }
+
+  /**
+   * The layer to insert or move this one under now (`undefined`: on top).
+   * That is the first layer, among those of the ManagedLayers on this map
+   * first added after this one with the same `beforeId`, that is in place;
+   * when there is none, the `beforeId` layer (see `resolveBeforeId`). So the
+   * layers sharing a `beforeId`, or on top, stay in the order they were first
+   * added in, whatever order they come back in after a style change.
+   */
+  private placeBefore(map: Map): string | undefined {
+    const beforeId = this.resolveBeforeId(map);
+    const stack = stacks.get(map) ?? [];
+    const index = stack.indexOf(this);
+    // Not in the stack yet (a first add): every other one was added before it.
+    if (index === -1) return beforeId;
+
+    for (const later of stack.slice(index + 1)) {
+      // One still waiting for its own `beforeId` sits on top, out of place.
+      if (later.desired.beforeId === this.desired.beforeId && !later.awaitingBeforeId && map.getLayer(later.id)) {
+        return later.id;
+      }
+    }
+    return beforeId;
   }
 
   /**
@@ -318,8 +374,7 @@ export class ManagedLayer extends ManagedItem {
   private moveUnderAwaitedLayer(map: Map): void {
     const beforeId = this.desired.beforeId;
     if (!this.awaitingBeforeId || beforeId === undefined || !map.getLayer(beforeId)) return;
-    this.awaitingBeforeId = false;
-    map.moveLayer(this.id, beforeId);
+    map.moveLayer(this.id, this.placeBefore(map));
   }
 
   /** One warning per missing source, unless a source component is about to add it. */

@@ -9,6 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MapManager } from '../js/maplibrex/core/map-manager';
+import { ManagedSource, type SourceSpec } from '../js/maplibrex/core/managed-source';
 import {
   BackgroundLayerHook,
   CircleLayerHook,
@@ -457,6 +458,132 @@ describe('a layer survives style changes (#4)', () => {
 
     expect(map.getLayer(ID)).toMatchObject(specFor(c, c.repaint));
     expect(pushed(m)).toEqual(['layer:added']);
+  });
+});
+
+describe('the layer order after a style change', () => {
+  const BASEMAP: StyleSpec = {
+    version: 8,
+    sources: { base: { type: 'vector', url: 'base.json' } },
+    layers: [
+      { id: 'water', type: 'fill', source: 'base', 'source-layer': 'water' },
+      { id: 'building', type: 'fill', source: 'base', 'source-layer': 'building' },
+      { id: 'labels', type: 'symbol', source: 'base', 'source-layer': 'place' }
+    ]
+  };
+  const OTHER_BASEMAP: StyleSpec = {
+    version: 8,
+    sources: { streets: { type: 'vector', url: 'streets.json' } },
+    layers: [
+      { id: 'land', type: 'fill', source: 'streets', 'source-layer': 'land' },
+      { id: 'building', type: 'fill', source: 'streets', 'source-layer': 'building' },
+      { id: 'labels', type: 'symbol', source: 'streets', 'source-layer': 'place' }
+    ]
+  };
+
+  /** A registered map showing `style`, with its `error` events collected. */
+  function mapShowing(style: StyleSpec): { map: FakeMap; errors: string[] } {
+    const map = register(new FakeMap(undefined, { loaded: false }));
+    map.finishStyleLoad(style);
+    const errors: string[] = [];
+    map.on('error', (e: { error: Error }) => errors.push(e.error.message));
+    return { map, errors };
+  }
+
+  // The basemap switch MapLibre diffs: it removes the layer, then the
+  // basemap's source (firing sourcedata while the layer's own source is still
+  // there), then the layer's source, then adds the new basemap's layers.
+  it.each(WITH_SOURCE)('%s with no beforeId is back on top of the new basemap', (_name, c) => {
+    const { map, errors } = mapShowing(BASEMAP);
+    const source = new ManagedSource('map', 'src', c.source as SourceSpec);
+    const m = mountHook(c.hook, configFor(c));
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'labels', ID]);
+
+    map.setStyle(OTHER_BASEMAP);
+
+    expect(map.getLayersOrder()).toEqual(['land', 'building', 'labels', ID]);
+    expect(map.getLayer(ID)).toMatchObject(specFor(c));
+    expect(errors).toEqual([]);
+    expect(pushed(m)).toEqual(['layer:added']);
+    source.destroy();
+  });
+
+  it.each(WITH_SOURCE)('%s with a beforeId is back directly under that layer, without a warning', (_name, c) => {
+    const { map, errors } = mapShowing(BASEMAP);
+    const source = new ManagedSource('map', 'src', c.source as SourceSpec);
+    mountHook(c.hook, configFor(c, { beforeId: 'building' }));
+    expect(map.getLayersOrder()).toEqual(['water', ID, 'building', 'labels']);
+
+    map.setStyle(OTHER_BASEMAP);
+
+    expect(map.getLayersOrder()).toEqual(['land', ID, 'building', 'labels']);
+    expect(errors).toEqual([]);
+    expect(warn).not.toHaveBeenCalled();
+    source.destroy();
+  });
+
+  /** A circle layer component with its own id and source, plus `extra` config. */
+  function mountCircle(id: string, sourceId: string, extra: Record<string, unknown> = {}): MountedHook {
+    return mountHook(CircleLayerHook, { id, mapId: 'map', sourceId, paint: {}, layout: {}, ...extra });
+  }
+
+  /** `BASEMAP` with the given extra sources, as a basemap switch that keeps them would be. */
+  function withSources(...ids: string[]): StyleSpec {
+    return { ...BASEMAP, sources: { ...BASEMAP.sources, ...Object.fromEntries(ids.map((id) => [id, GEOJSON])) } };
+  }
+
+  // "second" is mounted first but waits for its source, so it is added after
+  // "first"; MapLibre calls their listeners in the order they were attached.
+  it.each([
+    ['a diff', (map: FakeMap) => map.setStyle(withSources('a', 'b'))],
+    ['a full rebuild', (map: FakeMap) => { map.setStyle(withSources('a', 'b'), { diff: false }); map.finishStyleLoad(); }]
+  ])('several layers keep the order they were first added in, after %s', (_path, change) => {
+    const { map } = mapShowing(withSources('a'));
+    mountCircle('second', 'b');
+    mountCircle('first', 'a');
+    map.addSource('b', GEOJSON);
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'labels', 'first', 'second']);
+
+    change(map);
+
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'labels', 'first', 'second']);
+  });
+
+  it('several layers with the same beforeId keep the order they were first added in', () => {
+    const { map } = mapShowing(withSources('a'));
+    mountCircle('second', 'b', { beforeId: 'labels' });
+    mountCircle('first', 'a', { beforeId: 'labels' });
+    map.addSource('b', GEOJSON);
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'first', 'second', 'labels']);
+
+    map.setStyle(withSources('a', 'b'), { diff: false });
+    map.finishStyleLoad();
+
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'first', 'second', 'labels']);
+  });
+
+  it('a layer an update re-adds keeps its place among the other layers', () => {
+    const { map } = mapShowing(withSources('a', 'b'));
+    const first = mountCircle('first', 'a');
+    mountCircle('second', 'b');
+
+    first.update({ id: 'first', mapId: 'map', sourceId: 'a', sourceLayer: 'points', paint: {}, layout: {} });
+
+    expect(map.getLayer('first')['source-layer']).toBe('points');
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'labels', 'first', 'second']);
+  });
+
+  // So the order does not change again at the next style change.
+  it('a layer whose beforeId is cleared goes back under the layers added after it', () => {
+    const { map } = mapShowing(withSources('a', 'b'));
+    const first = mountCircle('first', 'a');
+    mountCircle('second', 'b');
+
+    first.update({ id: 'first', mapId: 'map', sourceId: 'a', paint: {}, layout: {}, beforeId: 'water' });
+    expect(map.getLayersOrder()).toEqual(['first', 'water', 'building', 'labels', 'second']);
+    first.update({ id: 'first', mapId: 'map', sourceId: 'a', paint: {}, layout: {} });
+
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'labels', 'first', 'second']);
   });
 });
 

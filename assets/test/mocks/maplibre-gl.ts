@@ -16,6 +16,8 @@
  * - `load` fires once per map, when the style and its tiles have loaded.
  * - Refusals either throw or fire an `error` event (logged to the console when
  *   nothing listens), exactly where MapLibre does.
+ * - A diffing `setStyle` applies maplibre-gl-style-spec's operations one at a
+ *   time, in their order, so listeners can run while it is half done.
  *
  * Simplifications: events MapLibre fires on a later frame or after a network
  * round trip (`sourcedata` after `addSource`, `styledata` after `setStyle`)
@@ -113,6 +115,30 @@ const EMPTY_STYLE: StyleSpec = { version: 8, sources: {}, layers: [] };
 /** A deep copy of a JSON value, as MapLibre keeps and serializes style objects. */
 function clone<T>(value: T): T {
   return value === undefined ? value : JSON.parse(JSON.stringify(value));
+}
+
+/** Deep equality of JSON values, whatever the key order, as the style diff compares them. */
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) {
+    if (!deepEqual(left[key], right[key])) return false;
+  }
+  return true;
+}
+
+/** The style fields a diff leaves alone: MapLibre's `setState` skips the camera. */
+const CAMERA_FIELDS = new Set(['center', 'zoom', 'bearing', 'pitch', 'roll']);
+
+/** maplibre-gl-style-spec's `canUpdateGeoJSON`: the two source specifications differ in `data` only. */
+function onlyDataDiffers(before: Record<string, unknown>, after: Record<string, unknown>): boolean {
+  const { data: _before, ...restBefore } = before;
+  const { data: _after, ...restAfter } = after;
+  return deepEqual(restBefore, restAfter);
 }
 
 /** `group` (a layer's paint or layout) with `name` set, or removed for null/undefined. */
@@ -305,8 +331,11 @@ export class FakeMap extends Emitter {
     }
   }
 
-  /** MapLibre's `Style.addSource`. */
-  private insertSource(id: string, spec: any): void {
+  /**
+   * MapLibre's `Style.addSource`. `notify: false` leaves out the `sourcedata`
+   * the mock otherwise fires right away, for a caller that fires it later.
+   */
+  private insertSource(id: string, spec: any, notify = true): void {
     this.checkLoaded();
     if (this.sources.has(id)) {
       throw new Error(`Source "${id}" already exists.`);
@@ -317,7 +346,69 @@ export class FakeMap extends Emitter {
       );
     }
     this.sources.set(id, createSource(id, spec));
-    this.emitSourceData(id, this.sources.get(id));
+    if (notify) this.emitSourceData(id, this.sources.get(id));
+  }
+
+  /** MapLibre's `Style.removeSource`, refused while a layer uses the source. */
+  private dropSource(id: string): void {
+    this.checkLoaded();
+    if (!this.sources.has(id)) {
+      throw new Error(`There is no source with this ID=${id}`);
+    }
+    const user = [...this.layers.values()].find((layer) => layer.source === id);
+    if (user) {
+      this.fireError(`Source "${id}" cannot be removed while layer "${user.id}" is using it.`);
+      return;
+    }
+    const source = this.sources.get(id);
+    this.sources.delete(id);
+    this.emitSourceData(id, source);
+  }
+
+  /** MapLibre's `Style.addLayer`: refusals fire an `error` event and add nothing. */
+  private insertLayer(layer: any, beforeId?: string): void {
+    this.checkLoaded();
+    const id = layer.id;
+    if (this.layers.has(id)) {
+      this.fireError(`Layer "${id}" already exists on this map.`);
+      return;
+    }
+    let spec = layer;
+    if (layer.type !== 'custom') {
+      if (layer.source && typeof layer.source === 'object') {
+        this.insertSource(id, layer.source);
+        spec = { ...layer, source: id };
+      }
+      // MapLibre's style validation of the layer.
+      if (spec.type !== 'background' && !spec.source) {
+        this.fireError(`layers.${id}: missing required property "source"`);
+        return;
+      }
+      if (spec.type !== 'background' && !this.sources.has(spec.source)) {
+        this.fireError(`layers.${id}: source "${spec.source}" not found`);
+        return;
+      }
+      // Like MapLibre's style layer, later changes to the caller's object do not reach it.
+      spec = clone(spec);
+    }
+    const index = beforeId ? this.layerOrder.indexOf(beforeId) : this.layerOrder.length;
+    if (beforeId && index === -1) {
+      this.fireError(`Cannot add layer "${id}" before non-existing layer "${beforeId}".`);
+      return;
+    }
+    this.layerOrder.splice(index, 0, id);
+    this.layers.set(id, spec);
+  }
+
+  /** MapLibre's `Style.removeLayer`. */
+  private dropLayer(id: string): void {
+    this.checkLoaded();
+    if (!this.layers.has(id)) {
+      this.fireError(`Cannot remove non-existing layer "${id}".`);
+      return;
+    }
+    this.layers.delete(id);
+    this.layerOrder = this.layerOrder.filter((layerId) => layerId !== id);
   }
 
   /**
@@ -355,18 +446,147 @@ export class FakeMap extends Emitter {
     this.emit('styledataloading', { type: 'styledataloading', dataType: 'style' });
   }
 
-  /** MapLibre's `Style.setState`: the end state is `next`, reached in place. */
+  /**
+   * MapLibre's `Map._updateDiff` and `Style.setState`: the end state is
+   * `next`, reached in place by the operations of maplibre-gl-style-spec's
+   * `diff`, applied one at a time in its order:
+   *
+   * 1. the top-level fields (sprite, glyphs, light, ...), the camera aside;
+   * 2. every layer whose source is removed or changed, in the layer order;
+   * 3. the sources `next` lacks, in the current style's order, then `next`'s
+   *    new and changed sources in its order: a changed one is removed and
+   *    added again, a GeoJSON one whose data alone changed gets that data;
+   * 4. the layers `next` lacks; then `next`'s layers from the top down, each
+   *    one that is not already in place inserted under the one above it (so
+   *    the topmost is appended to the layer order); then in-place changes to
+   *    the layers left where they were.
+   *
+   * As in MapLibre, removing a source fires `sourcedata` synchronously, so
+   * listeners run while the diff is half done, and an operation that throws
+   * abandons the diff for a full rebuild. Custom layers, which the diff never
+   * sees, stay where they are in the layer order.
+   *
+   * Simplifications: terrain is applied after the other operations, and
+   * removing a sprite fires no `styledata` (MapLibre's `_unloadSprite` does).
+   */
   private diffStyle(next: StyleSpec): void {
-    const before = JSON.stringify(this.serializeStyle());
-    const terrainBefore = JSON.stringify(this.terrain);
-    const added = this.replaceStyleContent(next);
-    if (JSON.stringify(this.terrain) !== terrainBefore) {
+    const before = this.serializeStyle();
+    const target = clone(next);
+    const { sources: nextSources = {}, layers: nextLayers = [], terrain, ...rest } = target;
+    const { sources: beforeSources = {}, layers: beforeLayers = [], terrain: _terrain, ...beforeRest } = before;
+    const operations: (() => void)[] = [];
+    const added: string[] = [];
+
+    // 1. Top-level fields.
+    for (const key of new Set([...Object.keys(beforeRest), ...Object.keys(rest)])) {
+      if (!CAMERA_FIELDS.has(key) && !deepEqual(beforeRest[key], rest[key])) {
+        operations.push(() => {});
+      }
+    }
+
+    // 3. Sources, collected first: their removals decide which layers go in 2.
+    const removedSources = new Set<string>();
+    const sourceOperations: (() => void)[] = [];
+    for (const id of Object.keys(beforeSources)) {
+      if (!(id in nextSources)) {
+        removedSources.add(id);
+        sourceOperations.push(() => this.dropSource(id));
+      }
+    }
+    for (const [id, spec] of Object.entries(nextSources)) {
+      const current = beforeSources[id];
+      if (current === undefined) {
+        sourceOperations.push(() => this.addStyleSource(id, spec, added));
+      } else if (!deepEqual(current, spec)) {
+        if (current.type === 'geojson' && spec.type === 'geojson' && onlyDataDiffers(current, spec)) {
+          sourceOperations.push(() => this.sources.get(id)?.setData(spec.data));
+        } else {
+          removedSources.add(id);
+          sourceOperations.push(() => this.dropSource(id), () => this.addStyleSource(id, spec, added));
+        }
+      }
+    }
+
+    // 2. The layers of removed and changed sources.
+    const keptLayers: any[] = [];
+    for (const layer of beforeLayers) {
+      if (layer.source !== undefined && removedSources.has(layer.source)) {
+        operations.push(() => this.dropLayer(layer.id));
+      } else {
+        keptLayers.push(layer);
+      }
+    }
+    operations.push(...sourceOperations);
+
+    // 4. Layers.
+    this.diffLayers(keptLayers, nextLayers, operations);
+
+    const terrainChanged = !deepEqual(this.terrain ?? undefined, terrain);
+    if (operations.length === 0 && !terrainChanged) return;
+
+    try {
+      operations.forEach((operation) => operation());
+    } catch (error) {
+      console.warn(`Unable to perform style diff: ${(error as Error).message}.  Rebuilding the style from scratch.`);
+      this.rebuildStyle(next);
+      return;
+    }
+
+    this.stylesheet = { version: 8, ...rest };
+    if (terrainChanged) {
+      this.terrain = terrain ?? null;
       this.emit('terrain', { type: 'terrain', terrain: this.terrain });
     }
-    if (JSON.stringify(this.serializeStyle()) !== before) {
-      this.emit('styledata', { type: 'styledata', dataType: 'style' });
-    }
+    this.emit('styledata', { type: 'styledata', dataType: 'style' });
     this.emitSourceDataFor(added);
+  }
+
+  /** A source the diff adds; its `sourcedata` comes after the diff, as MapLibre's arrives asynchronously. */
+  private addStyleSource(id: string, spec: any, added: string[]): void {
+    this.insertSource(id, spec, false);
+    added.push(id);
+  }
+
+  /** maplibre-gl-style-spec's `diffLayers`, pushing each operation onto `operations`. */
+  private diffLayers(before: any[], after: any[], operations: (() => void)[]): void {
+    const beforeById = new Map(before.map((layer) => [layer.id, layer]));
+    const afterById = new Map(after.map((layer) => [layer.id, layer]));
+    // The layer order as it will be after each operation, `before`'s layers only.
+    const tracker = before.map((layer) => layer.id);
+    // Layers added in their final shape, which need no in-place changes.
+    const clean = new Set<string>();
+
+    for (const layer of before) {
+      if (!afterById.has(layer.id)) {
+        operations.push(() => this.dropLayer(layer.id));
+        tracker.splice(tracker.indexOf(layer.id), 1);
+      }
+    }
+
+    for (let i = 0; i < after.length; i++) {
+      const id = after[after.length - 1 - i].id;
+      if (tracker[tracker.length - 1 - i] === id) continue;
+      if (beforeById.has(id)) {
+        operations.push(() => this.dropLayer(id));
+        tracker.splice(tracker.indexOf(id), 1);
+      }
+      const insertBefore = tracker[tracker.length - i];
+      operations.push(() => this.insertLayer(afterById.get(id), insertBefore));
+      tracker.splice(tracker.length - i, 0, id);
+      clean.add(id);
+    }
+
+    for (const layer of after) {
+      const previous = beforeById.get(layer.id);
+      if (clean.has(layer.id) || deepEqual(previous, layer)) continue;
+      if (previous.source !== layer.source || previous['source-layer'] !== layer['source-layer'] || previous.type !== layer.type) {
+        const insertBefore = tracker[tracker.indexOf(layer.id) + 1];
+        operations.push(() => this.dropLayer(layer.id), () => this.insertLayer(layer, insertBefore));
+      } else {
+        // setPaintProperty, setLayoutProperty, setFilter, ...: the layer stays where it is.
+        operations.push(() => this.layers.set(layer.id, clone(layer)));
+      }
+    }
   }
 
   /** `sourcedata` for each of these sources still on the map. */
@@ -378,38 +598,26 @@ export class FakeMap extends Emitter {
   }
 
   /**
-   * Swap in a style document's sources, layers and terrain, without events,
-   * and return the ids of the sources that got a new object. A source whose
-   * specification is unchanged keeps its object; custom layers, which
-   * MapLibre's diff never sees, stay on top.
+   * Load a style document's sources, layers and terrain into an empty style,
+   * as MapLibre's `Style._load` does, without events, and return the ids of
+   * its sources.
    */
   private replaceStyleContent(style: StyleSpec): string[] {
     const { sources = {}, layers = [], terrain, ...rest } = style;
     this.stylesheet = { version: 8, ...rest };
 
-    const previousSources = new Map(this.sources);
-    const added: string[] = [];
     this.sources.clear();
-    Object.entries(sources).forEach(([id, spec]) => {
-      const kept = previousSources.get(id);
-      if (kept && JSON.stringify(kept.serialize()) === JSON.stringify(spec)) {
-        this.sources.set(id, kept);
-      } else {
-        this.sources.set(id, createSource(id, spec));
-        added.push(id);
-      }
-    });
+    Object.entries(sources).forEach(([id, spec]) => this.sources.set(id, createSource(id, spec)));
 
-    const customLayers = this.layerOrder.map((id) => this.layers.get(id)).filter((layer) => layer.type === 'custom');
     this.layers.clear();
     this.layerOrder = [];
-    [...layers.map((layer) => clone(layer)), ...customLayers].forEach((layer) => {
-      this.layers.set(layer.id, layer);
+    layers.forEach((layer) => {
+      this.layers.set(layer.id, clone(layer));
       this.layerOrder.push(layer.id);
     });
 
     this.terrain = clone(terrain) ?? null;
-    return added;
+    return Object.keys(sources);
   }
 
   /** MapLibre's `Style.serialize()`: custom layers are left out. */
@@ -447,52 +655,11 @@ export class FakeMap extends Emitter {
   });
   getSource = vi.fn((id: string) => this.sources.get(id));
   removeSource = vi.fn((id: string) => {
-    this.checkLoaded();
-    if (!this.sources.has(id)) {
-      throw new Error(`There is no source with this ID=${id}`);
-    }
-    const user = [...this.layers.values()].find((layer) => layer.source === id);
-    if (user) {
-      this.fireError(`Source "${id}" cannot be removed while layer "${user.id}" is using it.`);
-      return this;
-    }
-    const source = this.sources.get(id);
-    this.sources.delete(id);
-    this.emitSourceData(id, source);
+    this.dropSource(id);
     return this;
   });
   addLayer = vi.fn((layer: any, beforeId?: string) => {
-    this.checkLoaded();
-    const id = layer.id;
-    if (this.layers.has(id)) {
-      this.fireError(`Layer "${id}" already exists on this map.`);
-      return this;
-    }
-    let spec = layer;
-    if (layer.type !== 'custom') {
-      if (layer.source && typeof layer.source === 'object') {
-        this.insertSource(id, layer.source);
-        spec = { ...layer, source: id };
-      }
-      // MapLibre's style validation of the layer.
-      if (spec.type !== 'background' && !spec.source) {
-        this.fireError(`layers.${id}: missing required property "source"`);
-        return this;
-      }
-      if (spec.type !== 'background' && !this.sources.has(spec.source)) {
-        this.fireError(`layers.${id}: source "${spec.source}" not found`);
-        return this;
-      }
-      // Like MapLibre's style layer, later changes to the caller's object do not reach it.
-      spec = clone(spec);
-    }
-    const index = beforeId ? this.layerOrder.indexOf(beforeId) : this.layerOrder.length;
-    if (beforeId && index === -1) {
-      this.fireError(`Cannot add layer "${id}" before non-existing layer "${beforeId}".`);
-      return this;
-    }
-    this.layerOrder.splice(index, 0, id);
-    this.layers.set(id, spec);
+    this.insertLayer(layer, beforeId);
     return this;
   });
   getLayer = vi.fn((id: string) => this.layers.get(id));
@@ -524,13 +691,7 @@ export class FakeMap extends Emitter {
     return this;
   });
   removeLayer = vi.fn((id: string) => {
-    this.checkLoaded();
-    if (!this.layers.has(id)) {
-      this.fireError(`Cannot remove non-existing layer "${id}".`);
-      return this;
-    }
-    this.layers.delete(id);
-    this.layerOrder = this.layerOrder.filter((layerId) => layerId !== id);
+    this.dropLayer(id);
     return this;
   });
   /** A null or undefined value resets the property to its default. */
@@ -569,9 +730,11 @@ export class FakeMap extends Emitter {
   /**
    * By default MapLibre diffs the new style against the current one, and the
    * result matches the new style: sources, layers and terrain added at
-   * runtime are dropped unless the new style has them too. `styledata` fires
-   * when something changed (MapLibre 6.5.0 also fires `style.load` on this
-   * path, 5.0.0 does not, so the mock leaves it out).
+   * runtime are dropped unless the new style has them too. The diff runs one
+   * operation at a time (see `diffStyle`), firing `sourcedata` for each source
+   * it removes. `styledata` fires when something changed (MapLibre fires it on
+   * the next frame; 6.5.0 also fires `style.load` on this path, 5.0.0 does not,
+   * so the mock leaves it out).
    *
    * `{ diff: false }`, or a style document that has not loaded yet, takes the
    * full-rebuild path instead: sources and layers are gone and style changes

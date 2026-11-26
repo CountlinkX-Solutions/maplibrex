@@ -326,6 +326,27 @@ describe('a geojson layer survives style changes (#4)', () => {
     expect(map.addLayer).toHaveBeenCalledTimes(1);
     expect(map.listenerKeys()).toEqual(listeners);
   });
+
+  // What the demo's basemap switcher showed in a browser: the diff removes the
+  // layer, then the old basemap's source (firing sourcedata while the layer's
+  // own source is still there), then adds the new basemap's layers.
+  it('is back on top of the new basemap after a basemap switch', () => {
+    const basemap = (source: string, layers: string[]) => ({
+      version: 8,
+      sources: { [source]: { type: 'vector', url: `${source}.json` } },
+      layers: layers.map((id) => ({ id, type: 'fill', source, 'source-layer': id }))
+    });
+    const map = register(new FakeMap(undefined, { loaded: false }));
+    map.finishStyleLoad(basemap('demotiles', ['countries', 'geolines']));
+    const errors = vi.fn();
+    map.on('error', errors);
+    mountHook(GeoJSONLayerHook, configWith());
+
+    map.setStyle(basemap('openmaptiles', ['water', 'building', 'place']));
+
+    expect(map.getLayersOrder()).toEqual(['water', 'building', 'place', ID]);
+    expect(errors).not.toHaveBeenCalled();
+  });
 });
 
 describe('server commands', () => {

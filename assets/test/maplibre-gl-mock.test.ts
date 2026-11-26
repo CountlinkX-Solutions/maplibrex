@@ -558,6 +558,118 @@ describe('FakeMap setStyle', () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
+
+  describe('a diff applied one operation at a time, as maplibre-gl-style-spec orders them', () => {
+    const streets = {
+      version: 8,
+      sources: { streets: { type: 'vector', url: 'streets.json' } },
+      layers: [
+        { id: 'land', type: 'fill', source: 'streets', 'source-layer': 'land' },
+        { id: 'building', type: 'fill', source: 'streets', 'source-layer': 'building' },
+        { id: 'labels', type: 'symbol', source: 'streets', 'source-layer': 'place' }
+      ]
+    };
+
+    /** `basemap` plus a runtime source and a layer on it, added after the style's own. */
+    function mapWithRuntimeLayer(): FakeMap {
+      const map = new FakeMap(undefined, { loaded: false });
+      map.finishStyleLoad(basemap);
+      map.addSource('points', { type: 'geojson', data: null });
+      map.addLayer({ id: 'points', type: 'circle', source: 'points' });
+      return map;
+    }
+
+    it('removes the layers of removed sources, then the sources in their old order, then adds the new layers', () => {
+      const map = mapWithRuntimeLayer();
+      const seen: [string, string[]][] = [];
+      map.on('sourcedata', (e: { sourceId: string }) => seen.push([e.sourceId, map.getLayersOrder()]));
+
+      map.setStyle(streets);
+
+      // Removing a source fires sourcedata synchronously, while the diff is
+      // half done; a new source's sourcedata arrives after it.
+      expect(seen).toEqual([
+        ['base', []],
+        ['points', []],
+        ['streets', ['land', 'building', 'labels']]
+      ]);
+      expect(map.getStyle()).toEqual(streets);
+      expect(map.removeSource).not.toHaveBeenCalled();
+      expect(map.addLayer).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a layer added by a listener during the diff under the layers the diff adds after it', () => {
+      const map = mapWithRuntimeLayer();
+      const errors: string[] = [];
+      map.on('error', (e: { error: Error }) => errors.push(e.error.message));
+      // A listener that puts "points" back as soon as anything changes, while
+      // its source is still there.
+      map.on('sourcedata', () => {
+        if (!map.getLayer('points') && map.getSource('points')) {
+          map.addLayer({ id: 'points', type: 'circle', source: 'points' });
+        }
+      });
+
+      map.setStyle(streets);
+
+      expect(map.getLayersOrder()).toEqual(['points', 'land', 'building', 'labels']);
+      expect(map.getSource('points')).toBeDefined();
+      expect(errors).toEqual(['Source "points" cannot be removed while layer "points" is using it.']);
+    });
+
+    it('keeps the layers a diff leaves in place, and inserts the new ones between them', () => {
+      const map = new FakeMap(undefined, { loaded: false });
+      map.finishStyleLoad(streets);
+      map.addLayer({ id: 'mine', type: 'background' });
+      const next = {
+        ...streets,
+        layers: [streets.layers[0], { id: 'roads', type: 'line', source: 'streets', 'source-layer': 'roads' }, ...streets.layers.slice(1)]
+      };
+
+      map.setStyle(next);
+
+      expect(map.getLayersOrder()).toEqual(['land', 'roads', 'building', 'labels']);
+      expect(map.getSource('streets')).toBeDefined();
+    });
+
+    it('updates a GeoJSON source in place when only its data changed', () => {
+      const style = { version: 8, sources: { points: { type: 'geojson', data: null } }, layers: [{ id: 'points', type: 'circle', source: 'points' }] };
+      const map = new FakeMap(undefined, { loaded: false });
+      map.finishStyleLoad(style);
+      const source = map.getSource('points');
+      const data = { type: 'FeatureCollection', features: [] };
+
+      map.setStyle({ ...style, sources: { points: { type: 'geojson', data } } });
+
+      expect(map.getSource('points')).toBe(source);
+      expect(map.getSource('points').serialize()).toEqual({ type: 'geojson', data });
+      expect(map.getLayersOrder()).toEqual(['points']);
+    });
+
+    it('rebuilds the style from scratch when an operation throws, as MapLibre does', () => {
+      const map = mapWithRuntimeLayer();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const putBack = () => {
+        if (!map.getLayer('points') && map.getSource('points')) {
+          map.addLayer({ id: 'points', type: 'circle', source: 'points' });
+          map.off('sourcedata', putBack);
+        }
+      };
+      map.on('sourcedata', putBack);
+      // "points" changes, so the diff removes and re-adds it; the layer put
+      // back meanwhile makes the removal fail and the add throw.
+      const next = { ...streets, sources: { ...streets.sources, points: { type: 'geojson', data: null, cluster: true } } };
+
+      map.setStyle(next);
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unable to perform style diff'));
+      expect(map.getStyle()).toBeUndefined();
+      map.finishStyleLoad();
+      expect(map.getStyle()).toEqual(next);
+      vi.restoreAllMocks();
+    });
+  });
 });
 
 describe('FakeMap listener bookkeeping', () => {
