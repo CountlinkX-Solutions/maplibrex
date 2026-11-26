@@ -77,6 +77,21 @@ mounted. See **Changed**.
   `vector_tile_source`, `raster_tile_source`, `raster_dem_source` and `sky`
   left out events they do push ([#28], in part). Each component's docs now
   list the events it pushes, the names the `events` attribute takes.
+- A map whose LiveView keeps its position in the assigns, as the README
+  shows (`assign(socket, center: center, zoom: zoom)` on `map:moved`), was
+  moved again to the position it had just reported when the re-render
+  arrived, and so pushed `map:moved` twice for one move by the user ([#49]).
+  When the re-render arrived while the user was still moving the map, it
+  pulled the map back to where the user had been. Now one move pushes one
+  `map:moved`, and the map is never moved by its own position coming back:
+  a centre, zoom, bearing or pitch it reported in `map:moved` or
+  `map:zoom_changed` is not applied while the server's answer to that event
+  is pending, and neither is a value where the map already is (within a
+  millionth of a degree for the centre, 0.005 for zoom, bearing and pitch,
+  the rounding of `map:moved`). A centre, zoom, bearing or pitch the
+  LiveView changes to is applied as before, also one the map reported
+  earlier, and the JS commands and `push_event` commands move the map as
+  before; each still pushes one `map:moved` where the map ends.
 
 ### Documentation
 
@@ -406,6 +421,7 @@ First public release.
 [#45]: https://github.com/CountlinkX-Solutions/maplibrex/issues/45
 [#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
 [#48]: https://github.com/CountlinkX-Solutions/maplibrex/issues/48
+[#49]: https://github.com/CountlinkX-Solutions/maplibrex/issues/49
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0

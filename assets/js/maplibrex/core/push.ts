@@ -14,6 +14,10 @@
  *   promise from `pushEvent` that rejects when the view is disconnected, the
  *   push times out or the server rejects it; that rejection is caught. A
  *   `pushEvent` that throws (a hook whose view is gone) is caught too.
+ * - say what became of the push (`PushOutcome`): whether it was sent and,
+ *   when LiveView returned a promise for it, when the server's answer is in.
+ *   The map's dispatcher uses that to tell its own camera, rendered back by
+ *   the LiveView, from a camera the server sets (#49).
  *
  * A push given a reply callback is a request, not a notification: it is never
  * filtered, since its caller waits for the reply. No hook sends one; only
@@ -59,26 +63,47 @@ export function wantsEvent(hook: EventPusher, event: string): boolean {
 }
 
 /**
+ * What `push` did: `false` when it sent nothing (the component did not ask
+ * for the event, or `pushEvent` threw). Otherwise `true`, or, when
+ * `pushEvent` returned a promise, a promise that resolves (and never rejects)
+ * once that one settles: LiveView has the server's answer, and has patched in
+ * the re-render that came with it, or the push failed.
+ */
+export type PushOutcome = boolean | Promise<void>;
+
+/**
  * Push `event` with `payload` from `hook`, if its component asked for it, and
  * drop it quietly if it cannot be delivered. With `onReply`, the push is a
  * request: it is always sent, and `onReply` gets the reply.
  */
-export function push(hook: EventPusher, event: string, payload: Record<string, unknown>, onReply?: () => void): void {
-  if (!onReply && !wantsEvent(hook, event)) return;
+export function push(
+  hook: EventPusher,
+  event: string,
+  payload: Record<string, unknown>,
+  onReply?: () => void
+): PushOutcome {
+  if (!onReply && !wantsEvent(hook, event)) return false;
 
   try {
     const result: unknown = onReply ? hook.pushEvent(event, payload, onReply) : hook.pushEvent(event, payload);
-    settle(result, event);
+    return settle(result, event) ?? true;
   } catch (error) {
     logger.debug(`[MaplibreX] Could not push ${event}:`, error);
+    return false;
   }
 }
 
-/** Catch the rejection of `result`, if it is a promise: an event that could not be delivered is dropped. */
-export function settle(result: unknown, event: string): void {
+/**
+ * Catch the rejection of `result`, if it is a promise: an event that could not
+ * be delivered is dropped. Returns a promise that resolves once `result`
+ * settles, either way, or `undefined` when `result` is not a promise.
+ */
+export function settle(result: unknown, event: string): Promise<void> | undefined {
   if (result !== null && typeof result === 'object' && typeof (result as PromiseLike<unknown>).then === 'function') {
-    (result as PromiseLike<unknown>).then(undefined, (error: unknown) =>
-      logger.debug(`[MaplibreX] Could not push ${event}:`, error)
+    return Promise.resolve(result as PromiseLike<unknown>).then(
+      () => undefined,
+      (error: unknown) => logger.debug(`[MaplibreX] Could not push ${event}:`, error)
     );
   }
+  return undefined;
 }

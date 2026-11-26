@@ -11,6 +11,7 @@ import type { LiveViewHook, MapConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 import { createEventDispatcher } from '../core/event-dispatcher';
 import { isEqual } from '../core/managed-item';
+import { CAMERA_FIELDS, type CameraField, cameraOf, sameCameraValue } from '../core/camera-reports';
 
 import { logger } from '../core/logger';
 
@@ -19,6 +20,38 @@ interface MapHookState {
   dispatcher: ReturnType<typeof createEventDispatcher>;
   config: MapConfig;
   cleanup?: () => void;
+}
+
+/**
+ * Move the map to the camera values of `newConfig` that the server changed
+ * since `oldConfig` (#49). A changed value is left alone when it is
+ * - one the map itself reported in `map:moved` or `map:zoom_changed` and the
+ *   server has not answered yet: the echo of a LiveView that keeps the
+ *   camera in its assigns, which may arrive while the user is still moving
+ *   the map (see core/camera-reports.ts);
+ * - where the map already is, within the tolerance of `sameCameraValue`:
+ *   moving it there would only fire another `map:moved`.
+ * A value the server did not change is left alone too, even when the map is
+ * elsewhere: a LiveView that sets only some of the camera (a zoom, say) and
+ * leaves the rest to the user re-renders the others unchanged.
+ */
+function applyCamera(state: MapHookState, newConfig: MapConfig, oldConfig: MapConfig): void {
+  const camera = cameraOf(state.map);
+  const set: Record<CameraField, (value: any) => unknown> = {
+    center: (center) => state.map.setCenter(center),
+    zoom: (zoom) => state.map.setZoom(zoom),
+    bearing: (bearing) => state.map.setBearing(bearing),
+    pitch: (pitch) => state.map.setPitch(pitch)
+  };
+
+  for (const field of CAMERA_FIELDS) {
+    const value = newConfig[field];
+    if (value === undefined || value === null) continue;
+    if (isEqual(value, oldConfig[field])) continue;
+    if (state.dispatcher.cameraReports.isEcho(field, value)) continue;
+    if (sameCameraValue(field, value, camera[field])) continue;
+    set[field](value);
+  }
 }
 
 export const MapHook: LiveViewHook = {
@@ -145,28 +178,7 @@ export const MapHook: LiveViewHook = {
       const newConfig: MapConfig = JSON.parse(configStr);
       const oldConfig: MapConfig = state.config;
 
-      // Update the centre if it changed
-      if (
-        newConfig.center[0] !== oldConfig.center[0] ||
-        newConfig.center[1] !== oldConfig.center[1]
-      ) {
-        state.map.setCenter(newConfig.center);
-      }
-
-      // Update the zoom if it changed
-      if (newConfig.zoom !== oldConfig.zoom) {
-        state.map.setZoom(newConfig.zoom);
-      }
-
-      // Update the bearing if it changed
-      if (newConfig.bearing !== undefined && newConfig.bearing !== oldConfig.bearing) {
-        state.map.setBearing(newConfig.bearing);
-      }
-
-      // Update the pitch if it changed
-      if (newConfig.pitch !== undefined && newConfig.pitch !== oldConfig.pitch) {
-        state.map.setPitch(newConfig.pitch);
-      }
+      applyCamera(state, newConfig, oldConfig);
 
       // Update the style if it changed. Both configs come from JSON.parse, so
       // a style object is a new object on every update: compare by value, or

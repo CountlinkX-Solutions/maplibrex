@@ -4,7 +4,7 @@
  * `style/style.ts`) where layer and source lifecycle bugs live.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeMap } from './mocks/maplibre-gl';
+import { FakeMap, Map as MapLibreMap } from './mocks/maplibre-gl';
 import { registerMap, resetEnvironment } from './helpers';
 
 const NOT_LOADED = 'Style is not done loading.';
@@ -742,6 +742,152 @@ describe('FakeMap listener bookkeeping', () => {
     map.off('click', 'points', onClick);
     map.emit('load');
     expect(map.listenerKeys()).toEqual([]);
+  });
+});
+
+describe('FakeMap camera', () => {
+  afterEach(resetEnvironment);
+
+  const MOVE_EVENTS = [
+    'movestart',
+    'move',
+    'zoomstart',
+    'zoom',
+    'zoomend',
+    'rotatestart',
+    'rotate',
+    'rotateend',
+    'pitchstart',
+    'pitch',
+    'pitchend',
+    'moveend'
+  ];
+
+  function camera(map: FakeMap) {
+    const { lng, lat } = map.getCenter();
+    return { center: [lng, lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+  }
+
+  it('starts a map made with new Map(options) at the camera its options give', () => {
+    const map = new MapLibreMap({ container: document.createElement('div'), center: [1, 2], zoom: 3, bearing: 4, pitch: 5 });
+
+    expect(camera(map)).toEqual({ center: [1, 2], zoom: 3, bearing: 4, pitch: 5 });
+  });
+
+  it('takes a centre given as { lng, lat } too', () => {
+    const map = new MapLibreMap({ container: document.createElement('div'), center: { lng: 1, lat: 2 } });
+
+    expect(map.getCenter()).toEqual({ lng: 1, lat: 2 });
+  });
+
+  it('jumpTo moves the camera at once and fires movestart, move, the events of what changed, and moveend', () => {
+    const map = new FakeMap();
+    const fired = recordEvents(map, MOVE_EVENTS);
+
+    map.jumpTo({ center: [1, 2], zoom: 6 });
+
+    expect(camera(map)).toEqual({ center: [1, 2], zoom: 6, bearing: 0, pitch: 0 });
+    expect(fired).toEqual(['movestart', 'move', 'zoomstart', 'zoom', 'zoomend', 'moveend']);
+  });
+
+  it.each([
+    ['setCenter', (m: FakeMap) => m.setCenter([1, 2]), { center: [1, 2] }, []],
+    ['setZoom', (m: FakeMap) => m.setZoom(7), { zoom: 7 }, ['zoomstart', 'zoom', 'zoomend']],
+    ['setBearing', (m: FakeMap) => m.setBearing(30), { bearing: 30 }, ['rotatestart', 'rotate', 'rotateend']],
+    ['setPitch', (m: FakeMap) => m.setPitch(20), { pitch: 20 }, ['pitchstart', 'pitch', 'pitchend']]
+  ] as const)('%s jumps at once, as MapLibre does', (_name, move, changed, events) => {
+    const map = new FakeMap();
+    const before = camera(map);
+    const fired = recordEvents(map, MOVE_EVENTS);
+
+    move(map);
+
+    expect(camera(map)).toEqual({ ...before, ...changed });
+    expect(fired).toEqual(['movestart', 'move', ...events, 'moveend']);
+  });
+
+  it('fires movestart, move and moveend for a jump to where the map already is, as MapLibre does', () => {
+    const map = new FakeMap();
+    map.jumpTo({ center: [1, 2], zoom: 6, bearing: 10, pitch: 20 });
+    const fired = recordEvents(map, MOVE_EVENTS);
+
+    map.jumpTo({ center: [1, 2], zoom: 6, bearing: 10, pitch: 20 });
+
+    expect(fired).toEqual(['movestart', 'move', 'moveend']);
+  });
+
+  it('passes the event data on to every event it fires', () => {
+    const map = new FakeMap();
+    const seen: unknown[] = [];
+    ['movestart', 'zoomend', 'moveend'].forEach((type) => map.on(type, (e) => seen.push(e)));
+
+    map.setZoom(8, { origin: 'test' });
+
+    expect(seen).toEqual([
+      { type: 'movestart', origin: 'test' },
+      { type: 'zoomend', origin: 'test' },
+      { type: 'moveend', origin: 'test' }
+    ]);
+  });
+
+  // MapLibre animates these over several frames and fires moveend when the
+  // animation ends; the mock ends it at once.
+  it.each([
+    ['flyTo', (m: FakeMap) => m.flyTo({ center: [1, 2], zoom: 9, bearing: 10, pitch: 20 }), { center: [1, 2], zoom: 9, bearing: 10, pitch: 20 }],
+    ['easeTo', (m: FakeMap) => m.easeTo({ center: [3, 4] }), { center: [3, 4] }],
+    ['fitBounds', (m: FakeMap) => m.fitBounds([[0, 0], [2, 4]]), { center: [1, 2] }],
+    ['zoomIn', (m: FakeMap) => m.zoomIn(), { zoom: 6 }],
+    ['zoomOut', (m: FakeMap) => m.zoomOut(), { zoom: 4 }],
+    ['rotateTo', (m: FakeMap) => m.rotateTo(45), { bearing: 45 }],
+    ['resetNorth', (m: FakeMap) => m.resetNorth(), { bearing: 0 }]
+  ] as const)('%s ends at once where it was going, with one moveend', (_name, move, changed) => {
+    const map = new FakeMap();
+    map.setBearing(90);
+    const before = camera(map);
+    const fired = recordEvents(map, ['moveend']);
+
+    move(map);
+
+    expect(camera(map)).toEqual({ ...before, ...changed });
+    expect(fired).toEqual(['moveend']);
+  });
+
+  it('keeps every camera method a spy', () => {
+    const map = new FakeMap();
+
+    map.setCenter([1, 2]);
+    map.flyTo({ zoom: 3 });
+
+    expect(map.setCenter).toHaveBeenCalledWith([1, 2]);
+    expect(map.flyTo).toHaveBeenCalledWith({ zoom: 3 });
+    expect(map.jumpTo).not.toHaveBeenCalled();
+  });
+
+  it('userMove moves the camera the way a gesture does: its events carry originalEvent', () => {
+    const map = new FakeMap();
+    const seen: any[] = [];
+    MOVE_EVENTS.forEach((type) => map.on(type, (e) => seen.push(e)));
+
+    map.userMove({ center: [1, 2], zoom: 7 });
+
+    expect(camera(map)).toMatchObject({ center: [1, 2], zoom: 7 });
+    expect(seen.map((e) => e.type)).toEqual(['movestart', 'zoomstart', 'move', 'zoom', 'zoomend', 'moveend']);
+    expect(seen.every((e) => e.originalEvent instanceof Event)).toBe(true);
+    expect(map.setCenter).not.toHaveBeenCalled();
+    expect(map.jumpTo).not.toHaveBeenCalled();
+  });
+
+  it('userMove with { ended: false } leaves the gesture going: moveend waits for the call that ends it', () => {
+    const map = new FakeMap();
+    const fired = recordEvents(map, MOVE_EVENTS);
+
+    map.userMove({ center: [1, 2] }, { ended: false });
+    map.userMove({ center: [3, 4], bearing: 20 }, { ended: false });
+    expect(fired).toEqual(['movestart', 'move', 'rotatestart', 'move', 'rotate']);
+    expect(map.getCenter()).toEqual({ lng: 3, lat: 4 });
+
+    map.userMove({ center: [5, 6] });
+    expect(fired.slice(5)).toEqual(['move', 'rotateend', 'moveend']);
   });
 });
 

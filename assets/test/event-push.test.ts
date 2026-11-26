@@ -47,6 +47,7 @@ vi.mock('../js/maplibrex/utils/deckgl-layer-factory', () => ({
 }));
 
 import { MapManager } from '../js/maplibrex/core/map-manager';
+import { push } from '../js/maplibrex/core/push';
 import {
   BackgroundLayerHook,
   CircleLayerHook,
@@ -590,5 +591,52 @@ describe('a push that fails is dropped quietly (#23)', () => {
 
     expect(MapManager.get('m')?.getLayer('lyr')).toBeUndefined();
     expect(unhandled).not.toHaveBeenCalled();
+  });
+});
+
+describe('push says what became of the push (#49)', () => {
+  const hook = (pushEvent: (...args: any[]) => unknown, config?: Record<string, unknown>) => {
+    const el = document.createElement('div');
+    if (config) el.dataset.config = JSON.stringify(config);
+    return { el, pushEvent: pushEvent as any };
+  };
+
+  it('returns false for an event the component did not ask for, which is not sent', () => {
+    const pushEvent = vi.fn();
+
+    expect(push(hook(pushEvent, { events: ['map:clicked'] }), 'map:moved', {})).toBe(false);
+    expect(pushEvent).not.toHaveBeenCalled();
+  });
+
+  it('returns false when pushEvent throws', () => {
+    expect(
+      push(
+        hook(() => {
+          throw new Error('view gone');
+        }),
+        'map:moved',
+        {}
+      )
+    ).toBe(false);
+  });
+
+  it('returns true when pushEvent gives no promise', () => {
+    expect(push(hook(() => undefined), 'map:moved', {})).toBe(true);
+  });
+
+  it('returns a promise that resolves once the promise LiveView gave settles, also when it rejects', async () => {
+    let answer!: (reply: unknown) => void;
+    const answered = push(hook(() => new Promise((resolve) => (answer = resolve))), 'map:moved', {});
+    const failed = push(hook(() => Promise.reject(new Error('push timeout'))), 'map:moved', {});
+    const settled: string[] = [];
+    (answered as Promise<void>).then(() => settled.push('answered'));
+    (failed as Promise<void>).then(() => settled.push('failed'));
+
+    await flush();
+    expect(settled).toEqual(['failed']);
+
+    answer({});
+    await flush();
+    expect(settled).toEqual(['failed', 'answered']);
   });
 });
