@@ -75,7 +75,7 @@ export const BackgroundLayerHook: LiveViewHook = {
           };
 
           // Emitir evento de capa agregada
-          this.pushEvent('layer:added', { layer_id: config.id });
+          this.pushEvent('layer:added', { layer_id: config.id, layerId: config.id });
 
           logger.debug(`[MaplibreX] Background layer "${config.id}" mounted on map "${mapId}"`);
 
@@ -110,7 +110,7 @@ export const BackgroundLayerHook: LiveViewHook = {
         }
 
         // Emitir evento de capa removida
-        this.pushEvent('layer:removed', { layer_id: state.config.id });
+        this.pushEvent('layer:removed', { layer_id: state.config.id, layerId: state.config.id });
       }
 
       logger.debug(`[MaplibreX] Background layer "${state.config.id}" destroyed`);

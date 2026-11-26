@@ -95,6 +95,7 @@ export const LineLayerHook: LiveViewHook = {
             if (e.features && e.features.length > 0) {
               this.pushEvent('layer:feature_clicked', {
                 layer_id: config.id,
+                layerId: config.id,
                 feature: e.features[0]
               });
             }
@@ -105,6 +106,7 @@ export const LineLayerHook: LiveViewHook = {
               map.getCanvas().style.cursor = 'pointer';
               this.pushEvent('layer:feature_mouseenter', {
                 layer_id: config.id,
+                layerId: config.id,
                 feature: e.features[0]
               });
             }
@@ -113,7 +115,8 @@ export const LineLayerHook: LiveViewHook = {
           const mouseleaveHandler = () => {
             map.getCanvas().style.cursor = '';
             this.pushEvent('layer:feature_mouseleave', {
-              layer_id: config.id
+              layer_id: config.id,
+              layerId: config.id
             });
           };
 
@@ -131,7 +134,7 @@ export const LineLayerHook: LiveViewHook = {
           };
 
           // Emitir evento de capa agregada
-          this.pushEvent('layer:added', { layer_id: config.id });
+          this.pushEvent('layer:added', { layer_id: config.id, layerId: config.id });
 
           logger.debug(`[MaplibreX] Line layer "${config.id}" mounted on map "${mapId}"`);
 
@@ -177,7 +180,7 @@ export const LineLayerHook: LiveViewHook = {
         }
 
         // Emitir evento de capa removida
-        this.pushEvent('layer:removed', { layer_id: state.config.id });
+        this.pushEvent('layer:removed', { layer_id: state.config.id, layerId: state.config.id });
       }
 
       logger.debug(`[MaplibreX] Line layer "${state.config.id}" destroyed`);

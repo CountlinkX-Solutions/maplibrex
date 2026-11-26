@@ -190,10 +190,14 @@ Map events arrive in your LiveView as ordinary `handle_event/3` calls:
 | `map:error` | `%{"error" => message}` |
 | `marker:clicked` | `%{"markerId" => id, "lngLat" => [lng, lat]}` |
 | `marker:drag_start` / `marker:dragging` / `marker:drag_end` | `%{"markerId" => id, "lngLat" => [lng, lat]}` |
-| `layer:feature_click` | `%{"layerId" => id, "feature" => feature}` |
+| `layer:feature_clicked` / `layer:feature_mouseenter` / `layer:feature_mouseleave` | `%{"layer_id" => id, "feature" => feature}` (no `feature` on `mouseleave`) |
 
 `map:moved` is debounced by 150 ms so continuous panning does not flood the
 socket.
+
+Every `layer:*` event identifies its layer with `"layer_id"`. The same value is
+also sent as `"layerId"`, kept for compatibility with code written against
+`geojson_layer` in 0.1.0; prefer `"layer_id"` in new code.
 
 ## Controlling the map
 

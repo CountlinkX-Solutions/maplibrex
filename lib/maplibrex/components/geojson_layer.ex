@@ -98,7 +98,7 @@ defmodule MaplibreX.Components.GeoJSONLayer do
         \"\"\"
       end
 
-      def handle_event("layer:feature_clicked", %{"layerId" => id, "feature" => feature}, socket) do
+      def handle_event("layer:feature_clicked", %{"layer_id" => id, "feature" => feature}, socket) do
         IO.inspect(feature, label: "Clicked feature")
         {:noreply, socket}
       end
@@ -143,6 +143,10 @@ defmodule MaplibreX.Components.GeoJSONLayer do
   * `layer:feature_mouseenter` - Fired when mouse enters a feature
   * `layer:feature_mouseleave` - Fired when mouse leaves a feature
   * `layer:source_loaded` - Fired when the source data is loaded
+
+  Every event identifies the layer with `"layer_id"`, the same key the other
+  layer components use. `"layerId"` carries the same value and is kept for
+  compatibility with code written against 0.1.0.
 
   ## JavaScript Commands
 
