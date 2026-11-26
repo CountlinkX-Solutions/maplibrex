@@ -164,6 +164,7 @@ export class ManagedLayer extends ManagedItem {
   private warnedBeforeId?: string;
   /** The layer listeners as attached at the first add, kept for `destroy()` to detach. */
   private attachedListeners: [string, (event: any) => void][] = [];
+  private listenersAttached = false;
 
   /**
    * Start keeping layer `id` on map `mapId`: it is added as soon as the map is
@@ -251,6 +252,8 @@ export class ManagedLayer extends ManagedItem {
 
     try {
       if (map.getLayer(this.id)) {
+        // A layer that was on the map before this component is taken over; it still needs its listeners.
+        this.attachListeners(map);
         this.moveUnderAwaitedLayer(map);
         return;
       }
@@ -291,14 +294,21 @@ export class ManagedLayer extends ManagedItem {
       const stack = stacks.get(map) ?? [];
       stacks.set(map, stack);
       stack.push(this);
-      this.attachedListeners = Object.entries(this.options.listeners ?? {}).map(([type, listener]) => [
-        type,
-        (event: any) => listener(event, map)
-      ]);
-      for (const [type, listener] of this.attachedListeners) {
-        map.on(type as never, this.id, listener);
-      }
+      this.attachListeners(map);
       this.options.onFirstAdd?.();
+    }
+  }
+
+  /** Attach the click and hover listeners once; MapLibre keeps them by layer id across re-adds. */
+  private attachListeners(map: Map): void {
+    if (this.listenersAttached) return;
+    this.listenersAttached = true;
+    this.attachedListeners = Object.entries(this.options.listeners ?? {}).map(([type, listener]) => [
+      type,
+      (event: any) => listener(event, map)
+    ]);
+    for (const [type, listener] of this.attachedListeners) {
+      map.on(type as never, this.id, listener);
     }
   }
 

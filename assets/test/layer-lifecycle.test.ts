@@ -667,6 +667,25 @@ describe('click and hover events', () => {
     expect(pushed(m).filter((name) => name === 'layer:feature_clicked')).toHaveLength(1);
   });
 
+  it.each(INTERACTIVE)('%s sends feature events for a layer that was already on the map', (_name, c) => {
+    const map = mapFor(c);
+    map.addLayer(specFor(c) as never);
+    register(map);
+    const m = mountHook(c.hook, configFor(c));
+
+    for (const type of HOVER_EVENTS) {
+      expect(map.listenerCount(type, ID), type).toBe(1);
+    }
+    map.emit('click', ID, interaction);
+    expect(pushed(m)).toEqual(['layer:feature_clicked']);
+
+    // Re-adding the layer later must not attach them a second time.
+    map.setStyle(styleFor(c));
+    for (const type of HOVER_EVENTS) {
+      expect(map.listenerCount(type, ID), type).toBe(1);
+    }
+  });
+
   it.each(NOT_INTERACTIVE)('%s has no click or hover listener', (_name, c) => {
     const map = register(mapFor(c));
     mountHook(c.hook, configFor(c));
