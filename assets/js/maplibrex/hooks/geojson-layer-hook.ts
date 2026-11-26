@@ -105,6 +105,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
         handlers.click = (e: any) => {
           if (e.features && e.features.length > 0) {
             this.pushEvent('layer:feature_clicked', {
+              layer_id: layerId,
               layerId: layerId,
               feature: e.features[0],
               lngLat: e.lngLat.toArray(),
@@ -120,6 +121,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
           
           if (e.features && e.features.length > 0) {
             this.pushEvent('layer:feature_mouseenter', {
+              layer_id: layerId,
               layerId: layerId,
               feature: e.features[0]
             });
@@ -131,6 +133,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
           map.getCanvas().style.cursor = '';
           
           this.pushEvent('layer:feature_mouseleave', {
+            layer_id: layerId,
             layerId: layerId
           });
         };
@@ -142,6 +145,7 @@ export const GeoJSONLayerHook: LiveViewHook = {
           map.once('sourcedata', (e: any) => {
             if (e.sourceId === sourceId && e.isSourceLoaded) {
               this.pushEvent('layer:source_loaded', {
+                layer_id: layerId,
                 layerId: layerId,
                 sourceId: sourceId
               });

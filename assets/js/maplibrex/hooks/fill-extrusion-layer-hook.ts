@@ -95,6 +95,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
             if (e.features && e.features.length > 0) {
               this.pushEvent('layer:feature_clicked', {
                 layer_id: config.id,
+                layerId: config.id,
                 features: e.features,
                 lngLat: e.lngLat
               });
@@ -106,6 +107,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
               map.getCanvas().style.cursor = 'pointer';
               this.pushEvent('layer:feature_mouseenter', {
                 layer_id: config.id,
+                layerId: config.id,
                 features: e.features,
                 lngLat: e.lngLat
               });
@@ -115,7 +117,8 @@ export const FillExtrusionLayerHook: LiveViewHook = {
           const mouseleaveHandler = () => {
             map.getCanvas().style.cursor = '';
             this.pushEvent('layer:feature_mouseleave', {
-              layer_id: config.id
+              layer_id: config.id,
+              layerId: config.id
             });
           };
 
@@ -133,7 +136,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
           };
 
           // Emitir evento de capa agregada
-          this.pushEvent('layer:added', { layer_id: config.id });
+          this.pushEvent('layer:added', { layer_id: config.id, layerId: config.id });
 
           logger.debug(`[MaplibreX] Fill extrusion layer "${config.id}" mounted on map "${mapId}"`);
 
@@ -179,7 +182,7 @@ export const FillExtrusionLayerHook: LiveViewHook = {
         }
 
         // Emitir evento de capa removida
-        this.pushEvent('layer:removed', { layer_id: state.config.id });
+        this.pushEvent('layer:removed', { layer_id: state.config.id, layerId: state.config.id });
       }
 
       logger.debug(`[MaplibreX] Fill extrusion layer "${state.config.id}" destroyed`);

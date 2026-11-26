@@ -48,7 +48,10 @@ defmodule MaplibreX do
     * `map:zoom_changed` - the zoom level changed
     * `map:error` - MapLibre reported an error
     * `marker:clicked`, `marker:drag_start`, `marker:dragging`, `marker:drag_end`
-    * `layer:feature_click`, `layer:feature_mouseenter`, `layer:feature_mouseleave`
+    * `layer:feature_clicked`, `layer:feature_mouseenter`, `layer:feature_mouseleave`
+
+  Every `layer:*` event names its layer with `"layer_id"` (the canonical key).
+  The same value is also sent as `"layerId"`, kept for compatibility.
 
   ## Controlling the map
 
