@@ -1,6 +1,6 @@
 {
   "name": "maplibrex-assets",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Assets for MaplibreX - MapLibre GL JS components for Phoenix LiveView",
   "license": "MIT",

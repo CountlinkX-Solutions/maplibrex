@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-26
+
+Component attributes, hook names, event names and payload keys are
+unchanged, and a component given no `events` list pushes every event, as
+before. One change in behaviour is visible: a layer or source component no
+longer removes a layer or source that was already on the map when it
+mounted. See **Changed**.
+
 ### Added
 
 - An optional `events` attribute on every component that pushes events to
@@ -36,10 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that layer or source when the component is removed ([#46]). In 0.2.0 it
   did, so a component sharing an id with a basemap layer deleted that part of
   the basemap when it went away. The component still takes the layer or
-  source over: it applies the changes MapLibre can make in place (paint,
-  layout, filter, zoom range and `before_id` for layers; new tiles, URL, image
-  or coordinates for sources) and logs one console warning saying that the id
-  was already in use. It pushes no `layer:added`/`layer:removed` or
+  source over: it applies later changes to its attributes that MapLibre can
+  make in place (paint, layout, filter, zoom range and `before_id` for layers;
+  new tiles, URL, image or coordinates for sources) and logs one console
+  warning saying that the id was already in use. It pushes no `layer:added`/`layer:removed` or
   `source:added`/`source:removed` for it, and a change that would mean
   removing it (a new `source_id` or `source_layer`, a zoom bound that is no
   longer set, a source change MapLibre cannot make in place) is not applied,
@@ -398,7 +406,8 @@ First public release.
 [#45]: https://github.com/CountlinkX-Solutions/maplibrex/issues/45
 [#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
 [#48]: https://github.com/CountlinkX-Solutions/maplibrex/issues/48
-[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CountlinkX-Solutions/maplibrex/releases/tag/v0.1.0
