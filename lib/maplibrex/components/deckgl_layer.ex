@@ -5,9 +5,11 @@ defmodule MaplibreX.Components.DeckGlLayer do
   deck.gl is a WebGL visualisation library for large datasets. This component
   wires deck.gl layers into MapLibre GL JS from Phoenix LiveView.
 
-  The deck.gl packages are lazy-loaded the first time a layer mounts, so
-  applications that never use this component pay nothing for it. They are
-  optional peer dependencies — see the installation guide in the README.
+  The deck.gl packages are optional peer dependencies, imported when the first
+  layer mounts. An application that never uses this component can leave them
+  out; with the esbuild profile Phoenix generates it then needs
+  `--external:@deck.gl/*`. With the packages installed, that profile includes
+  them in `app.js`. See the installation guide in the README.
 
   > #### Requires maplibre-gl v5 {: .warning}
   >
