@@ -19,9 +19,10 @@ You need Elixir 1.15+, Erlang/OTP 26+ and Node 18+.
 ```bash
 mix ci         # format check, warnings-as-errors, credo --strict, tests
 mix typecheck  # tsc --noEmit over the TypeScript hooks
+(cd assets && npm test)  # vitest hook tests, run against a maplibre-gl mock
 ```
 
-Both must pass. CI runs the same commands.
+All three must pass. CI runs the same commands.
 
 ## Working on a component
 
