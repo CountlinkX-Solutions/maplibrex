@@ -53,6 +53,44 @@ defmodule MaplibreX.Components.Map do
       def handle_event("map:moved", %{"center" => center, "zoom" => zoom}, socket) do
         {:noreply, assign(socket, center: center, zoom: zoom)}
       end
+
+  ## Nesting components
+
+  Components can be nested in the map. They behave exactly as they do when
+  rendered right after it:
+
+      <.map id="my-map" center={@center} zoom={@zoom} class="h-96">
+        <.vector_tile_source id="places" map_id="my-map" url={@tiles_url} />
+        <.circle_layer
+          :if={@show_places}
+          id="places-points"
+          map_id="my-map"
+          source_id="places"
+          source_layer="place"
+          paint={@places_paint}
+        />
+        <.marker :for={pin <- @pins} id={pin.id} map_id="my-map" lng_lat={pin.coords} />
+      </.map>
+
+  Every nested component still names its map with `map_id`.
+
+  The slot is rendered right after the map element, as its sibling, not
+  inside it. The map element is `phx-update="ignore"`, because MapLibre owns
+  its DOM, so LiveView never patches anything inside it; next to it, nested
+  components follow their assigns and mount and unmount with `:if` and `:for`
+  like any other component.
+
+  Visible slot content is therefore laid out after the map, not on top of it,
+  and is not part of the map in fullscreen. To show your own content on the
+  map, use the `control`, `control_button` and `control_group` components:
+  MapLibre places them in its control corners, inside the map. Or position it
+  yourself in a wrapper of your own (give the wrapper's id to
+  `fullscreen_control` as `container_id` to take it into fullscreen):
+
+      <div class="relative">
+        <.map id="my-map" class="h-96" />
+        <div class="absolute bottom-8 left-2 rounded bg-white p-2 shadow">Legend</div>
+      </div>
   """
 
   use Phoenix.Component
@@ -97,7 +135,10 @@ defmodule MaplibreX.Components.Map do
 
   ## Slots
 
-  * `inner_block` - Optional content to render inside the map container
+  * `inner_block` - Optional content, typically other MaplibreX components
+    for this map. It is rendered right after the map element, as its
+    sibling, not inside the map container: see "Nesting components" in the
+    module documentation
   """
   attr :id, :string, required: true
   attr :center, :list, default: nil
@@ -158,6 +199,10 @@ defmodule MaplibreX.Components.Map do
 
       LiveView still merges `data-*` attributes onto ignored elements, so
       `data-config` keeps flowing and MapHook.updated/0 stays reactive.
+
+      The same rule means LiveView never patches anything inside the map
+      element, so the slot is rendered right after it, as its sibling: nested
+      components follow their assigns, mount and unmount like any other (#15).
     --%>
     <div
       id={@id}
@@ -167,9 +212,7 @@ defmodule MaplibreX.Components.Map do
       data-testid={@testid || "maplibrex-map-#{@id}"}
       class={@class}
       {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
+    ></div><%= render_slot(@inner_block) %>
     """
   end
 
