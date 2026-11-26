@@ -42,7 +42,9 @@ Bugfix release. There are no breaking changes.
   `rotation_alignment` are now applied (color, scale and anchor rebuild the
   marker, keeping position, popup and drag state), `marker:dragging` is
   throttled to one event per 50 ms, and `marker:drag_end` always carries the
-  final position.
+  final position. A rebuild requested while the user drags the marker waits
+  for the drag to end, so it never cuts the drag or its `marker:drag_end`
+  short, and a `lng_lat` sent during a drag is not applied.
 - Server-pushed map events (`map:fly_to`, `map:jump_to`, `map:fit_bounds`,
   `map:set_style`, `map:set_bearing`, `map:set_pitch`, `map:reset_north`,
   `map:zoom_in`, `map:zoom_out`) were applied by every map on the page ([#9]).

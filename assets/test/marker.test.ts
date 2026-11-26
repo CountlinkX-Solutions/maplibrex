@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountHook, registerMap, resetEnvironment } from './helpers';
-import { Marker } from './mocks/maplibre-gl';
+import { FakeMap, Marker } from './mocks/maplibre-gl';
 import { MarkerHook } from '../js/maplibrex/hooks';
 
 const base = {
@@ -19,8 +19,10 @@ const pushed = (m: { hook: any }, name: string) =>
   m.hook.pushEvent.mock.calls.filter(([n]: [string]) => n === name);
 
 describe('MarkerHook (#8)', () => {
+  let map: FakeMap;
+
   beforeEach(() => {
-    registerMap('map');
+    map = registerMap('map');
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -81,7 +83,11 @@ describe('MarkerHook (#8)', () => {
   describe('pending throttled ticks', () => {
     it.each([
       ['destroyed', (m: any) => m.destroy()],
-      ['recreated', (m: any) => m.update({ ...base, draggable: true, color: '#ff0000' })]
+      // A rebuild requested during a drag happens when the drag ends.
+      ['recreated', (m: any) => {
+        m.update({ ...base, draggable: true, color: '#ff0000' });
+        Marker.instances[0].emit('dragend');
+      }]
     ])('do not push after the marker is %s', (_n, act) => {
       vi.useFakeTimers();
       const m = mountHook(MarkerHook, { ...base, draggable: true });
@@ -169,6 +175,53 @@ describe('MarkerHook (#8)', () => {
       expect(marker.setOffset).toHaveBeenCalledWith([3, 4]);
       expect(marker.setPitchAlignment).toHaveBeenCalledWith('map');
       expect(marker.setRotationAlignment).toHaveBeenCalledWith('viewport');
+    });
+
+    // E.g. the server highlights the marker on `marker:drag_start`.
+    it.each([
+      ['color', { color: '#ff0000' }, 'color', '#ff0000'],
+      ['scale', { scale: 2 }, 'scale', 2],
+      ['anchor', { anchor: 'bottom' }, 'anchor', 'bottom']
+    ])('lets a drag finish when %s changes during it, then applies it', (_n, change, option, value) => {
+      const cfg = { ...base, draggable: true, popup: { id: 'pin-popup', text: 'hi' } };
+      const m = mountHook(MarkerHook, cfg);
+      const first = Marker.instances[0];
+      first.togglePopup();
+
+      first.pointerDown();
+      map.emit('mousemove', { lngLat: [11, 21] });
+      map.emit('mousemove', { lngLat: [12, 22] });
+      // The server echoes a position from an earlier `marker:dragging`.
+      m.update({ ...cfg, ...change, lngLat: [11, 21], rotation: 30 });
+
+      // The marker stays under the pointer and keeps following it.
+      expect(first.lngLat).toEqual([12, 22]);
+      map.emit('mousemove', { lngLat: [13, 23] });
+      expect(first.lngLat).toEqual([13, 23]);
+      // In-place updates apply at once.
+      expect(first.setRotation).toHaveBeenCalledWith(30);
+      expect(pushed(m, 'marker:drag_end')).toHaveLength(0);
+
+      map.emit('mouseup');
+
+      const end = pushed(m, 'marker:drag_end');
+      expect(end).toHaveLength(1);
+      expect(end[0][1].lngLat).toEqual([13, 23]);
+
+      // Then the marker is rebuilt where it was dropped.
+      expect(Marker.instances).toHaveLength(2);
+      const second = Marker.instances[1];
+      expect(first.removed).toBe(true);
+      expect(second.options[option]).toBe(value);
+      expect(second.options.rotation).toBe(30);
+      expect(second.lngLat).toEqual([13, 23]);
+      expect(second.popup!.isOpen()).toBe(true);
+
+      // and can be dragged again.
+      second.pointerDown();
+      map.emit('mousemove', { lngLat: [14, 24] });
+      map.emit('mouseup');
+      expect(pushed(m, 'marker:drag_end')).toHaveLength(2);
     });
 
     it('does not recreate the marker when nothing relevant changed', () => {
