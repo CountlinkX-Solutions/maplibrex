@@ -801,11 +801,30 @@ export class FakeMap extends Emitter {
   jumpTo = vi.fn();
   fitBounds = vi.fn();
   rotateTo = vi.fn();
+  setCenter = vi.fn();
+  setZoom = vi.fn();
+  setBearing = vi.fn();
   setPitch = vi.fn();
   resetNorth = vi.fn();
   zoomIn = vi.fn();
   zoomOut = vi.fn();
+  resize = vi.fn();
 }
+
+/**
+ * What `new maplibregl.Map(options)` builds when MapHook creates a map: a
+ * FakeMap in `options.container` showing `options.style` (a style URL stands
+ * for an empty style), already loaded. `options` keeps what it was given.
+ * Exported as `Map`, the name MapHook uses.
+ */
+class MapLibreMap extends FakeMap {
+  constructor(public options: Record<string, any> = {}) {
+    super(options.container, { loaded: false });
+    this.finishStyleLoad(options.style && typeof options.style === 'object' ? options.style : undefined);
+  }
+}
+
+export { MapLibreMap as Map };
 
 export class Popup extends Emitter {
   static instances: Popup[] = [];
