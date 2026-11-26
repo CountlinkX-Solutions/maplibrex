@@ -68,11 +68,14 @@ defmodule MaplibreX.MixProject do
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
         "Demo" => "https://github.com/CountlinkX-Solutions/maplibrex_demo"
       },
-      # `priv/static` carries the prebuilt hook bundle and must exist before
-      # publishing — use `mix publish`, which builds it first.
+      # The prebuilt hook bundle is listed by name: `mix assets.deploy` also
+      # writes its source map next to it, which is git-ignored and must not
+      # ship, and nothing else in `priv/static` belongs in the package (#50).
+      # The bundle loads no file of its own (its only imports are the peer
+      # dependencies). Use `mix publish`, which rebuilds it first.
       files: ~w(
         lib
-        priv/static
+        priv/static/assets/js/maplibrex.js
         assets/js
         assets/css
         assets/package.json
