@@ -592,8 +592,13 @@ export class FakeMap extends Emitter {
         const insertBefore = tracker[tracker.indexOf(layer.id) + 1];
         operations.push(() => this.dropLayer(layer.id), () => this.insertLayer(layer, insertBefore));
       } else {
-        // setPaintProperty, setLayoutProperty, setFilter, ...: the layer stays where it is.
-        operations.push(() => this.layers.set(layer.id, clone(layer)));
+        // setPaintProperty, setLayoutProperty, setFilter, ...: the layer stays
+        // where it is, and so does its object, which MapLibre changes in place.
+        operations.push(() => {
+          const current = this.layers.get(layer.id);
+          for (const key of Object.keys(current)) delete current[key];
+          Object.assign(current, clone(layer));
+        });
       }
     }
   }
