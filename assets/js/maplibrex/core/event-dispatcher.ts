@@ -108,7 +108,7 @@ export class EventDispatcher {
    */
   setupLiveViewHandlers(): void {
     // Move the map to a location
-    this.onLiveViewEvent('map:fly_to', (payload: any) => {
+    this.onMapCommand('map:fly_to', (payload: any) => {
       const { center, zoom, duration, bearing, pitch } = payload;
       
       this.map.flyTo({
@@ -122,7 +122,7 @@ export class EventDispatcher {
     });
 
     // Jump straight to a location, no animation
-    this.onLiveViewEvent('map:jump_to', (payload: any) => {
+    this.onMapCommand('map:jump_to', (payload: any) => {
       const { center, zoom, bearing, pitch } = payload;
       
       this.map.jumpTo({
@@ -134,7 +134,7 @@ export class EventDispatcher {
     });
 
     // Fit the map to bounds
-    this.onLiveViewEvent('map:fit_bounds', (payload: any) => {
+    this.onMapCommand('map:fit_bounds', (payload: any) => {
       const { bounds, padding, maxZoom, duration } = payload;
       
       this.map.fitBounds(bounds, {
@@ -145,34 +145,34 @@ export class EventDispatcher {
     });
 
     // Update the map style
-    this.onLiveViewEvent('map:set_style', (payload: any) => {
+    this.onMapCommand('map:set_style', (payload: any) => {
       const { style } = payload;
       this.map.setStyle(style);
     });
 
     // Change the bearing
-    this.onLiveViewEvent('map:set_bearing', (payload: any) => {
+    this.onMapCommand('map:set_bearing', (payload: any) => {
       const { bearing, duration } = payload;
       this.map.rotateTo(bearing, { duration: duration || 1000 });
     });
 
     // Change the pitch
-    this.onLiveViewEvent('map:set_pitch', (payload: any) => {
+    this.onMapCommand('map:set_pitch', (payload: any) => {
       const { pitch } = payload;
       this.map.setPitch(pitch);
     });
 
     // Reset to north
-    this.onLiveViewEvent('map:reset_north', () => {
+    this.onMapCommand('map:reset_north', () => {
       this.map.resetNorth();
     });
 
     // Zoom in/out
-    this.onLiveViewEvent('map:zoom_in', () => {
+    this.onMapCommand('map:zoom_in', () => {
       this.map.zoomIn();
     });
 
-    this.onLiveViewEvent('map:zoom_out', () => {
+    this.onMapCommand('map:zoom_out', () => {
       this.map.zoomOut();
     });
   }
@@ -185,6 +185,23 @@ export class EventDispatcher {
     // cannot be narrowed to MapLibre's `keyof MapEventType` at compile time.
     this.map.on(event as MapEventName, handler);
     this.mapEventListeners.set(event, handler);
+  }
+
+  /**
+   * Subscribe to a server-pushed map command.
+   *
+   * The payload may carry an optional `id`. When present and different from
+   * this map's id the command is meant for another map and is ignored; when
+   * absent the command applies to every map, as before.
+   */
+  private onMapCommand(event: string, handler: EventHandler): void {
+    this.onLiveViewEvent(event, (payload: any) => {
+      const target = payload?.id;
+      if (target !== undefined && target !== null && target !== this.mapId) {
+        return;
+      }
+      handler(payload);
+    });
   }
 
   /**
