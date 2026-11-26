@@ -15,7 +15,8 @@ import type {
   EventHandler
 } from '../types';
 import { debounce } from '../utils/debounce';
-import { push, settle } from './push';
+import { type Camera, CameraReports } from './camera-reports';
+import { type PushOutcome, push, settle } from './push';
 
 /** The map event names MapLibre accepts. */
 type MapEventName = keyof MapEventType;
@@ -26,6 +27,8 @@ export class EventDispatcher {
   private mapId: string;
   private eventHandlers: Map<string, EventHandler[]> = new Map();
   private mapEventListeners: Map<string, any> = new Map();
+  /** The camera values `map:moved` and `map:zoom_changed` sent that the server has not answered yet (#49). */
+  readonly cameraReports = new CameraReports();
 
   constructor(hook: HookContext, map: MapLibreMap, mapId: string) {
     this.hook = hook;
@@ -54,7 +57,12 @@ export class EventDispatcher {
         pitch: Math.round(pitch * 100) / 100
       };
 
-      this.pushToLiveView('map:moved', payload);
+      this.reportCamera('map:moved', payload, {
+        center: payload.center,
+        zoom: payload.zoom,
+        bearing: payload.bearing,
+        pitch: payload.pitch
+      });
     }, 150);
     
     this.onMapEvent('moveend', debouncedMoveEnd);
@@ -83,13 +91,14 @@ export class EventDispatcher {
 
     // Zoom events
     this.onMapEvent('zoomend', () => {
+      const zoom = this.map.getZoom();
       const payload: MapEventPayload = {
         mapId: this.mapId,
         type: 'zoomend',
-        zoom: this.map.getZoom()
+        zoom
       };
 
-      this.pushToLiveView('map:zoom_changed', payload);
+      this.reportCamera('map:zoom_changed', payload, { zoom });
     });
 
     // Error events
@@ -223,8 +232,20 @@ export class EventDispatcher {
    * map's `events` list, when it has one, names it, and dropped quietly if it
    * cannot be delivered. With `callback` it is a request, always sent.
    */
-  pushToLiveView(event: string, payload: any, callback?: () => void): void {
-    push(this.hook, event, payload, callback);
+  pushToLiveView(event: string, payload: any, callback?: () => void): PushOutcome {
+    return push(this.hook, event, payload, callback);
+  }
+
+  /**
+   * Push an event that tells the server where the map is, and remember the
+   * camera values it sent until the server has answered, so that MapHook does
+   * not apply them back to the map (#49). Nothing is remembered when nothing
+   * was sent.
+   */
+  private reportCamera(event: string, payload: any, camera: Partial<Camera>): void {
+    const outcome = this.pushToLiveView(event, payload);
+    if (outcome === false) return;
+    this.cameraReports.record(camera, outcome === true ? undefined : outcome);
   }
 
   /**

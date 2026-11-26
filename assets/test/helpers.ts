@@ -41,6 +41,23 @@ export interface LiveViewHarness {
   render(html: string): void;
   /** Every event a hook pushed to the server (`pushEvent`), in order, as [event, payload]. */
   pushes: [string, unknown][];
+  /** Deliver the server's answers to the pushes so far, in order (see `server`). */
+  answer(): void;
+}
+
+export interface LiveViewOptions {
+  /** `false`: the view is not connected and rejects every push. */
+  connected?: boolean;
+  /** Mount the real MapHook, which builds its map from the element's `data-config`, instead of the stub. */
+  realMapHook?: boolean;
+  /**
+   * The LiveView's `handle_event/3` and re-render: given each pushed event
+   * and its payload, the HTML it renders in answer, or `undefined` when
+   * nothing changed. The answers wait for `answer()`; each is applied the way
+   * LiveView applies a push's reply: the re-render is patched in, then the
+   * promise `pushEvent` returned resolves.
+   */
+  server?: (event: string, payload: any) => string | undefined;
 }
 
 /**
@@ -51,12 +68,16 @@ export interface LiveViewHarness {
  * view is a single dynamic, so every render patches all of it.
  *
  * `MapHook` is replaced by a stub that registers a FakeMap on its element,
- * the way the real hook creates a MapLibre map in it. A hook's `pushEvent`
- * is recorded in `pushes` instead of going to a server, unless `connected`
- * is false: then the unconnected view rejects every push, as LiveView does
- * while the socket is down, and `pushes` stays empty.
+ * the way the real hook creates a MapLibre map in it, unless `realMapHook`
+ * is set. A hook's `pushEvent` is recorded in `pushes` instead of going to a
+ * server, and answered at once with no re-render, unless `server` answers
+ * it. With `connected: false` the unconnected view rejects every push, as
+ * LiveView does while the socket is down, and `pushes` stays empty.
  */
-export function renderLiveView(html: string, { connected = true }: { connected?: boolean } = {}): LiveViewHarness {
+export function renderLiveView(
+  html: string,
+  { connected = true, realMapHook = false, server }: LiveViewOptions = {}
+): LiveViewHarness {
   const root = document.createElement('div');
   root.id = 'phx-test';
   root.setAttribute('data-phx-session', 'test');
@@ -68,15 +89,25 @@ export function renderLiveView(html: string, { connected = true }: { connected?:
       registerMap(this.el.id, this.el);
     }
   };
-  const liveSocket = new LiveSocket('/live', Socket, { hooks: { ...MapHooks, MapHook: FakeMapHook } });
+  const hooks = realMapHook ? MapHooks : { ...MapHooks, MapHook: FakeMapHook };
+  const liveSocket = new LiveSocket('/live', Socket, { hooks });
   // What joining over the socket would do: create the root view, then apply
   // the server's first render.
   const view = (liveSocket as any).newRootView(root);
   const pushes: [string, unknown][] = [];
+  const answers: (() => void)[] = [];
   if (connected) {
     view.pushHookEvent = (_el: unknown, _target: unknown, event: string, payload: unknown) => {
       pushes.push([event, payload]);
-      return Promise.resolve({ reply: undefined, ref: 0 });
+      if (!server) return Promise.resolve({ reply: undefined, ref: 0 });
+
+      const next = server(event, payload);
+      return new Promise((resolve) => {
+        answers.push(() => {
+          if (next !== undefined) view.update({ 0: next }, []);
+          resolve({ reply: undefined, ref: 0 });
+        });
+      });
     };
   }
   view.onJoin({ rendered: { s: ['', ''], 0: html }, liveview_version: liveSocket.version() });
@@ -85,7 +116,10 @@ export function renderLiveView(html: string, { connected = true }: { connected?:
     render(next) {
       view.update({ 0: next }, []);
     },
-    pushes
+    pushes,
+    answer() {
+      answers.splice(0).forEach((send) => send());
+    }
   };
 }
 

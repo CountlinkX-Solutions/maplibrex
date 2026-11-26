@@ -3,8 +3,9 @@
  *
  * It models only what the hooks touch: listener bookkeeping per event type
  * (and per layer id), source/layer registries, control placement inside the
- * map container, and spies for the imperative camera and style commands.
- * Tests drive it with `emit()` and the lifecycle controls on `FakeMap`.
+ * map container, the camera (its methods are spies that move it and fire
+ * MapLibre's move events) and spies for the style commands. Tests drive it
+ * with `emit()`, `userMove()` and the lifecycle controls on `FakeMap`.
  *
  * Where layer and source lifecycle bugs live, `FakeMap` follows maplibre-gl
  * 6.5.0 (`src/ui/map.ts`, `src/style/style.ts`), including its error messages:
@@ -808,29 +809,142 @@ export class FakeMap extends Emitter {
     return this;
   });
 
-  flyTo = vi.fn();
-  jumpTo = vi.fn();
-  fitBounds = vi.fn();
-  rotateTo = vi.fn();
-  setCenter = vi.fn();
-  setZoom = vi.fn();
-  setBearing = vi.fn();
-  setPitch = vi.fn();
-  resetNorth = vi.fn();
-  zoomIn = vi.fn();
-  zoomOut = vi.fn();
+  // ---------------------------------------------------------------------
+  // Camera
+  // ---------------------------------------------------------------------
+
+  // Each camera method is a spy that moves the camera. The ones MapLibre
+  // carries out at once (`jumpTo` and the `set*` methods, which call it) fire
+  // their events synchronously, as MapLibre does. The ones it animates over
+  // several frames, firing `moveend` when the animation ends, end at once in
+  // the mock, with the same events; `fitBounds` only centres the bounds, as
+  // the mock has no viewport size to fit them to.
+  jumpTo = vi.fn((options: CameraTarget, eventData?: object) => this.moveCamera(options, eventData));
+  setCenter = vi.fn((center: LngLatLike, eventData?: object) => this.moveCamera({ center }, eventData));
+  setZoom = vi.fn((zoom: number, eventData?: object) => this.moveCamera({ zoom }, eventData));
+  setBearing = vi.fn((bearing: number, eventData?: object) => this.moveCamera({ bearing }, eventData));
+  setPitch = vi.fn((pitch: number, eventData?: object) => this.moveCamera({ pitch }, eventData));
+  flyTo = vi.fn((options: CameraTarget, eventData?: object) => this.moveCamera(options, eventData));
+  easeTo = vi.fn((options: CameraTarget, eventData?: object) => this.moveCamera(options, eventData));
+  fitBounds = vi.fn((bounds: [LngLatLike, LngLatLike], _options?: object, eventData?: object) => {
+    const [sw, ne] = bounds.map(toLngLat);
+    return this.moveCamera({ center: [(sw.lng + ne.lng) / 2, (sw.lat + ne.lat) / 2] }, eventData);
+  });
+  zoomIn = vi.fn((_options?: object, eventData?: object) => this.moveCamera({ zoom: this.zoom + 1 }, eventData));
+  zoomOut = vi.fn((_options?: object, eventData?: object) => this.moveCamera({ zoom: this.zoom - 1 }, eventData));
+  rotateTo = vi.fn((bearing: number, _options?: object, eventData?: object) =>
+    this.moveCamera({ bearing }, eventData)
+  );
+  resetNorth = vi.fn((_options?: object, eventData?: object) => this.moveCamera({ bearing: 0 }, eventData));
   resize = vi.fn();
+
+  /** What a gesture under way (`userMove` with `{ ended: false }`) has changed so far. */
+  private gesture?: Set<'zoom' | 'rotate' | 'pitch'>;
+
+  /**
+   * MapLibre's `jumpTo`: the camera changes at once, then `movestart` and
+   * `move` fire, then `zoomstart`/`zoom`/`zoomend` if the zoom changed,
+   * `rotatestart`/`rotate`/`rotateend` if the bearing did,
+   * `pitchstart`/`pitch`/`pitchend` if the pitch did, and `moveend` last.
+   * Like MapLibre it fires `movestart`, `move` and `moveend` even when
+   * nothing changed. Every event carries `eventData`.
+   */
+  private moveCamera(target: CameraTarget, eventData: object = {}): this {
+    const changed = this.applyCamera(target);
+    const fire = (type: string) => this.emit(type, { type, ...eventData });
+    fire('movestart');
+    fire('move');
+    changed.forEach((kind) => [`${kind}start`, kind, `${kind}end`].forEach(fire));
+    fire('moveend');
+    return this;
+  }
+
+  /** Set the camera fields `target` gives; returns the kinds of change (`zoom`, `rotate`, `pitch`) it made. */
+  private applyCamera(target: CameraTarget): ('zoom' | 'rotate' | 'pitch')[] {
+    const changed: ('zoom' | 'rotate' | 'pitch')[] = [];
+    if (target.center !== undefined) {
+      const { lng, lat } = toLngLat(target.center);
+      this.center = [lng, lat];
+    }
+    if (target.zoom !== undefined && target.zoom !== this.zoom) {
+      this.zoom = target.zoom;
+      changed.push('zoom');
+    }
+    if (target.bearing !== undefined && target.bearing !== this.bearing) {
+      this.bearing = target.bearing;
+      changed.push('rotate');
+    }
+    if (target.pitch !== undefined && target.pitch !== this.pitch) {
+      this.pitch = target.pitch;
+      changed.push('pitch');
+    }
+    return changed;
+  }
+
+  /**
+   * Test-only: the user moves the map to `camera` (a drag, a scroll, a
+   * rotation), firing what MapLibre's gesture handlers fire, with an
+   * `originalEvent`: `movestart` and the `zoomstart`/`rotatestart`/
+   * `pitchstart` of a change when it begins, then `move` and the `zoom`/
+   * `rotate`/`pitch` of this step. When the gesture ends (by default, at
+   * once) the `*end` events of everything it changed fire, then `moveend`.
+   * With `{ ended: false }` the gesture goes on: a later call continues it.
+   * No camera method is called.
+   */
+  userMove(camera: CameraTarget, { ended = true }: { ended?: boolean } = {}): void {
+    const originalEvent = new MouseEvent('mousemove');
+    const fire = (type: string) => this.emit(type, { type, originalEvent });
+    const starting = !this.gesture;
+    const gesture = (this.gesture ??= new Set());
+    const changed = this.applyCamera(camera);
+
+    if (starting) fire('movestart');
+    changed.filter((kind) => !gesture.has(kind)).forEach((kind) => fire(`${kind}start`));
+    changed.forEach((kind) => gesture.add(kind));
+    fire('move');
+    changed.forEach(fire);
+
+    if (ended) {
+      this.gesture = undefined;
+      gesture.forEach((kind) => fire(`${kind}end`));
+      fire('moveend');
+    }
+  }
+}
+
+type LngLatLike = [number, number] | { lng: number; lat: number };
+
+/** What `jumpTo`, `flyTo` and `easeTo` take. */
+interface CameraTarget {
+  center?: LngLatLike;
+  zoom?: number;
+  bearing?: number;
+  pitch?: number;
+}
+
+function toLngLat(value: LngLatLike): { lng: number; lat: number } {
+  return Array.isArray(value) ? { lng: value[0], lat: value[1] } : { lng: value.lng, lat: value.lat };
 }
 
 /**
  * What `new maplibregl.Map(options)` builds when MapHook creates a map: a
  * FakeMap in `options.container` showing `options.style` (a style URL stands
- * for an empty style), already loaded. `options` keeps what it was given.
- * Exported as `Map`, the name MapHook uses.
+ * for an empty style), already loaded, with the camera `options` gives
+ * (`center`, `zoom`, `bearing`, `pitch`; FakeMap's own for any it leaves
+ * out). `options` keeps what it was given. Exported as `Map`, the name
+ * MapHook uses.
  */
 class MapLibreMap extends FakeMap {
   constructor(public options: Record<string, any> = {}) {
     super(options.container, { loaded: false });
+    const { center, zoom, bearing, pitch } = options;
+    if (center != null) {
+      const { lng, lat } = toLngLat(center);
+      this.center = [lng, lat];
+    }
+    if (zoom != null) this.zoom = zoom;
+    if (bearing != null) this.bearing = bearing;
+    if (pitch != null) this.pitch = pitch;
     this.finishStyleLoad(options.style && typeof options.style === 'object' ? options.style : undefined);
   }
 }
