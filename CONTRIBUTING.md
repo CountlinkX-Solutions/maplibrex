@@ -9,7 +9,7 @@ pull requests are all welcome.
 git clone https://github.com/CountlinkX-Solutions/maplibrex.git
 cd maplibrex
 mix setup      # fetches Elixir deps and runs npm install in assets/
-mix test       # should print "405 tests, 0 failures"
+mix test       # should end with "0 failures"
 ```
 
 You need Elixir 1.15+, Erlang/OTP 26+ and Node 18+.

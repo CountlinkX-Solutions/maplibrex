@@ -110,8 +110,10 @@ defmodule MaplibreX.Components.LineLayer do
   * `layer:feature_clicked` - Fired when a feature is clicked
   * `layer:feature_mouseenter` - Fired when mouse enters a feature
   * `layer:feature_mouseleave` - Fired when mouse leaves a feature
-  * `layer:added` - Fired when layer is added to map
-  * `layer:removed` - Fired when layer is removed from map
+  * `layer:added` - Fired once, the first time the layer is on the map (not
+    again when a style change puts it back)
+  * `layer:removed` - Fired when the component is removed, if `layer:added`
+    was fired
   """
   attr :id, :string, required: true
   attr :map_id, :string, required: true

@@ -30,12 +30,13 @@ end
 
 - **Declarative** — components and assigns, not imperative JS glue.
 - **Reactive** — the map follows your assigns; events flow back into `handle_event/3`.
-- **Small** — the published bundle is ~65 KB (12 KB gzipped). MapLibre GL is a
+- **Small** — the published bundle is about 66 KB (17 KB gzipped). MapLibre GL is a
   peer dependency, so there is never a second copy of it on the page.
 - **Complete** — 32 components covering layers, sources, controls, 3D terrain,
   deck.gl and custom WebGL layers.
 - **Typed** — the hook layer is written in TypeScript, type-checked in CI.
-- **Tested** — 405 tests against the rendered component output.
+- **Tested** — Elixir tests against the rendered component output, and
+  vitest tests for the hooks against a MapLibre GL mock.
 
 ## Installation
 
@@ -177,6 +178,17 @@ To see MaplibreX's lifecycle logging in the browser console, set
 Every component is documented with attributes, events and examples on
 [HexDocs](https://hexdocs.pm/maplibrex).
 
+Components find their map through `map_id`, so they can sit anywhere in the
+same LiveView as their `<.map>`, or be nested in it. The layer and source
+components, `geojson_layer` and `terrain` can come before or after their map
+and their source: each appears as soon as the map can take it, follows its
+assigns, and comes back after a map style change. Markers, popups, controls,
+`sky`, `deckgl_layer` and `custom_layer` still have to come after their map.
+
+Content nested in `<.map>` is rendered right after the map element, not
+inside it; see `MaplibreX.Components.Map` for how to put your own content on
+the map.
+
 ## Events
 
 Map events arrive in your LiveView as ordinary `handle_event/3` calls:
@@ -235,15 +247,16 @@ push_event(socket, "map:fly_to", %{id: "detail", center: [-3.7, 40.4], zoom: 12}
 
 ## Demo
 
-A full Phoenix application exercising every component:
+A Phoenix application with example pages built on MaplibreX:
 **[maplibrex_demo](https://github.com/CountlinkX-Solutions/maplibrex_demo)**
 
 ## Development
 
 ```bash
 mix setup          # deps + npm install
-mix test           # 405 tests
+mix test           # Elixir tests
 mix typecheck      # tsc --noEmit
+(cd assets && npm test)  # hook tests (vitest)
 mix ci             # format check, warnings-as-errors, credo, tests
 mix assets.build   # development bundle
 mix assets.watch   # rebuild on change
