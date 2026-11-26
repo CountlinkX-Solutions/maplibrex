@@ -20,7 +20,9 @@
  *   full rebuild loads the new style's terrain (usually none), and a diffing
  *   `setStyle` while terrain is on fails and falls back to a full rebuild;
  * - `destroy()` turns the terrain off if it is still the one this class set,
- *   and drops every listener and pending wait.
+ *   and drops every listener and pending wait. A terrain this class did not
+ *   set stays on (#46): one that was already on with the desired settings at
+ *   mount, or one with the same settings that a style change loaded.
  *
  * Style changes are detected through `styledata` and the arrival of the DEM
  * source through that source's `sourcedata`. Both fire often, so reconciling
@@ -28,7 +30,7 @@
  * `getTerrain()` call.
  */
 
-import type { Map } from 'maplibre-gl';
+import type { Map, TerrainSpecification } from 'maplibre-gl';
 
 import { logger } from './logger';
 import { ManagedItem, isEqual } from './managed-item';
@@ -53,8 +55,13 @@ export class ManagedTerrain extends ManagedItem {
   private desired: DesiredTerrain;
   /** `onFirstEnable` has run. */
   private wasEnabled = false;
-  /** The terrain this class last set, which `destroy()` turns off if it is still on. */
-  private applied?: DesiredTerrain;
+  /**
+   * The terrain object this class last gave `setTerrain`, which `destroy()`
+   * turns off if it is still the map's. MapLibre keeps that very object as its
+   * terrain options (`getTerrain()`), and a style change that loads a terrain
+   * of its own sets another one, even with the same settings (#46).
+   */
+  private applied?: TerrainSpecification;
   /**
    * MapLibre threw on the last attempt, or did not set the terrain. Retrying
    * on every map event would only repeat that, so the next attempt waits for
@@ -105,7 +112,7 @@ export class ManagedTerrain extends ManagedItem {
 
     const map = this.map;
     // A map removed by its own hook first has no style left to change.
-    if (!map || !this.isRegistered(map) || !this.applied || !isOn(map, this.applied)) return false;
+    if (!map || !this.isRegistered(map) || !this.applied || map.getTerrain() !== this.applied) return false;
     map.setTerrain(null);
     logger.debug(`[MaplibreX] Terrain on map "${this.mapId}" disabled`);
     return true;
@@ -141,12 +148,13 @@ export class ManagedTerrain extends ManagedItem {
 
   private enable(map: Map): void {
     const terrain = { ...this.desired };
-    map.setTerrain({ source: terrain.source, exaggeration: terrain.exaggeration });
+    const options: TerrainSpecification = { source: terrain.source, exaggeration: terrain.exaggeration };
+    map.setTerrain(options);
     if (!isOn(map, terrain)) {
       this.refused = true;
       return;
     }
-    this.applied = terrain;
+    this.applied = options;
     logger.debug(`[MaplibreX] Terrain enabled with source "${terrain.source}" and exaggeration ${terrain.exaggeration}`);
 
     if (!this.wasEnabled) {

@@ -560,6 +560,47 @@ describe('destroyed()', () => {
   });
 });
 
+describe('a geojson layer whose ids are already on the map (#46)', () => {
+  it('takes its source and layer over for updates, with one warning each, and leaves both on the map', () => {
+    const map = register();
+    map.addSource(SOURCE_ID, { type: 'geojson', data: EMPTY });
+    map.addLayer({ id: ID, type: 'circle', source: SOURCE_ID });
+    const source = map.getSource(SOURCE_ID);
+    const layer = map.getLayer(ID);
+
+    const m = mountHook(GeoJSONLayerHook, configWith());
+    m.update(configWith({ data: DATA, paint: { 'circle-radius': 9 } }));
+
+    expect(source.setData).toHaveBeenCalledWith(DATA);
+    expect(map.getLayer(ID)).toMatchObject({ paint: { 'circle-radius': 9 } });
+    expect(warn.mock.calls).toEqual([
+      [expect.stringContaining(`Source "${SOURCE_ID}" was already on map "map"`)],
+      [expect.stringContaining(`Layer "${ID}" was already on map "map"`)]
+    ]);
+
+    m.destroy();
+
+    expect(map.getSource(SOURCE_ID)).toBe(source);
+    expect(map.getLayer(ID)).toBe(layer);
+    expect(map.listenerKeys()).toEqual([]);
+    expect(pushed(m)).toEqual([]);
+  });
+
+  it('removes its own layer and leaves the source it took over', () => {
+    const map = register();
+    map.addSource(SOURCE_ID, { type: 'geojson', data: EMPTY });
+    const source = map.getSource(SOURCE_ID);
+    const m = mountHook(GeoJSONLayerHook, configWith());
+    expect(map.getLayer(ID)).toBeDefined();
+
+    m.destroy();
+
+    expect(map.getLayer(ID)).toBeUndefined();
+    expect(map.getSource(SOURCE_ID)).toBe(source);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('a geojson layer in a LiveView', () => {
   const attr = (value: unknown) => JSON.stringify(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const MAP = '<div id="map" phx-hook="MapHook" phx-update="ignore"></div>';

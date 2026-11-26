@@ -6,7 +6,8 @@
  * ManagedLayer, the same machinery as the source and layer components: both
  * wait for the map and its style (#17, #12), follow `updated()` (#3), come
  * back after a style change (#4) and are removed by `destroyed()`, the source
- * once no other layer uses it (#18).
+ * once no other layer uses it (#18). A source or layer with its id that was
+ * already on the map is taken over and left there (#46).
  *
  * New data goes to the source with `setData` and new cluster radius or max
  * zoom with `setClusterOptions`; any other source change (turning clustering

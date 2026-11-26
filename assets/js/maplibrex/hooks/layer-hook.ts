@@ -7,7 +7,8 @@
  * hook turns it into a layer specification and hands it to a `ManagedLayer`
  * (core/managed-layer.ts), which keeps the layer on the map: it is added once
  * the map, its style and its source are ready, follows `updated()`, comes back
- * after a style change and is removed by `destroyed()`.
+ * after a style change and is removed by `destroyed()`. A layer with its id
+ * that was already on the map is taken over and left there (#46).
  *
  * Each component's hook only declares what is its own: the layer type, the
  * spec keys its component does not have, and whether and how it reports

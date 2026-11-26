@@ -302,6 +302,30 @@ describe('destroyed()', () => {
     expect(pushed(m)).toEqual(['terrain:enabled']);
   });
 
+  it('leaves on a terrain with its settings that was on before it mounted, and pushes nothing (#46)', () => {
+    const map = register();
+    map.setTerrain({ source: 'dem', exaggeration: 1.5 });
+    const m = mountHook(TerrainHook, configFor());
+
+    m.destroy();
+
+    expect(map.getTerrain()).toEqual({ source: 'dem', exaggeration: 1.5 });
+    expect(pushed(m)).toEqual([]);
+  });
+
+  it('leaves on the terrain with its settings that a style change brings in place of its own (#46)', () => {
+    const map = register();
+    const m = mountHook(TerrainHook, configFor());
+    const terrain = { source: 'dem', exaggeration: 1.5 };
+
+    map.setStyle({ version: 8, sources: { dem: DEM }, layers: [], terrain }, { diff: false });
+    map.finishStyleLoad();
+    m.destroy();
+
+    expect(map.getTerrain()).toEqual(terrain);
+    expect(pushed(m)).toEqual(['terrain:enabled']);
+  });
+
   it('turns off the terrain it set on a source it has since moved away from', () => {
     const map = register();
     const m = mountHook(TerrainHook, configFor());

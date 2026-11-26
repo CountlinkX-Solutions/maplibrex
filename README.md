@@ -297,7 +297,10 @@ Components find their map through `map_id`, so they can sit anywhere in the
 same LiveView as their `<.map>`, or be nested in it. The layer and source
 components, `geojson_layer` and `terrain` can come before or after their map
 and their source: each appears as soon as the map can take it, follows its
-assigns, and comes back after a map style change. Markers, popups, controls,
+assigns, and comes back after a map style change. A layer or source component
+whose id is already on the map, from the map style or your own code, takes
+that layer or source over for its updates and leaves it on the map when it is
+removed. Markers, popups, controls,
 `sky`, `deckgl_layer` and `custom_layer` still have to come after their map.
 
 Content nested in `<.map>` is rendered right after the map element, not
