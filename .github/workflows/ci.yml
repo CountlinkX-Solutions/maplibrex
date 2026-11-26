@@ -97,6 +97,11 @@ jobs:
         run: npx tsc --noEmit
         working-directory: assets
 
+      # Hook tests run against a hand-written maplibre-gl mock (assets/test).
+      - name: Hook tests
+        run: npm test
+        working-directory: assets
+
       - name: Build distributable bundle
         run: mix assets.deploy
 
