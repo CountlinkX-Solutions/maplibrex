@@ -13,6 +13,7 @@ import { requireDeckGL } from './deckgl-lazy-loader';
 import type { DeckGLLayerConfig } from '../types/deckgl';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 export class DeckGLLayerManager {
   private map: MapLibreMap;
@@ -104,7 +105,7 @@ export class DeckGLLayerManager {
    */
   private handleClick(info: PickingInfo): void {
     if (info.object) {
-      this.hook.pushEvent('deckgl:click', {
+      push(this.hook, 'deckgl:click', {
         layerId: info.layer?.id,
         object: info.object,
         x: info.x,
@@ -119,7 +120,7 @@ export class DeckGLLayerManager {
    */
   private handleHover(info: PickingInfo): void {
     if (info.object) {
-      this.hook.pushEvent('deckgl:hover', {
+      push(this.hook, 'deckgl:hover', {
         layerId: info.layer?.id,
         object: info.object,
         x: info.x,
@@ -133,7 +134,7 @@ export class DeckGLLayerManager {
    */
   private handleDragStart(info: PickingInfo): void {
     if (info.object) {
-      this.hook.pushEvent('deckgl:drag_start', {
+      push(this.hook, 'deckgl:drag_start', {
         layerId: info.layer?.id,
         object: info.object
       });
@@ -145,7 +146,7 @@ export class DeckGLLayerManager {
    */
   private handleDrag(info: PickingInfo): void {
     if (info.object) {
-      this.hook.pushEvent('deckgl:drag', {
+      push(this.hook, 'deckgl:drag', {
         layerId: info.layer?.id,
         object: info.object,
         coordinate: info.coordinate
@@ -157,7 +158,7 @@ export class DeckGLLayerManager {
    * Maneja fin de drag
    */
   private handleDragEnd(info: PickingInfo): void {
-    this.hook.pushEvent('deckgl:drag_end', {
+    push(this.hook, 'deckgl:drag_end', {
       layerId: info.layer?.id
     });
   }

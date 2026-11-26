@@ -10,6 +10,7 @@ import type { LiveViewHook, FullscreenControlConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface FullscreenControlHookState {
   config: FullscreenControlConfig;
@@ -58,14 +59,14 @@ export const FullscreenControlHook: LiveViewHook = {
       // FullscreenControl is itself an Evented and fires these on the control,
       // never on the map — listening on the map silently received nothing.
       control.on('fullscreenstart', () => {
-        this.pushEvent('fullscreen:entered', {
+        push(this, 'fullscreen:entered', {
           controlId: config.id,
           mapId: config.mapId
         });
       });
 
       control.on('fullscreenend', () => {
-        this.pushEvent('fullscreen:exited', {
+        push(this, 'fullscreen:exited', {
           controlId: config.id,
           mapId: config.mapId
         });

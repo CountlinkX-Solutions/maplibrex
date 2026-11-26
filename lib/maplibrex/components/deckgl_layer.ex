@@ -31,6 +31,9 @@ defmodule MaplibreX.Components.DeckGlLayer do
     * `pickable` - Whether the layer responds to pointer events (default: `false`)
     * `auto_highlight` - Highlight objects on hover (default: `false`)
     * `update_triggers` - deck.gl update triggers (default: `%{}`)
+    * `events` - List of the events to push to the LiveView, e.g.
+      `["deckgl:click"]`. Optional: without it, every event listed under Events
+      is pushed
 
   ## Supported layer types
 
@@ -161,6 +164,7 @@ defmodule MaplibreX.Components.DeckGlLayer do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @valid_layer_types ~w(
     ScatterplotLayer ArcLayer LineLayer HexagonLayer GridLayer
@@ -193,6 +197,10 @@ defmodule MaplibreX.Components.DeckGlLayer do
   attr :auto_highlight, :boolean, default: false, doc: "Highlight objects on hover"
   attr :update_triggers, :map, default: %{}, doc: "deck.gl update triggers"
 
+  attr :events, :list,
+    default: nil,
+    doc: "The events to push to the LiveView; without it, every event is pushed"
+
   def deckgl_layer(assigns) do
     validate_layer_type!(assigns.layer_type)
     validate_opacity!(assigns.opacity)
@@ -201,6 +209,7 @@ defmodule MaplibreX.Components.DeckGlLayer do
     # Build configuration
     config =
       build_layer_config(assigns)
+      |> Events.put(assigns.events)
       |> Jason.encode!()
 
     assigns = assign(assigns, :config, config)

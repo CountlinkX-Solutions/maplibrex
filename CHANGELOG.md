@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- An optional `events` attribute on every component that pushes events to
+  the LiveView ([#45], in part): a list of event names, such as
+  `events={["map:moved", "map:clicked"]}`. When it is given, the component
+  pushes only those events, so a LiveView no longer needs a `handle_event/3`
+  clause for the others and they cost no round trip; an empty list pushes
+  none. Without it, every event is pushed, as before. It applies to `map`,
+  `marker`, `popup`, `geolocate_control`, `fullscreen_control`,
+  `terrain_control`, `terrain`, `sky`, `deckgl_layer`, `geojson_layer`, the
+  layer components and the source components. [#45] stays open for 1.0,
+  when components will push only the events asked for.
+
 ### Changed
 
 - A layer or source component whose id is already on the map when it mounts,
@@ -33,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `layer:removed` or `source:removed` for its own. `terrain` likewise turns
   off only the terrain it set, not one with the same settings that a style
   change loaded.
+
+### Fixed
+
+- Events that could not be delivered surfaced as unhandled promise rejections
+  (`Uncaught (in promise)` in the browser console), one per event pushed
+  while the LiveView was disconnected, for example while the socket
+  reconnected after a deploy ([#23]). Every hook now pushes through one
+  helper that drops such events quietly: they are notifications, and nobody
+  waits for them.
+- The docs of `image_source` and `video_source` listed events their hooks
+  never push (`source:loaded`, `video:loaded`, `video:error`), and those of
+  `vector_tile_source`, `raster_tile_source`, `raster_dem_source` and `sky`
+  left out events they do push ([#28], in part). Each component's docs now
+  list the events it pushes, the names the `events` attribute takes.
 
 ## [0.2.0] - 2026-11-26
 
@@ -340,9 +367,12 @@ First public release.
 [#17]: https://github.com/CountlinkX-Solutions/maplibrex/issues/17
 [#18]: https://github.com/CountlinkX-Solutions/maplibrex/issues/18
 [#20]: https://github.com/CountlinkX-Solutions/maplibrex/issues/20
+[#23]: https://github.com/CountlinkX-Solutions/maplibrex/issues/23
 [#26]: https://github.com/CountlinkX-Solutions/maplibrex/issues/26
+[#28]: https://github.com/CountlinkX-Solutions/maplibrex/issues/28
 [#41]: https://github.com/CountlinkX-Solutions/maplibrex/issues/41
 [#42]: https://github.com/CountlinkX-Solutions/maplibrex/issues/42
+[#45]: https://github.com/CountlinkX-Solutions/maplibrex/issues/45
 [#46]: https://github.com/CountlinkX-Solutions/maplibrex/issues/46
 [Unreleased]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/CountlinkX-Solutions/maplibrex/compare/v0.1.1...v0.2.0

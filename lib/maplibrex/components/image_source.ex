@@ -48,8 +48,8 @@ defmodule MaplibreX.Components.ImageSource do
 
   The image source can emit the following events to LiveView:
 
-      def handle_event("source:loaded", %{"source_id" => source_id}, socket) do
-        IO.inspect(source_id, label: "Image loaded")
+      def handle_event("source:added", %{"source_id" => source_id}, socket) do
+        IO.inspect(source_id, label: "Image source added")
         {:noreply, socket}
       end
 
@@ -60,6 +60,7 @@ defmodule MaplibreX.Components.ImageSource do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders an image source component.
@@ -71,6 +72,9 @@ defmodule MaplibreX.Components.ImageSource do
   * `url` (required) - URL of the image
   * `coordinates` (required) - Array of 4 coordinates [lng, lat] defining the corners
     in clockwise order starting from top-left: [top-left, top-right, bottom-right, bottom-left]
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["source:error"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Coordinates
 
@@ -94,10 +98,11 @@ defmodule MaplibreX.Components.ImageSource do
 
   ## Events
 
-  * `source:loaded` - Fired when the image is successfully loaded
-    - `source_id` - ID of the source
-
-  * `source:error` - Fired when there's an error loading the image
+  * `source:added` - Fired once, with `source_id`, the first time the source
+    is on the map (not again when a style change puts it back)
+  * `source:removed` - Fired, with `source_id`, once the source is gone after
+    the component is removed, if `source:added` was fired
+  * `source:error` - Fired when MapLibre fails to add or replace the source
     - `source_id` - ID of the source
     - `error` - Error message
 
@@ -113,6 +118,7 @@ defmodule MaplibreX.Components.ImageSource do
   attr :map_id, :string, required: true
   attr :url, :string, required: true
   attr :coordinates, :list, required: true
+  attr :events, :list, default: nil
 
   def image_source(assigns) do
     # Validate coordinates
@@ -129,7 +135,7 @@ defmodule MaplibreX.Components.ImageSource do
       coordinates: assigns.coordinates
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

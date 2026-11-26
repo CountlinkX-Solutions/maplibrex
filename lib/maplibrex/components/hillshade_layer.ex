@@ -63,6 +63,7 @@ defmodule MaplibreX.Components.HillshadeLayer do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a hillshade layer component.
@@ -78,6 +79,9 @@ defmodule MaplibreX.Components.HillshadeLayer do
   * `min_zoom` - Minimum zoom level for layer visibility
   * `max_zoom` - Maximum zoom level for layer visibility
   * `before_id` - ID of layer to insert this layer before
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["layer:added"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Paint Properties
 
@@ -111,6 +115,7 @@ defmodule MaplibreX.Components.HillshadeLayer do
   attr :min_zoom, :integer, default: nil
   attr :max_zoom, :integer, default: nil
   attr :before_id, :string, default: nil
+  attr :events, :list, default: nil
 
   def hillshade_layer(assigns) do
     # Build configuration
@@ -129,7 +134,7 @@ defmodule MaplibreX.Components.HillshadeLayer do
       |> Enum.reject(fn {_k, v} -> is_nil(v) || v == %{} end)
       |> Map.new()
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

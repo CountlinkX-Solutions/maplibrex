@@ -105,6 +105,7 @@ defmodule MaplibreX.Components.GeoJSONLayer do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
   alias Phoenix.LiveView.JS
 
   @valid_types ~w(fill line circle symbol heatmap fill-extrusion)
@@ -130,6 +131,9 @@ defmodule MaplibreX.Components.GeoJSONLayer do
   * `cluster_radius` - Cluster radius in pixels. Defaults to `50`
   * `cluster_properties` - Aggregate properties for clusters
   * `generate_id` - Generate unique IDs for features. Defaults to `false`
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["layer:feature_clicked"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Slots
 
@@ -198,6 +202,7 @@ defmodule MaplibreX.Components.GeoJSONLayer do
   attr :cluster_properties, :map, default: nil
   attr :generate_id, :boolean, default: false
   attr :rest, :global
+  attr :events, :list, default: nil
 
   def geojson_layer(assigns) do
     # Validate layer type
@@ -250,7 +255,7 @@ defmodule MaplibreX.Components.GeoJSONLayer do
         beforeId: assigns.before_id
       }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

@@ -16,7 +16,9 @@
  * config keys that go into the specification, the changes MapLibre applies in
  * place, and whether it reports the source's map events.
  *
- * Events pushed to the server, all with `source_id`:
+ * Events pushed to the server, all with `source_id`
+ * (through `push`, core/push.ts: only those the component's `events` list
+ * names, when it has one):
  * - `source:added`, once, the first time the source is on the map (not again
  *   when a style change or an update puts it back);
  * - `source:removed`, once the source is really gone after `destroyed()`, if
@@ -29,7 +31,7 @@
 
 import type { HookContext, LiveViewHook } from '../types';
 import { type InPlaceUpdates, ManagedSource, type SourceListener, type SourceSpec } from '../core/managed-source';
-import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 /** The `data-config` of a source component; keys whose assign is nil are left out. */
 export interface SourceConfig {
@@ -59,22 +61,6 @@ export const TILE_UPDATES: InPlaceUpdates = {
 
 interface SourceHookContext extends HookContext {
   _maplibrex_source?: ManagedSource;
-}
-
-/**
- * Push `event` from `hook`. `source:removed` can come after `destroyed()`,
- * when the last layer using the source goes: LiveView (1.2) still sends a
- * destroyed hook's push while its view is connected, and rejects it once the
- * view is gone, when there is nobody left to tell, so the rejection is
- * dropped instead of surfacing as an unhandled one.
- */
-function push(hook: HookContext, event: string, payload: Record<string, unknown>): void {
-  try {
-    const result: unknown = hook.pushEvent(event, payload);
-    if (result instanceof Promise) result.catch(() => {});
-  } catch (error) {
-    logger.debug(`[MaplibreX] Could not push ${event}:`, error);
-  }
 }
 
 export function createSourceHook(definition: SourceHookDefinition): LiveViewHook {

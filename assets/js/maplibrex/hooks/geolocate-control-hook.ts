@@ -12,6 +12,7 @@ import type { LiveViewHook } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { push } from '../core/push';
 
 interface GeolocateControlConfig {
   id: string;
@@ -77,19 +78,19 @@ export const GeolocateControlHook: LiveViewHook = {
           timestamp: e.timestamp
         };
 
-        this.pushEvent('geolocate:location_found', { coords });
+        push(this, 'geolocate:location_found', { coords });
         logger.debug(`[MaplibreX] Geolocate control "${config.id}": Location found`, coords);
       });
 
       // Event: trackuserlocationstart
       control.on('trackuserlocationstart', () => {
-        this.pushEvent('geolocate:tracking_started', {});
+        push(this, 'geolocate:tracking_started', {});
         logger.debug(`[MaplibreX] Geolocate control "${config.id}": Tracking started`);
       });
 
       // Event: trackuserlocationend
       control.on('trackuserlocationend', () => {
-        this.pushEvent('geolocate:tracking_stopped', {});
+        push(this, 'geolocate:tracking_stopped', {});
         logger.debug(`[MaplibreX] Geolocate control "${config.id}": Tracking stopped`);
       });
 
@@ -100,7 +101,7 @@ export const GeolocateControlHook: LiveViewHook = {
           message: e.message
         };
 
-        this.pushEvent('geolocate:location_error', error);
+        push(this, 'geolocate:location_error', error);
         console.error(`[MaplibreX] Geolocate control "${config.id}": Error`, error);
       });
 
@@ -113,7 +114,7 @@ export const GeolocateControlHook: LiveViewHook = {
             latitude: center.lat,
             longitude: center.lng
           };
-          this.pushEvent('geolocate:user_location_updated', { coords });
+          push(this, 'geolocate:user_location_updated', { coords });
         }
       });
 

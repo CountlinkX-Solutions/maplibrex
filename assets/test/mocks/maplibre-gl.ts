@@ -224,6 +224,9 @@ export class FakeMap extends Emitter {
   sources = new Map<string, any>();
   layers = new Map<string, any>();
   zoom = 5;
+  center: [number, number] = [0, 0];
+  bearing = 0;
+  pitch = 0;
   canvas = { style: { cursor: '' } };
   /** The corner elements MapLibre creates inside the map container for controls. */
   controlPositions = {} as Record<ControlPosition, HTMLElement>;
@@ -653,6 +656,9 @@ export class FakeMap extends Emitter {
   loaded = (): boolean => this.styleDocumentLoaded && !this.tilesLoading;
   getCanvas = () => this.canvas;
   getZoom = () => this.zoom;
+  getCenter = () => ({ lng: this.center[0], lat: this.center[1] });
+  getBearing = () => this.bearing;
+  getPitch = () => this.pitch;
 
   /** Like MapLibre, `undefined` until the style document has loaded. */
   getStyle = (): StyleSpec | undefined => (this.styleDocumentLoaded ? this.serializeStyle() : undefined);
@@ -836,11 +842,26 @@ export class Popup extends Emitter {
   text?: string;
   html?: string;
   open = false;
+  lngLat?: [number, number];
 
   constructor(public options: Record<string, any> = {}) {
     super();
     Popup.instances.push(this);
   }
+  on(type: string, handler: Handler): this {
+    this.addListener(type, handler, undefined, false);
+    return this;
+  }
+  off(type: string, handler: Handler): this {
+    this.removeListener(type, handler);
+    return this;
+  }
+  setLngLat = vi.fn((lngLat: [number, number]) => {
+    this.lngLat = lngLat;
+    return this;
+  });
+  getLngLat = () =>
+    this.lngLat && { lng: this.lngLat[0], lat: this.lngLat[1], toArray: () => [...(this.lngLat as [number, number])] };
   isOpen = () => this.open;
   addTo = vi.fn(() => {
     this.open = true;
@@ -975,8 +996,58 @@ export class ScaleControl implements Control {
   }
 }
 
+/**
+ * A built-in control that is itself an event emitter, as MapLibre's
+ * GeolocateControl and FullscreenControl are: they fire their events on the
+ * control, not on the map. Fire them with `emit()`.
+ */
+class EventedControl extends Emitter implements Control {
+  element = document.createElement('div');
+
+  constructor(public options: Record<string, any>, className: string) {
+    super();
+    this.element.className = `maplibregl-ctrl ${className}`;
+  }
+  on(type: string, handler: Handler): this {
+    this.addListener(type, handler, undefined, false);
+    return this;
+  }
+  off(type: string, handler: Handler): this {
+    this.removeListener(type, handler);
+    return this;
+  }
+  onAdd(): HTMLElement {
+    return this.element;
+  }
+  onRemove(): void {
+    this.element.remove();
+  }
+}
+
+export class GeolocateControl extends EventedControl {
+  static instances: GeolocateControl[] = [];
+  /** MapLibre's internal tracking state, which GeolocateControlHook reads. */
+  _watchState = 'OFF';
+
+  constructor(options: Record<string, any> = {}) {
+    super(options, 'maplibregl-ctrl-geolocate');
+    GeolocateControl.instances.push(this);
+  }
+}
+
+export class FullscreenControl extends EventedControl {
+  static instances: FullscreenControl[] = [];
+
+  constructor(options: Record<string, any> = {}) {
+    super(options, 'maplibregl-ctrl-fullscreen');
+    FullscreenControl.instances.push(this);
+  }
+}
+
 /** Forget instances created by earlier tests. */
 export function resetMocks(): void {
   Marker.instances = [];
   Popup.instances = [];
+  GeolocateControl.instances = [];
+  FullscreenControl.instances = [];
 }

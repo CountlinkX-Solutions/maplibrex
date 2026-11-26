@@ -70,6 +70,7 @@ defmodule MaplibreX.Components.Terrain do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a terrain component.
@@ -83,6 +84,9 @@ defmodule MaplibreX.Components.Terrain do
     - 1.0 = realistic terrain
     - >1.0 = more dramatic/exaggerated terrain
     - <1.0 = flattened terrain
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["terrain:enabled"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -111,6 +115,7 @@ defmodule MaplibreX.Components.Terrain do
   attr :map_id, :string, required: true
   attr :source_id, :string, required: true
   attr :exaggeration, :float, default: 1.0
+  attr :events, :list, default: nil
 
   def terrain(assigns) do
     # Validate exaggeration range
@@ -125,7 +130,7 @@ defmodule MaplibreX.Components.Terrain do
       exaggeration: assigns.exaggeration
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

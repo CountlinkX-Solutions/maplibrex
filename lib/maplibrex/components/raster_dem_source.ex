@@ -51,6 +51,7 @@ defmodule MaplibreX.Components.RasterDEMSource do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a raster DEM source component.
@@ -68,6 +69,9 @@ defmodule MaplibreX.Components.RasterDEMSource do
   * `bounds` - Geographic bounds [west, south, east, north]
   * `encoding` - Encoding format: "mapbox" (default) or "terrarium"
   * `volatile` - Whether data should be cached (default: false)
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["source:error"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Encoding
 
@@ -81,6 +85,10 @@ defmodule MaplibreX.Components.RasterDEMSource do
 
   ## Events
 
+  * `source:added` - Fired once, with `source_id`, the first time the source
+    is on the map (not again when a style change puts it back)
+  * `source:removed` - Fired, with `source_id`, once the source is gone after
+    the component is removed, if `source:added` was fired
   * `source:data` - Fired when source data is loaded or updated
   * `source:error` - Fired when there's an error loading the source
 
@@ -101,6 +109,7 @@ defmodule MaplibreX.Components.RasterDEMSource do
   attr :bounds, :list, default: nil
   attr :encoding, :string, default: nil
   attr :volatile, :boolean, default: false
+  attr :events, :list, default: nil
 
   def raster_dem_source(assigns) do
     # Build configuration
@@ -126,7 +135,7 @@ defmodule MaplibreX.Components.RasterDEMSource do
       raise ArgumentError, "RasterDEMSource requires either 'url' or 'tiles' attribute"
     end
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

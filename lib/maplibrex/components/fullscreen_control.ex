@@ -50,6 +50,7 @@ defmodule MaplibreX.Components.FullscreenControl do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @valid_positions ~w(top-left top-right bottom-left bottom-right)
 
@@ -62,6 +63,9 @@ defmodule MaplibreX.Components.FullscreenControl do
   * `map_id` (required) - ID of the map to add the control to
   * `position` - Control position: `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"`. Defaults to `"top-right"`
   * `container_id` - ID of the HTML element to make fullscreen. If not provided, defaults to the map container
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["fullscreen:entered"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Slots
 
@@ -87,6 +91,7 @@ defmodule MaplibreX.Components.FullscreenControl do
   attr :position, :string, default: "top-right"
   attr :container_id, :string, default: nil
   attr :rest, :global
+  attr :events, :list, default: nil
 
   def fullscreen_control(assigns) do
     # Validate position
@@ -103,7 +108,7 @@ defmodule MaplibreX.Components.FullscreenControl do
       containerSelector: assigns.container_id
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

@@ -38,6 +38,7 @@ defmodule MaplibreX.Components.Marker do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a marker on the map.
@@ -55,6 +56,9 @@ defmodule MaplibreX.Components.Marker do
   * `offset` - Pixel offset as `[x, y]`
   * `pitch_alignment` - How marker is aligned to pitch. One of: `"map"`, `"viewport"`, `"auto"`
   * `rotation_alignment` - How marker is aligned to rotation. One of: `"map"`, `"viewport"`, `"auto"`
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["marker:drag_end"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -91,6 +95,7 @@ defmodule MaplibreX.Components.Marker do
 
   attr :popup_text, :string, default: nil
   attr :popup_html, :string, default: nil
+  attr :events, :list, default: nil
 
   def marker(assigns) do
     # Build popup configuration if text or HTML provided
@@ -135,7 +140,7 @@ defmodule MaplibreX.Components.Marker do
       |> maybe_put(:offset, assigns.offset)
       |> maybe_put(:popup, popup_config)
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

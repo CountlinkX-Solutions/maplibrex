@@ -7,13 +7,12 @@
 
 // maplibre-gl v6 is ESM-only and no longer has a default export.
 import * as maplibregl from 'maplibre-gl';
-import type { HookContext, LiveViewHook, MarkerConfig } from '../types';
+import type { LiveViewHook, MarkerConfig } from '../types';
 import { MapManager } from '../core/map-manager';
 
 import { logger } from '../core/logger';
+import { type EventPusher, push } from '../core/push';
 import { throttle } from '../utils/debounce';
-
-type EventPusher = Pick<HookContext, 'pushEvent'>;
 
 interface MarkerHookState {
   marker: maplibregl.Marker;
@@ -95,19 +94,19 @@ function createMarker(
   // pushing a stale position once the drag is over.
   let dragging = false;
   const pushDragging = throttle(() => {
-    if (dragging) hook.pushEvent('marker:dragging', payload());
+    if (dragging) push(hook, 'marker:dragging', payload());
   }, DRAG_THROTTLE_MS);
 
   marker.on('dragstart', () => {
     dragging = true;
-    hook.pushEvent('marker:drag_start', payload());
+    push(hook, 'marker:drag_start', payload());
   });
 
   marker.on('drag', pushDragging);
 
   marker.on('dragend', () => {
     dragging = false;
-    hook.pushEvent('marker:drag_end', payload());
+    push(hook, 'marker:drag_end', payload());
   });
 
   marker.getElement().addEventListener('click', (e) => {
@@ -115,7 +114,7 @@ function createMarker(
     if (popup) {
       marker.togglePopup();
     }
-    hook.pushEvent('marker:clicked', payload());
+    push(hook, 'marker:clicked', payload());
   });
 
   return {

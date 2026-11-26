@@ -67,6 +67,7 @@ defmodule MaplibreX.Components.GeolocateControl do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @valid_positions ~w(top-left top-right bottom-left bottom-right)
 
@@ -82,6 +83,9 @@ defmodule MaplibreX.Components.GeolocateControl do
   * `show_accuracy_circle` - Show a circle representing location accuracy. Defaults to `true`
   * `show_user_heading` - Show user's heading/direction as they move. Defaults to `true`
   * `fit_bounds_options` - Options for fitting map bounds when location is found. Map with keys like `maxZoom`, `padding`
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["geolocate:location_found"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -98,6 +102,7 @@ defmodule MaplibreX.Components.GeolocateControl do
   attr :show_accuracy_circle, :boolean, default: true
   attr :show_user_heading, :boolean, default: true
   attr :fit_bounds_options, :map, default: %{}
+  attr :events, :list, default: nil
 
   def geolocate_control(assigns) do
     # Validate position
@@ -118,7 +123,7 @@ defmodule MaplibreX.Components.GeolocateControl do
         fitBoundsOptions: assigns.fit_bounds_options
       }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

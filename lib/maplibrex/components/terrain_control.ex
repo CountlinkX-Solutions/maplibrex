@@ -54,6 +54,7 @@ defmodule MaplibreX.Components.TerrainControl do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a terrain control component.
@@ -66,6 +67,9 @@ defmodule MaplibreX.Components.TerrainControl do
   * `terrain_source_id` (required) - ID of the RasterDEMSource to use
   * `exaggeration` - Terrain exaggeration factor when enabled (default: 1.5)
   * `enabled` - Initial terrain state (default: false)
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["terrain_control:toggled"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -83,6 +87,7 @@ defmodule MaplibreX.Components.TerrainControl do
   attr :terrain_source_id, :string, required: true
   attr :exaggeration, :float, default: 1.5
   attr :enabled, :boolean, default: false
+  attr :events, :list, default: nil
 
   def terrain_control(assigns) do
     # Validate position
@@ -108,7 +113,7 @@ defmodule MaplibreX.Components.TerrainControl do
       enabled: assigns.enabled
     }
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

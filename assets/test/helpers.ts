@@ -52,10 +52,11 @@ export interface LiveViewHarness {
  *
  * `MapHook` is replaced by a stub that registers a FakeMap on its element,
  * the way the real hook creates a MapLibre map in it. A hook's `pushEvent`
- * is recorded in `pushes` instead of going to a server (an unconnected view
- * would reject it).
+ * is recorded in `pushes` instead of going to a server, unless `connected`
+ * is false: then the unconnected view rejects every push, as LiveView does
+ * while the socket is down, and `pushes` stays empty.
  */
-export function renderLiveView(html: string): LiveViewHarness {
+export function renderLiveView(html: string, { connected = true }: { connected?: boolean } = {}): LiveViewHarness {
   const root = document.createElement('div');
   root.id = 'phx-test';
   root.setAttribute('data-phx-session', 'test');
@@ -72,10 +73,12 @@ export function renderLiveView(html: string): LiveViewHarness {
   // the server's first render.
   const view = (liveSocket as any).newRootView(root);
   const pushes: [string, unknown][] = [];
-  view.pushHookEvent = (_el: unknown, _target: unknown, event: string, payload: unknown) => {
-    pushes.push([event, payload]);
-    return Promise.resolve({ reply: undefined, ref: 0 });
-  };
+  if (connected) {
+    view.pushHookEvent = (_el: unknown, _target: unknown, event: string, payload: unknown) => {
+      pushes.push([event, payload]);
+      return Promise.resolve({ reply: undefined, ref: 0 });
+    };
+  }
   view.onJoin({ rendered: { s: ['', ''], 0: html }, liveview_version: liveSocket.version() });
 
   return {
@@ -86,6 +89,16 @@ export function renderLiveView(html: string): LiveViewHarness {
   };
 }
 
+export interface MountOptions {
+  /**
+   * The hook's `pushEvent`, instead of the default spy. A plain function, not
+   * a spy: a spy settles the promise it returns, so a rejected one would never
+   * go unhandled. LiveView 1.1+ returns a promise that rejects when the push
+   * fails.
+   */
+  pushEvent?: (event: string, payload: unknown) => unknown;
+}
+
 /**
  * Mount a hook object the way LiveView would: `this.el` carries the JSON
  * config in `data-config`, and `pushEvent` / `handleEvent` are spies.
@@ -94,7 +107,8 @@ export function renderLiveView(html: string): LiveViewHarness {
 export function mountHook(
   definition: any,
   config: Record<string, unknown>,
-  innerHTML = ''
+  innerHTML = '',
+  options: MountOptions = {}
 ): MountedHook {
   const el = document.createElement('div');
   el.id = String(config.id);
@@ -105,7 +119,7 @@ export function mountHook(
   const serverHandlers = new Map<string, HookEventHandler[]>();
   const hook: any = Object.create(definition);
   hook.el = el;
-  hook.pushEvent = vi.fn();
+  hook.pushEvent = options.pushEvent ?? vi.fn();
   hook.pushEventTo = vi.fn();
   hook.handleEvent = vi.fn((event: string, handler: HookEventHandler) => {
     serverHandlers.set(event, [...(serverHandlers.get(event) ?? []), handler]);

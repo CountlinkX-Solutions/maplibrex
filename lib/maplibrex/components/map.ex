@@ -98,6 +98,7 @@ defmodule MaplibreX.Components.Map do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
   alias Phoenix.LiveView.JS
 
   @type center :: {float(), float()} | list(float())
@@ -126,6 +127,9 @@ defmodule MaplibreX.Components.Map do
   * `attribution_control` - Show attribution control. Defaults to `true`
   * `class` - CSS classes for the map container
   * `testid` - Test ID for the map element
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["map:moved"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -161,6 +165,7 @@ defmodule MaplibreX.Components.Map do
   attr :class, :string, default: "maplibrex-map"
   attr :testid, :string, default: nil
   attr :rest, :global
+  attr :events, :list, default: nil
 
   slot :inner_block, required: false
 
@@ -191,7 +196,7 @@ defmodule MaplibreX.Components.Map do
       |> maybe_put(:bounds, assigns.bounds)
       |> maybe_put(:maxBounds, assigns.max_bounds)
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <%!--

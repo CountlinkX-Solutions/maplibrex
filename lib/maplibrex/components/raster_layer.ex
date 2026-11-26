@@ -108,6 +108,7 @@ defmodule MaplibreX.Components.RasterLayer do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a raster layer component.
@@ -122,6 +123,9 @@ defmodule MaplibreX.Components.RasterLayer do
   * `min_zoom` - Minimum zoom level for layer visibility
   * `max_zoom` - Maximum zoom level for layer visibility
   * `before_id` - ID of layer to insert this layer before
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["layer:added"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Events
 
@@ -138,6 +142,7 @@ defmodule MaplibreX.Components.RasterLayer do
   attr :min_zoom, :integer, default: nil
   attr :max_zoom, :integer, default: nil
   attr :before_id, :string, default: nil
+  attr :events, :list, default: nil
 
   def raster_layer(assigns) do
     # Build configuration
@@ -155,7 +160,7 @@ defmodule MaplibreX.Components.RasterLayer do
       |> Enum.reject(fn {_k, v} -> is_nil(v) or v == %{} end)
       |> Map.new()
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div

@@ -72,6 +72,7 @@ defmodule MaplibreX.Components.VectorTileSource do
   """
 
   use Phoenix.Component
+  alias MaplibreX.Components.Events
 
   @doc """
   Renders a vector tile source component.
@@ -89,6 +90,9 @@ defmodule MaplibreX.Components.VectorTileSource do
   * `scheme` - Tile scheme: "xyz" (default) or "tms"
   * `promote_id` - Property to use as feature ID
   * `volatile` - Whether data should be cached (default: false)
+  * `events` - List of the events to push to the LiveView, e.g.
+    `["source:error"]`. Optional: without it, every event listed under Events
+    is pushed
 
   ## Tile URL Template
 
@@ -106,6 +110,10 @@ defmodule MaplibreX.Components.VectorTileSource do
 
   ## Events
 
+  * `source:added` - Fired once, with `source_id`, the first time the source
+    is on the map (not again when a style change puts it back)
+  * `source:removed` - Fired, with `source_id`, once the source is gone after
+    the component is removed, if `source:added` was fired
   * `source:data` - Fired when source data is loaded or updated
     - `source_id` - ID of the source
     - `data_type` - Type of data ("source" or "metadata")
@@ -132,6 +140,7 @@ defmodule MaplibreX.Components.VectorTileSource do
   attr :scheme, :string, default: nil
   attr :promote_id, :map, default: nil
   attr :volatile, :boolean, default: false
+  attr :events, :list, default: nil
 
   def vector_tile_source(assigns) do
     # Build configuration
@@ -157,7 +166,7 @@ defmodule MaplibreX.Components.VectorTileSource do
       raise ArgumentError, "VectorTileSource requires either 'url' or 'tiles' attribute"
     end
 
-    assigns = assign(assigns, :config, Jason.encode!(config))
+    assigns = assign(assigns, :config, Jason.encode!(Events.put(config, assigns.events)))
 
     ~H"""
     <div
