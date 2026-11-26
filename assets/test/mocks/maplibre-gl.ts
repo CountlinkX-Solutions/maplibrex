@@ -2,8 +2,9 @@
  * Hand-written stand-in for `maplibre-gl`, aliased in by vitest.config.ts.
  *
  * It models only what the hooks touch: listener bookkeeping per event type
- * (and per layer id), source/layer registries, and spies for the imperative
- * camera and style commands. Tests drive it with `emit()`.
+ * (and per layer id), source/layer registries, control placement inside the
+ * map container, and spies for the imperative camera and style commands.
+ * Tests drive it with `emit()`.
  */
 import { vi } from 'vitest';
 
@@ -54,11 +55,34 @@ class Emitter {
   }
 }
 
+type ControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+interface Control {
+  onAdd(map: FakeMap): HTMLElement;
+  onRemove(map: FakeMap): void;
+  getDefaultPosition?(): ControlPosition;
+}
+
 export class FakeMap extends Emitter {
   sources = new Map<string, any>();
   layers = new Map<string, any>();
   zoom = 5;
   canvas = { style: { cursor: '' } };
+  /** The corner elements MapLibre creates inside the map container for controls. */
+  controlPositions = {} as Record<ControlPosition, HTMLElement>;
+
+  constructor(public container: HTMLElement = document.createElement('div')) {
+    super();
+    const controlContainer = document.createElement('div');
+    controlContainer.className = 'maplibregl-control-container';
+    (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).forEach((position) => {
+      const corner = document.createElement('div');
+      corner.className = `maplibregl-ctrl-${position}`;
+      controlContainer.appendChild(corner);
+      this.controlPositions[position] = corner;
+    });
+    container.appendChild(controlContainer);
+  }
 
   on(type: string, a: string | Handler, b?: Handler): this {
     this.addListener(type, a, b, false);
@@ -95,8 +119,25 @@ export class FakeMap extends Emitter {
   setLayoutProperty = vi.fn();
   setFilter = vi.fn();
 
-  addControl = vi.fn();
-  removeControl = vi.fn();
+  getContainer = () => this.container;
+
+  // As in MapLibre: the element returned by `onAdd` goes into the corner for
+  // `position` (prepended at the bottom), and removal is left to `onRemove`.
+  addControl = vi.fn((control: Control, position?: ControlPosition) => {
+    const at = position ?? control.getDefaultPosition?.() ?? 'top-right';
+    const element = control.onAdd(this);
+    const corner = this.controlPositions[at];
+    if (at.startsWith('bottom')) {
+      corner.insertBefore(element, corner.firstChild);
+    } else {
+      corner.appendChild(element);
+    }
+    return this;
+  });
+  removeControl = vi.fn((control: Control) => {
+    control.onRemove(this);
+    return this;
+  });
 
   flyTo = vi.fn();
   jumpTo = vi.fn();
@@ -196,9 +237,19 @@ export class Marker extends Emitter {
   }
 }
 
-/** Controls only need to be constructible; the map records `addControl` calls. */
-export class ScaleControl {
-  constructor(public options: Record<string, any> = {}) {}
+/** A built-in control: an element the map places on `addControl`. */
+export class ScaleControl implements Control {
+  element = document.createElement('div');
+
+  constructor(public options: Record<string, any> = {}) {
+    this.element.className = 'maplibregl-ctrl maplibregl-ctrl-scale';
+  }
+  onAdd(): HTMLElement {
+    return this.element;
+  }
+  onRemove(): void {
+    this.element.remove();
+  }
 }
 
 /** Forget instances created by earlier tests. */

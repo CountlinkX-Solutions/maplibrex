@@ -55,12 +55,9 @@ class GroupControl implements maplibregl.IControl {
   }
 
   onRemove(): void {
+    // The content goes with the container: this runs from `destroyed()`,
+    // once LiveView has removed the wrapper the content came from.
     if (this.container && this.container.parentNode) {
-      // Move content back to original location before removing
-      const originalParent = this.container.parentNode;
-      if (this.contentElement.parentNode === this.container) {
-        originalParent.insertBefore(this.contentElement, this.container);
-      }
       this.container.parentNode.removeChild(this.container);
     }
     this.container = null;
@@ -68,6 +65,12 @@ class GroupControl implements maplibregl.IControl {
 
   getDefaultPosition(): 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' {
     return 'top-right';
+  }
+
+  /** Shows `contentElement` in the control, in place of the current content. */
+  attach(contentElement: HTMLElement): void {
+    this.contentElement = contentElement;
+    this.container?.replaceChildren(contentElement);
   }
 }
 
@@ -119,9 +122,17 @@ export const ControlGroupHook: LiveViewHook = {
   },
 
   updated(this: any) {
-    // Control groups with dynamic content are already updated by LiveView
-    // We don't need to recreate the control, just ensure content stays in place
-    logger.debug('[MaplibreX] ControlGroup updated');
+    const state: ControlGroupHookState | undefined = (this as any)._maplibrex_control_group;
+    if (!state) return;
+
+    // LiveView's patch finds the content by id anywhere in the view, even
+    // inside the map's `phx-update="ignore"` element, and renders it back
+    // into this hidden wrapper. Move it back into the control.
+    const rendered = (this.el as HTMLElement).querySelector<HTMLElement>(`#${state.config.id}-content`);
+    if (rendered) {
+      state.control.attach(rendered);
+    }
+    logger.debug(`[MaplibreX] ControlGroup "${state.config.id}" updated`);
   },
 
   destroyed(this: any) {
