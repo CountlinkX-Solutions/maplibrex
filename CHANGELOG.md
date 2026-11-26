@@ -13,12 +13,17 @@ Bugfix release. There are no breaking changes.
 
 ### Fixed
 
-- `control`, `control_button`, `control_group` and `zoom_range` never became
-  map controls: their hooks (`ControlHook`, `ControlButtonHook`,
-  `ControlGroupHook`, `ZoomRangeHook`) were implemented but missing from
-  `MapHooks` and the named exports ([#2]). `control_button` also now forwards
-  `phx-click` and `phx-value-*` bindings to its button, which the map moves out
-  of the component's wrapper element.
+- `control`, `control_button` and `control_group` never became map controls,
+  and `zoom_range` never reacted to the zoom: their hooks (`ControlHook`,
+  `ControlButtonHook`, `ControlGroupHook`, `ZoomRangeHook`) were implemented but
+  missing from `MapHooks` and the named exports ([#2]). `control_button` also
+  now forwards `phx-click` and `phx-value-*` bindings to its button, which the
+  map moves out of the component's wrapper element.
+- Controls survive LiveView re-renders: a re-render of `control`,
+  `control_button` or `control_group` put the control's content back into the
+  component's hidden wrapper, leaving an empty box on the map. The content now
+  stays on the map with its newly rendered state, and removing the component
+  removes it from the map ([#2]).
 - `geojson_layer` left its click and hover listeners attached when destroyed, so
   remounting a layer with the same id pushed every feature event more than once
   ([#6]).

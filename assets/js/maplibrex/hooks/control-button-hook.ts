@@ -55,6 +55,12 @@ class ButtonControl implements maplibregl.IControl {
     return 'top-right';
   }
 
+  /** Shows `buttonElement` in the control, in place of the current button. */
+  attach(buttonElement: HTMLButtonElement): void {
+    this.buttonElement = buttonElement;
+    this.container?.replaceChildren(buttonElement);
+  }
+
   /**
    * Update button active state
    */
@@ -172,18 +178,25 @@ export const ControlButtonHook: LiveViewHook = {
     if (!state) return;
 
     try {
+      const el = this.el as HTMLElement;
       // Re-parse config in case active state or tooltip changed
-      const configStr = (this.el as HTMLElement).dataset.config;
+      const configStr = el.dataset.config;
       if (!configStr) return;
 
       const newConfig: ControlButtonConfig = JSON.parse(configStr);
 
-      state.forwarded = forwardBindings(this.el as HTMLElement, state.buttonElement, state.forwarded);
-      
-      // Update active state if changed
-      if (newConfig.active !== state.config.active) {
-        state.control.setActive(newConfig.active || false);
+      // LiveView's patch finds the button by id anywhere in the view, even
+      // inside the map's `phx-update="ignore"` element, and renders it back
+      // into this hidden wrapper with only its server-rendered attributes.
+      // Move it back into the control; bindings and active state follow.
+      const rendered = el.querySelector<HTMLButtonElement>(`#${newConfig.id}-button`);
+      if (rendered) {
+        state.control.attach(rendered);
+        state.buttonElement = rendered;
       }
+
+      state.forwarded = forwardBindings(el, state.buttonElement, state.forwarded);
+      state.control.setActive(newConfig.active || false);
 
       // Update tooltip if changed
       if (newConfig.tooltip !== state.config.tooltip) {
